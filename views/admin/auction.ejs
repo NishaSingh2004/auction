@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Auction Control</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body style="background-color: var(--bg-dark);">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>Admin Panel</h2>
+            <ul class="nav-links">
+                <li><a href="/admin/dashboard">Dashboard</a></li>
+                <li><a href="/admin/teams">Manage Teams</a></li>
+                <li><a href="/admin/players">Manage Players</a></li>
+                <li><a href="/admin/auction" class="active">Live Auction Control</a></li>
+                <li><a href="/logout" style="color: var(--danger); margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1.5rem; border-radius: 0;"><span class="icon">🚪</span> Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <header class="topbar" style="height: 60px; flex-shrink: 0;">
+                <h1 style="font-size: 1.25rem; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif;">Live Auction Control Panel</h1>
+            </header>
+            
+            <%
+              const unitsLocal = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+              const formatCurrencyLocal = (amt) => {
+                return ['₹', '$', '€', '£'].includes(unitsLocal) ? `${unitsLocal}${amt.toLocaleString()}` : `${amt.toLocaleString()} ${unitsLocal}`;
+              };
+            %>
+
+            <div class="grid" style="grid-template-columns: 28% 44% 28%; gap: 1.25rem; align-items: start; padding: 1.5rem; flex: 1; overflow: hidden; height: calc(100vh - 60px);">
+                
+                <!-- Left Column: Franchise Standings -->
+                <div class="panel" style="overflow-y: auto; max-height: 80vh; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; border-radius: 14px;">
+                    <h3 style="color: var(--primary); font-size: 0.88rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.2rem;">Franchise Standings</h3>
+                    <div id="teamList" class="sleek-scroll" style="display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto; flex: 1; padding-right: 0.25rem;">
+                        <% data.teams.forEach(team => { %>
+                            <% const teamPlayers = data.players.filter(p => p.soldTo === team.name); %>
+                            <div class="team-card" data-teamname="<%= team.name %>" style="border-left: 4.5px solid <%= team.color %>; padding: 0.85rem 1rem !important; border-radius: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="font-weight: 800; color: #fff; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                                        <span class="color-dot" <%- 'style="background-color: ' + team.color + '; width: 8px; height: 8px; display: inline-block; border-radius: 50%;"' %>></span>
+                                        <%= team.name %>
+                                    </div>
+                                    <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-muted);"><%= teamPlayers.length %>/15</div>
+                                </div>
+                                <div style="margin-top: 0.35rem; font-size: 0.76rem; color: var(--text-muted); display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.02); padding-top: 0.35rem;">
+                                    <span>PURSE:</span> 
+                                    <span style="color: var(--success); font-weight: 700;"><%= formatCurrencyLocal(team.budget) %></span>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+                </div>
+
+                <!-- Center Column: Player Board & Controls -->
+                <div style="display: flex; flex-direction: column; gap: 1.25rem; max-height: 80vh; overflow-y: auto;" class="sleek-scroll">
+                    <!-- Filters & Loader Deck -->
+                    <div class="panel" style="padding: 1.2rem; border-radius: 14px;">
+                        <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: center;">
+                            <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;">Filter Set:</label>
+                            <select id="auctionCategorySelect" class="form-control" style="flex: 1; padding: 0.45rem 0.75rem !important; border-radius: 8px !important; font-size: 0.82rem !important;">
+                                <option value="">-- All Categories --</option>
+                                <% data.categories.forEach(cat => { %>
+                                    <option value="<%= cat.id %>"><%= cat.name %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <button id="randomPlayerBtn" class="btn btn-secondary" style="white-space: nowrap; padding: 0.5rem 1rem; font-size: 0.8rem; display: flex; align-items: center; gap: 5px; border-radius: 8px;"><span style="font-size: 0.95rem;">🔀</span> Random</button>
+                            <select id="manualPlayerSelect" class="form-control" style="flex: 1; padding: 0.45rem 0.75rem !important; border-radius: 8px !important; font-size: 0.82rem !important;">
+                                <option value="">-- Select Specific Player --</option>
+                                <% data.players.filter(p => p.status === 'available').forEach(player => { %>
+                                    <option value="<%= player.id %>" data-base="<%= player.basePrice %>" data-category="<%= player.category_id || '' %>"><%= player.name %> (<%= player.role %>) - Base: <%= formatCurrencyLocal(player.basePrice) %></option>
+                                <% }) %>
+                            </select>
+                            <button id="startBtn" class="btn btn-primary" style="white-space: nowrap; padding: 0.5rem 1.25rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px;">START BID</button>
+                        </div>
+                    </div>
+
+                    <!-- Hero Player Card Deck -->
+                    <div class="panel player-card" style="padding: 2.2rem 1.75rem; border: 1px solid rgba(212, 175, 55, 0.2) !important; border-radius: 14px; position: relative;">
+                        <!-- Sold/Unsold Banner Overlays -->
+                        <div id="statusOverlay" class="status-overlay" style="border-radius: 12px;">
+                            <div id="statusText" class="status-text"></div>
+                        </div>
+                        
+                        <!-- Ambient Stage Spotlight Effect behind player info -->
+                        <div class="player-spotlight-frame">
+                            <img id="livePlayerPhoto" src="/uploads/default-player.svg" style="width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 3.5px solid var(--primary); background: var(--bg-dark);">
+                        </div>
+                        
+                        <h2 id="livePlayerName" class="player-name" style="font-size: 2.4rem !important; margin-bottom: 0.2rem; font-family: 'Plus Jakarta Sans', sans-serif;">Waiting...</h2>
+                        <div id="livePlayerRole" class="player-role" style="font-size: 0.95rem !important; margin-bottom: 0.8rem;">--</div>
+                        
+                        <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center; margin-bottom: 1rem;">
+                            <div id="liveCategoryDisplay" class="player-role" style="font-size: 0.8rem !important; color: var(--accent); font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.25); padding: 0.2rem 0.75rem; border-radius: 5px; background: rgba(59, 130, 246, 0.04); text-transform: uppercase;">No Category Selected</div>
+                        </div>
+                        <div id="livePlayerCaptainBadge" style="display: none; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; font-size: 0.7rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 5px; margin: 0.5rem auto 1rem; width: fit-content; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(245,158,11,0.2);">👑 TEAM CAPTAIN</div>
+                        
+                        <!-- High Contrast Bid Display -->
+                        <div class="bid-display" id="bidDisplay" style="margin: 1.5rem 0; padding: 1.25rem !important;">
+                            <div class="current-bid-label" style="font-size: 0.78rem !important; letter-spacing: 2px !important; margin-bottom: 0.35rem;">CURRENT BID</div>
+                            <div id="liveBidAmount" class="current-bid-amount" style="font-size: 3.5rem !important; line-height: 1;"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></div>
+                            <div id="liveHighestBidder" class="highest-bidder" style="font-size: 0.95rem !important; margin-top: 0.6rem;"><%= data.auctionState.highestBidder ? '🏆 ' + data.auctionState.highestBidder : 'No Bids Placed' %></div>
+                        </div>
+                        
+                        <div id="liveTimer" class="timer" style="position: absolute; top: 1.25rem; right: 1.25rem;">30</div>
+
+                        <!-- Timer Controls -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03); margin-bottom: 1.2rem;">
+                            <button id="timerResetBtn" class="btn btn-secondary" style="padding: 0.45rem; font-size: 0.75rem; font-weight: 700; border-radius: 6px; flex: 1;">🔄 Reset</button>
+                            <button id="timerPauseBtn" class="btn btn-secondary" style="padding: 0.45rem; font-size: 0.75rem; font-weight: 700; border-radius: 6px; flex: 1;">⏸️ Pause</button>
+                        </div>
+
+                        <!-- Decision Controls: SOLD & UNSOLD -->
+                        <div style="display: flex; justify-content: space-between; gap: 0.85rem;">
+                            <button id="resetTimerBtn" class="btn btn-secondary" style="display: none;"></button>
+                            <button id="endAuctionBtn" class="btn btn-success" style="flex: 1; padding: 0.85rem; font-weight: 800; font-size: 0.95rem; border-radius: 10px;">✓ SOLD (S)</button>
+                            <button id="unsoldBtn" class="btn btn-danger" style="flex: 1; padding: 0.85rem; font-weight: 800; font-size: 0.95rem; border-radius: 10px;">✕ UNSOLD (U)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Bidding Console -->
+                <div class="panel" style="padding: 1.25rem; border-radius: 14px; max-height: 80vh; overflow-y: auto;" class="sleek-scroll">
+                    <h3 style="margin-bottom: 1rem; color: var(--primary); font-size: 0.88rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Bidding Console</h3>
+                    <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(0,0,0,0.25); border-radius: 10px; text-align: center; border: 1px solid var(--border-color);">
+                        <div style="color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 0.35rem;">SELECTED FRANCHISE</div>
+                        <div id="selectedTeamDisplay" style="font-size: 0.95rem; font-weight: 800; color: var(--accent); text-shadow: 0 0 10px rgba(59, 130, 246, 0.15);">Select team from standings</div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem;">
+                        <div style="color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem;">Manual Bid Entry</div>
+                        <div style="display: flex; gap: 0.35rem; align-items: stretch;">
+                            <button id="manualBidDownBtn" class="btn btn-secondary" style="padding: 0 0.75rem; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px;" title="Subtract 100">▼</button>
+                            <input type="number" id="manualBidAmount" class="form-control" placeholder="Amount" style="flex: 1; text-align: center; font-weight: 700; font-size: 0.95rem !important; border-radius: 8px !important;">
+                            <button id="manualBidUpBtn" class="btn btn-secondary" style="padding: 0 0.75rem; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px;" title="Add 100">▲</button>
+                            <button id="manualBidBtn" class="btn btn-primary" style="padding: 0 1.1rem; font-weight: 800; border-radius: 8px;">Bid</button>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1.5rem;">
+                        <% 
+                            const bidInc = data.auctionDetails && data.auctionDetails.bidIncreaseBy ? parseFloat(data.auctionDetails.bidIncreaseBy) : 500;
+                            const units = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+                            const formatCurrencyLocalBtn = (amt) => {
+                                return ['₹', '$', '€', '£'].includes(units) ? `${units}${amt.toLocaleString()}` : `${amt.toLocaleString()} ${units}`;
+                            };
+                        %>
+                        <button class="btn quick-bid-btn" data-increment="<%= bidInc %>" style="padding: 0.65rem; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(34, 197, 94, 0.08) !important; border: 1px solid rgba(34, 197, 94, 0.2) !important; color: #fff; border-radius: 10px; cursor: pointer;">
+                            <div style="font-size: 1.1rem; font-weight: 800; color: var(--success);">+ <%= formatCurrencyLocalBtn(bidInc) %></div>
+                            <div style="font-size: 0.6rem; color: var(--text-muted); margin-top: 0.1rem; text-transform: uppercase; font-weight: 700;">Single Inc</div>
+                        </button>
+                        <button class="btn quick-bid-btn" data-increment="<%= bidInc * 2 %>" style="padding: 0.65rem; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(34, 197, 94, 0.08) !important; border: 1px solid rgba(34, 197, 94, 0.2) !important; color: #fff; border-radius: 10px; cursor: pointer;">
+                            <div style="font-size: 1.1rem; font-weight: 800; color: var(--success);">+ <%= formatCurrencyLocalBtn(bidInc * 2) %></div>
+                            <div style="font-size: 0.6rem; color: var(--text-muted); margin-top: 0.1rem; text-transform: uppercase; font-weight: 700;">Double Inc</div>
+                        </button>
+                    </div>
+                    <button class="btn quick-bid-btn" data-increment="<%= bidInc * 10 %>" style="width: 100%; margin-top: 0.5rem; padding: 0.65rem; background: rgba(34, 197, 94, 0.15) !important; border: 1px solid rgba(34, 197, 94, 0.28) !important; color: var(--success); font-weight: 800; font-size: 0.92rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(34,197,94,0.1); cursor: pointer;">
+                        <div style="font-size: 1.1rem; font-weight: 800; color: var(--success);">+ <%= formatCurrencyLocalBtn(bidInc * 10) %> (Jump)</div>
+                    </button>
+                </div>
+
+            </div>
+        </main>
+    </div>
+    <script>
+        window.auctionCurrencyUnit = "<%= data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹' %>";
+        window.auctionMaxPlayers = parseInt("<%= data.auctionDetails && data.auctionDetails.playersPerTeamMax ? data.auctionDetails.playersPerTeamMax : 15 %>", 10) || 15;
+        window.auctionBaseBid = parseFloat("<%= data.auctionDetails && data.auctionDetails.baseBid ? data.auctionDetails.baseBid : 500 %>") || 500;
+        window.auctionBidIncreaseBy = parseFloat("<%= data.auctionDetails && data.auctionDetails.bidIncreaseBy ? data.auctionDetails.bidIncreaseBy : 500 %>") || 500;
+    </script>
+    <script src="/js/admin.js?v=<%= Date.now() %>"></script>
+</body>
+</html>

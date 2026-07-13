@@ -1,0 +1,4 @@
+Name,BasePrice,Role,FormNo,Age,FatherName,Phone,TshirtSize,TrouserSize,Detail
+"Virat Kohli",1000,"Batsman","101",35,"Prem Kohli","9876543210","L","32","Right-handed batsman"
+"Jasprit Bumrah",1000,"Bowler","102",30,"Jasbir Singh","9876543211","M","30","Right-arm fast bowler"
+"MS Dhoni",1000,"Wicket-Keeper","103",42,"Pan Singh","9876543212","XL","34","Wicket-keeper batsman"

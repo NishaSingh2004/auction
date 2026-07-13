@@ -1,0 +1,4 @@
+Name,BasePrice,Role,FormNo,Age,FatherName,Phone,TshirtSize,TrouserSize,Detail
+"Rohit Sharma",2000,"Batsman","301",37,"Gurunath Sharma","9876543301","XL","34","India national team captain"
+"Ravindra Jadeja",1800,"All-Rounder","302",35,"Anirudhsinh Jadeja","9876543302","L","32","Left-arm orthodox allrounder"
+"Rishabh Pant",1500,"Wicket-Keeper","303",26,"Rajendra Pant","9876543303","M","30","Dynamic wicketkeeper batsman"

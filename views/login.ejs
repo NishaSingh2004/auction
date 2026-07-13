@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Auction - Login</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body style="display: flex; flex-direction: column; min-height: 100vh; justify-content: center; align-items: center; padding: 2rem; background-color: var(--bg-dark);">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    
+    <div class="login-container panel animate-fade-in" style="width: 100%; max-width: 420px; text-align: center; border: 1px solid var(--border-color); background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 2.5rem; box-shadow: var(--shadow-luxury);">
+        <div class="brand-logo" style="width: 55px; height: 55px; border-radius: 14px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);">
+            <span style="font-size: 1.6rem;">⚡</span>
+        </div>
+        <h1 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 0.4rem; letter-spacing: -0.5px; font-family: 'Plus Jakarta Sans', sans-serif;">Live Auction Room</h1>
+        <p class="subtitle" style="color: var(--text-muted); margin-bottom: 2.2rem; font-size: 0.88rem; font-weight: 500;">Enter the arena to build your ultimate squad.</p>
+        
+        <form action="/login" method="POST" class="stacked-form">
+            <div class="form-group" style="text-align: left; display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.8rem;">
+                <label for="username" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Username / Team Name</label>
+                <input type="text" id="username" name="username" required placeholder="Enter username or team name" class="form-control form-control-lg" style="border-radius: 10px !important;">
+            </div>
+            <div class="form-group" style="text-align: left; display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1.8rem;">
+                <label for="password" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter password" class="form-control form-control-lg" style="border-radius: 10px !important;">
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-block" style="border-radius: 12px; font-weight: 700; font-size: 0.92rem; padding: 0.85rem;">Login to Dashboard</button>
+        </form>
+    </div>
+</body>
+</html>

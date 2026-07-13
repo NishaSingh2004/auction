@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Live Auction</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body style="overflow: hidden; height: 100vh; margin: 0; padding: 0; background-color: var(--bg-dark);">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+<%
+  const unitsLocal = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+  const formatCurrencyLocal = (amt) => {
+    return ['₹', '$', '€', '£'].includes(unitsLocal) ? `${unitsLocal}${amt.toLocaleString()}` : `${amt.toLocaleString()} ${unitsLocal}`;
+  };
+%>
+    <div class="app-container" style="display: flex; flex-direction: column; height: 100vh; width: 100vw; max-width: 100%; overflow: hidden;">
+        <!-- Main Header -->
+        <header class="topbar" style="height: 60px; flex-shrink: 0; background: rgba(15, 23, 42, 0.7) !important; border-bottom: 1px solid var(--border-color) !important; padding: 0.75rem 2rem !important;">
+            <div style="display: flex; align-items: center; gap: 0.85rem;">
+                <img src="<%= data.auctionDetails && data.auctionDetails.logo ? data.auctionDetails.logo : '/uploads/default-auction.svg' %>" style="width: 30px; height: 30px; border-radius: 6px; object-fit: contain; border: 1px solid var(--border-color); background: var(--bg-dark);" onerror="this.src='/uploads/default-auction.svg'">
+                <h1 id="pageTitle" style="font-size: 1.15rem; margin: 0; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 700px; font-family: 'Plus Jakarta Sans', sans-serif;" title="<%= data.auctionDetails ? data.auctionDetails.name : 'Admin Console' %>"><%= data.auctionDetails ? data.auctionDetails.name : 'Admin Console' %></h1>
+            </div>
+            <div style="display: flex; gap: 0.85rem; align-items: center;">
+                <div class="stats-bar" style="margin: 0; background: transparent; padding: 0; display: flex; align-items: center; gap: 0.4rem;">
+                    <div class="stat-pill" style="border-radius: 6px !important; padding: 0.3rem 0.65rem !important; font-size: 0.76rem !important;">Teams: <span id="totalTeams"><%= data.teams.length %></span></div>
+                    <div class="stat-pill" style="border-radius: 6px !important; padding: 0.3rem 0.65rem !important; font-size: 0.76rem !important;">Players: <span id="totalPlayers"><%= data.players.length %></span></div>
+                    <div class="stat-pill" style="border-radius: 6px !important; padding: 0.3rem 0.65rem !important; font-size: 0.76rem !important;">Status: <span class="badge" id="auctionStatusBadge" style="border-radius: 4px !important; font-size: 0.68rem !important; padding: 0.15rem 0.45rem !important;"><%= data.auctionState.status.toUpperCase() %></span></div>
+                    <button onclick="syncData()" class="btn btn-secondary" style="font-size: 0.68rem; padding: 0.25rem 0.6rem; border-radius: 5px; cursor: pointer; font-weight: 700; margin-left: 0.25rem;" title="Sync data from server">🔄 Sync</button>
+                </div>
+                <button onclick="document.getElementById('dataModal').style.display='flex'" class="btn btn-primary" style="padding: 0.4rem 1.1rem; font-weight: 800; font-size: 0.8rem; border-radius: var(--radius-small);">⚙ Admin Tools</button>
+                <a href="/logout" class="btn btn-danger" style="padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700;">⏻</a>
+            </div>
+        </header>
+
+        <!-- LIVE CONSOLE SECTION -->
+        <div style="flex: 1; overflow: hidden; height: calc(100vh - 60px); background: transparent;">
+            <div class="grid" style="display: grid; grid-template-columns: 56% 44%; height: 100%; width: 100%; gap: 1.25rem; padding: 1.25rem; overflow: hidden; background: transparent;">
+                
+                <!-- Left: Player Board & Bio Grid -->
+                <div class="panel" style="display: flex; flex-direction: column; height: 100%; position: relative; padding: 0; border: 1px solid var(--border-color) !important; overflow: hidden; background: var(--bg-card); border-radius: var(--radius-card); box-shadow: var(--shadow-luxury);">
+                    <!-- Top Search/Select Area -->
+                    <div style="padding: 0.85rem 1.25rem; background: rgba(15, 23, 42, 0.45); border-bottom: 1px solid var(--border-color); display: flex; gap: 0.6rem; align-items: center; justify-content: center;">
+                        <div style="display: flex; flex-direction: column; align-items: flex-start; border-right: 1px solid var(--border-color); padding-right: 0.6rem; margin-right: 0.2rem; position: relative;">
+                            <input type="text" id="quickUnsoldInput" placeholder="Search Player # / Name..." class="form-control" style="width: 170px; padding: 0.45rem 0.7rem !important; font-size: 0.82rem !important; border-radius: 8px !important;" oninput="updateQuickUnsoldSearch()" onkeydown="handleQuickUnsoldKeydown(event)" autocomplete="off">
+                            <div id="quickUnsoldPreview" style="position: absolute; top: 100%; left: 0; width: 260px; background: rgba(17, 24, 39, 0.98); border: 1px solid var(--border-color); border-radius: 8px; z-index: 10000; display: none; max-height: 220px; overflow-y: auto; margin-top: 5px; box-shadow: var(--shadow-luxury);"></div>
+                        </div>
+                        <select id="categoryFilterSelect" class="form-control" style="max-width: 150px; padding: 0.45rem 0.7rem !important; font-size: 0.82rem !important; border-radius: 8px !important;">
+                            <% const activeCat = data.auctionState && data.auctionState.activeCategory ? data.auctionState.activeCategory : 'all'; %>
+                            <option value="all" <%= (activeCat === 'all' || activeCat.startsWith('cat_all_')) ? 'selected' : '' %>>All Categories</option>
+                            <% data.categories.filter(c => !c.id.startsWith('cat_all_')).forEach(cat => { %>
+                                <option value="<%= cat.id %>" <%= activeCat === cat.id ? 'selected' : '' %>><%= cat.name %></option>
+                            <% }) %>
+                        </select>
+                        <select id="playerSelect" class="form-control" style="max-width: 220px; padding: 0.45rem 0.7rem !important; font-size: 0.82rem !important; border-radius: 8px !important;">
+                            <% 
+                                const initialPlayers = data.players.filter(p => {
+                                    if (p.status !== 'available') return false;
+                                    if (activeCat === 'all' || activeCat.startsWith('cat_all_')) {
+                                        return !p.category_id || p.category_id.startsWith('cat_all_');
+                                    } else {
+                                        return p.category_id === activeCat;
+                                    }
+                                });
+                                initialPlayers.sort((a, b) => a.name.localeCompare(b.name));
+                                initialPlayers.forEach(player => { 
+                             %>
+                                <option value="<%= player.id %>" data-base="<%= player.basePrice %>" data-category="<%= player.category_id || '' %>"><%= player.name %> - <%= formatCurrencyLocal(player.basePrice) %></option>
+                            <% }) %>
+                        </select>
+                        <button id="startBtn" class="btn btn-primary" style="white-space: nowrap; padding: 0.5rem 1.25rem; font-size: 0.8rem; font-weight: 800; border-radius: 8px;">LOAD PLAYER</button>
+                    </div>
+
+                    <!-- Center Player Card -->
+                    <div class="sleek-scroll" style="flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; position: relative; overflow-y: auto; padding: 1.25rem 1.5rem;">
+                        <div class="player-card" style="position: relative; background: transparent; border: none; box-shadow: none; width: 100%; max-width: 600px; padding: 0;">
+                            <div id="statusOverlay" class="status-overlay" style="border-radius: 12px;">
+                                <div id="statusText" class="status-text"></div>
+                            </div>
+                            
+                            <!-- Player Info Block -->
+                            <div style="display: flex; flex-direction: column; gap: 0.85rem; width: 100%;">
+                                <!-- Row 1: Player Identity & Live Timer -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; background: rgba(15, 23, 42, 0.45); padding: 0.85rem 1.15rem; border-radius: 14px; border: 1px solid var(--border-color); box-shadow: var(--shadow-soft);">
+                                    <div style="display: flex; align-items: center; gap: 1.15rem;">
+                                        <div class="player-spotlight-frame" style="width: 85px; height: 85px; margin: 0;">
+                                            <img id="livePlayerPhoto" src="/uploads/default-player.svg" style="width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); background: var(--bg-dark);">
+                                        </div>
+                                        <div style="text-align: left;">
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                                <span id="livePlayerFormNo" style="background: var(--primary); color: #070B14; padding: 0.2rem 0.6rem; border-radius: 5px; font-size: 0.95rem; font-weight: 800; font-family: monospace;">[#--]</span>
+                                                <h2 id="livePlayerName" class="player-name" style="font-size: 1.8rem !important; margin: 0; line-height: 1.1; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif;">Ready to Bid</h2>
+                                            </div>
+                                            <div id="livePlayerRole" class="player-role" style="font-size: 0.88rem !important; margin-top: 0.3rem;">--</div>
+                                            <div style="display: flex; gap: 0.35rem; margin-top: 0.3rem; flex-wrap: wrap;">
+                                                <div id="liveCategoryDisplay" class="player-role" style="font-size: 0.78rem !important; color: var(--accent); font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.15rem 0.5rem; border-radius: 4px; display: none; background: rgba(59, 130, 246, 0.03);">No Category Selected</div>
+                                                <div id="liveBasePriceDisplay" class="player-role" style="font-size: 0.78rem !important; color: var(--success); font-weight: 700; border: 1px solid rgba(34, 197, 94, 0.2); padding: 0.15rem 0.5rem; border-radius: 4px; display: none; background: rgba(34, 197, 94, 0.03);">Base Bid: --</div>
+                                            </div>
+                                            <div id="livePlayerAge" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem; font-weight: 500;">Age: --</div>
+                                            <div id="livePlayerCaptainBadge" style="display: none; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 5px; margin-top: 0.4rem; width: fit-content; text-transform: uppercase; letter-spacing: 0.5px;">👑 TEAM CAPTAIN</div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div id="liveTimer" class="timer" style="width: 64px; height: 64px; font-size: 1.6rem;">30</div>
+                                    </div>
+                                </div>
+                                <!-- Row 2: Bid Readout -->
+                                 <div class="bid-display" id="bidDisplay" style="padding: 1rem 1.25rem !important; text-align: center;">
+                                     <div class="current-bid-label" style="font-size: 0.78rem !important; letter-spacing: 2px !important; margin-bottom: 0.3rem;">CURRENT BID</div>
+                                     <div id="liveBidAmount" class="current-bid-amount" style="font-size: 3.5rem !important; line-height: 1;"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></div>
+                                     <div id="liveHighestBidder" class="highest-bidder" style="font-size: 0.95rem !important; padding: 0.35rem 1rem !important; margin-top: 0.5rem;"><%= data.auctionState.highestBidder ? '🏆 ' + data.auctionState.highestBidder : 'None' %></div>
+                                 </div>
+                             </div>
+                             
+                             <!-- Player Bio Specs Grid -->
+                             <div id="livePlayerBioGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin: 1.2rem 0; padding: 1rem; background: rgba(15, 23, 42, 0.45); border-radius: 12px; border: 1px solid var(--border-color); font-size: 0.8rem; text-align: left;">
+                                 <div style="background: rgba(255,255,255,0.01); padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.02);"><span style="color: var(--text-muted); display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.1rem;">Base Price:</span> <strong id="bioBasePrice" style="color: var(--success); font-size: 0.95rem;">--</strong></div>
+                                 <div style="background: rgba(255,255,255,0.01); padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.02);"><span style="color: var(--text-muted); display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Age:</span> <strong id="bioAge" style="color: #ffffff; font-size: 0.95rem;">--</strong></div>
+                                 <div style="background: rgba(255,255,255,0.01); padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.02);"><span style="color: var(--text-muted); display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Father Name:</span> <strong id="bioFather" style="color: #ffffff; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;">--</strong></div>
+                                 <div style="background: rgba(255,255,255,0.01); padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.02);"><span style="color: var(--text-muted); display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Tag/Category:</span> <strong id="bioTag" style="color: var(--accent); font-size: 0.95rem;">--</strong></div>
+                                 <div style="background: rgba(255,255,255,0.01); padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.02);"><span style="color: var(--text-muted); display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Custom Tag:</span> <strong id="bioCustom" style="color: #c084fc; font-size: 0.95rem;">--</strong></div>
+                                 <div style="background: rgba(255,255,255,0.01); padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.02);"><span style="color: var(--text-muted); display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Spec 1:</span> <strong id="bioSpec1" style="color: #ffffff; font-size: 0.95rem;">--</strong></div>
+                                 <div style="background: rgba(255,255,255,0.01); padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.02);"><span style="color: var(--text-muted); display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Spec 2:</span> <strong id="bioSpec2" style="color: #ffffff; font-size: 0.95rem;">--</strong></div>
+                                 <div style="background: rgba(255,255,255,0.01); padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.02);"><span style="color: var(--text-muted); display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Spec 3:</span> <strong id="bioSpec3" style="color: #ffffff; font-size: 0.95rem;">--</strong></div>
+                                 <div style="background: rgba(255,255,255,0.01); padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.02);"><span style="color: var(--text-muted); display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Jersey/Trouser:</span> <strong id="bioSize" style="color: #ffffff; font-size: 0.95rem;">-- / --</strong></div>
+                             </div>
+                             <!-- Player Details Box -->
+                             <div id="livePlayerDetailContainer" style="display: none; padding: 0.75rem 1rem; background: rgba(15, 23, 42, 0.45); border-radius: 12px; border: 1px solid var(--border-color); font-size: 0.8rem; text-align: left; margin-top: 0.75rem; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+                                 <span style="color: var(--text-muted); display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.3rem; font-weight: bold;">Player Details & Info:</span>
+                                 <div id="bioDetail" style="color: #cbd5e1; font-family: monospace; white-space: pre-wrap; line-height: 1.4; font-size: 0.75rem;">--</div>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+
+                 <!-- Right Column: Tabbed Bidding Console & Standings Container -->
+                 <div class="panel" style="border: 1px solid var(--border-color); padding: 0; display: flex; flex-direction: column; height: 100%; overflow: hidden; background: var(--bg-card); border-radius: var(--radius-card); box-shadow: var(--shadow-luxury);">
+                     
+                     <!-- Tab Navigation Bar -->
+                     <div style="display: flex; background: rgba(15, 23, 42, 0.45); border-bottom: 1px solid var(--border-color); padding: 0.4rem 0.4rem 0 0.4rem; gap: 0.4rem; flex-shrink: 0;">
+                         <button id="tabBtnBidding" onclick="switchRightTab('bidding')" class="btn" style="flex: 1; padding: 0.75rem; background: rgba(15, 23, 42, 0.8); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.2); border-bottom: none; border-radius: 10px 10px 0 0; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; box-shadow: none;">
+                             ⚡ BIDDING CONSOLE
+                         </button>
+                         <button id="tabBtnStandings" onclick="switchRightTab('standings')" class="btn" style="flex: 1; padding: 0.75rem; background: rgba(255,255,255,0.01); color: var(--text-muted); border: 1px solid transparent; border-bottom: none; border-radius: 10px 10px 0 0; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; box-shadow: none;">
+                             🏆 TEAM STANDINGS
+                         </button>
+                     </div>
+
+                     <!-- TAB 1 CONTENT: Bidding Console -->
+                     <div id="tabContentBidding" style="display: flex; flex-direction: column; gap: 0.85rem; padding: 1.15rem; flex: 1; min-height: 0; overflow-y: auto;" class="sleek-scroll">
+                         <!-- Selected Team Display & Quick Selector -->
+                         <div style="padding: 0.85rem; background: rgba(15, 23, 42, 0.45); border-radius: 10px; text-align: center; border: 1px solid var(--border-color);">
+                             <div style="color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 0.5rem;">SELECT TEAM TO BID</div>
+                             <div id="quickTeamSelectContainer" style="display: flex; flex-wrap: wrap; gap: 0.3rem; justify-content: center; margin-bottom: 0.3rem;">
+                                 <% data.teams.forEach(team => { %>
+                                     <button type="button" class="team-tab-btn" data-teamname="<%= team.name %>" style="border-radius: 6px !important;" onclick="if(window.selectTeamForBid) window.selectTeamForBid('<%= team.name %>')"><%= team.shortName || team.name %></button>
+                                 <% }) %>
+                             </div>
+                             <input type="hidden" id="quickTeamSelect" value="">
+                             <div id="selectedTeamDisplay" style="font-size: 0.95rem; font-weight: 800; margin-top: 0.45rem; color: var(--success); display: none;"></div>
+                         </div>
+
+                         <!-- Bid Increment Buttons -->
+                         <% 
+                             const units = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+                             const bidInc = data.auctionDetails && data.auctionDetails.bidIncreaseBy ? parseFloat(data.auctionDetails.bidIncreaseBy) : 500;
+                             const formatCurrencyLocalInternal = (amt) => {
+                                 return ['₹', '$', '€', '£'].includes(units) ? `${units}${amt.toLocaleString()}` : `${amt.toLocaleString()} ${units}`;
+                             };
+                         %>
+                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+                             <button id="quickBidBtnSingle" class="btn quick-bid-btn" data-increment="<%= bidInc %>" style="padding: 0.65rem; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(34, 197, 94, 0.08) !important; border: 1px solid rgba(34, 197, 94, 0.2) !important; color: #fff; border-radius: 10px; cursor: pointer;">
+                                 <div style="font-size: 1.1rem; font-weight: 800; color: var(--success);">+<%= formatCurrencyLocalInternal(bidInc) %></div>
+                                 <div style="font-size: 0.6rem; color: var(--text-muted); margin-top: 0.1rem; text-transform: uppercase; font-weight: 700;">Single Increment</div>
+                             </button>
+                             <button id="quickBidBtnDouble" class="btn quick-bid-btn" data-increment="<%= bidInc * 2 %>" style="padding: 0.65rem; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(34, 197, 94, 0.08) !important; border: 1px solid rgba(34, 197, 94, 0.2) !important; color: #fff; border-radius: 10px; cursor: pointer;">
+                                 <div style="font-size: 1.1rem; font-weight: 800; color: var(--success);">+<%= formatCurrencyLocalInternal(bidInc * 2) %></div>
+                                 <div style="font-size: 0.6rem; color: var(--text-muted); margin-top: 0.1rem; text-transform: uppercase; font-weight: 700;">Double Increment</div>
+                             </button>
+                         </div>
+                         <button id="quickBidBtnJump" class="btn quick-bid-btn" data-increment="<%= bidInc * 10 %>" style="width: 100%; padding: 0.65rem; background: rgba(34, 197, 94, 0.15) !important; border: 1px solid rgba(34, 197, 94, 0.28) !important; color: var(--success); font-weight: 800; font-size: 0.92rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(34,197,94,0.1); cursor: pointer;">
+                             <div style="font-size: 1.1rem; font-weight: 800; color: var(--success);">+<%= formatCurrencyLocalInternal(bidInc * 10) %> (Jump)</div>
+                         </button>
+
+                         <!-- Manual Bid Entry -->
+                         <div style="background: rgba(15, 23, 42, 0.45); padding: 0.65rem; border-radius: 10px; border: 1px solid var(--border-color);">
+                             <div style="color: var(--text-muted); font-size: 0.7rem; margin-bottom: 0.35rem; font-weight: 700; text-transform: uppercase;">Manual Bid Entry</div>
+                             <div style="display: flex; gap: 0.35rem; align-items: stretch;">
+                                 <button id="manualBidDownBtn" class="btn btn-secondary" style="padding: 0 0.75rem; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px;" title="Subtract 100">▼</button>
+                                 <input type="text" id="manualBidAmount" class="form-control" placeholder="e.g. 500, +500, -500" style="text-align: center; font-weight: 700; font-size: 0.95rem !important; border-radius: 8px !important;">
+                                 <button id="manualBidUpBtn" class="btn btn-secondary" style="padding: 0 0.75rem; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px;" title="Add 100">▲</button>
+                                 <button id="manualBidBtn" class="btn btn-primary" style="padding: 0 1.1rem; font-weight: 800; border-radius: 8px;">Bid</button>
+                             </div>
+                         </div>
+
+                         <!-- Timer Controls -->
+                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: rgba(15, 23, 42, 0.45); padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                             <button id="timerResetBtn" class="btn btn-secondary" style="padding: 0.45rem; font-size: 0.75rem; font-weight: 700; border-radius: 6px; flex: 1;">🔄 Reset</button>
+                             <button id="timerPauseBtn" class="btn btn-secondary" style="padding: 0.45rem; font-size: 0.75rem; font-weight: 700; border-radius: 6px; flex: 1;">⏸️ Pause</button>
+                         </div>
+
+                         <!-- Decision Controls: SOLD & UNSOLD -->
+                         <div style="display: flex; gap: 0.6rem; padding-top: 0.15rem;">
+                             <button id="resetTimerBtn" style="display: none;"></button>
+                             <button id="endAuctionBtn" class="btn btn-success" style="flex: 1; padding: 0.8rem; font-weight: 800; font-size: 0.95rem; border-radius: 10px;">✓ SOLD (S)</button>
+                             <button id="unsoldBtn" class="btn btn-danger" style="flex: 1; padding: 0.8rem; font-weight: 800; font-size: 0.95rem; border-radius: 10px;">✕ UNSOLD (U)</button>
+                         </div>
+                     </div>
+
+                     <!-- TAB 2 CONTENT: Franchise Standings -->
+                     <div id="tabContentStandings" class="sleek-scroll" style="display: none; flex-direction: column; padding: 1.15rem; flex: 1; min-height: 0; overflow-y: auto; gap: 0.6rem;">
+                         <div id="teamList" style="display: flex; flex-direction: column; gap: 0.6rem;">
+                             <% data.teams.forEach((team, index) => { %>
+                                 <% 
+                                     const teamPlayers = data.players.filter(p => p.soldTo === team.name); 
+                                     const maxPlayers = data.auctionDetails && data.auctionDetails.playersPerTeamMax ? parseInt(data.auctionDetails.playersPerTeamMax) : 15;
+                                     const baseBid = data.auctionDetails && data.auctionDetails.baseBid ? parseFloat(data.auctionDetails.baseBid) : 500;
+                                     const units = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+                                     const formatCurrency = (amt) => ['₹', '$', '€', '£'].includes(units) ? `${units}${amt.toLocaleString()}` : `${amt.toLocaleString()} ${units}`;
+                                     const playersLeft = maxPlayers - teamPlayers.length;
+                                     
+                                     let totalMinBudgetNeeded = 0;
+                                     const currentCatId = data.auctionState && data.auctionState.currentPlayer ? data.auctionState.currentPlayer.category_id : null;
+                                     if (data.categories) {
+                                         data.categories.forEach(cat => {
+                                             if (cat.id.startsWith('cat_all_')) return;
+                                             const actualPlayersInCat = teamPlayers.filter(p => p.category_id === cat.id).length;
+                                             const isCurrentCat = (currentCatId === cat.id);
+                                             const assumedBought = isCurrentCat ? 1 : 0;
+                                             const needed = Math.max(0, (cat.minPlayers || 0) - (actualPlayersInCat + assumedBought));
+                                             if (needed > 0) {
+                                                 const catBaseBid = cat.baseBid && cat.baseBid > 0 ? parseFloat(cat.baseBid) : baseBid;
+                                                 totalMinBudgetNeeded += needed * catBaseBid;
+                                             }
+                                         });
+                                     }
+                                     const reservePoints = totalMinBudgetNeeded;
+                                     const maxBid = playersLeft > 0 ? team.budget - reservePoints : team.budget;
+                                     const cleanTeamName = team.name.replace(/\s+/g, '-');
+                                 %>
+                                 <div class="team-card" data-teamname="<%= team.name %>" style="border-left: 4.5px solid <%= team.color %>; border-radius: 10px; cursor: pointer;" onclick="toggleAdminRosterTab('<%= team.name %>')">
+                                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                         <div style="font-weight: 800; color: #fff; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                                             <span style="color: var(--text-muted); margin-right: 1px; font-size: 0.76rem;"><%= index + 1 %>.</span>
+                                             <% if (team.logo) { %>
+                                                 <img src="<%= team.logo %>" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.12);">
+                                             <% } else { %>
+                                                 <span class="color-dot" <%- 'style="background-color: ' + team.color + '; width: 10px; height: 10px; border-radius: 3px; display: inline-block;"' %>></span>
+                                             <% } %>
+                                             <%= team.name %>
+                                         </div>
+                                         <div style="font-size: 0.95rem; font-weight: 800; color: var(--success);"><%= formatCurrency(team.budget) %></div>
+                                     </div>
+                                     <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.03); padding-top: 0.35rem; font-weight: 500; align-items: flex-end;">
+                                         <div style="display: flex; flex-direction: column; gap: 0.1rem;">
+                                             <span>Purse: <%= formatCurrency(team.budget) %></span>
+                                             <span style="color: var(--warning);">Reserve: <%= formatCurrency(reservePoints) %></span>
+                                         </div>
+                                         <div style="display: flex; flex-direction: column; gap: 0.1rem; align-items: flex-end;">
+                                             <span style="background: rgba(255,255,255,0.02); padding: 0.1rem 0.3rem; border-radius: 4px; color: #cbd5e1; font-size: 0.68rem;">Ply: <%= teamPlayers.length %>/<%= maxPlayers %></span>
+                                             <span style="color: var(--accent); font-weight: bold; font-size: 0.78rem;">Max Bid: <%= formatCurrency(maxBid) %></span>
+                                         </div>
+                                     </div>
+                                     <div class="team-roster-expand" id="tab-roster-<%= cleanTeamName %>" style="display: none; margin-top: 0.65rem; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 0.5rem;">
+                                         <div style="font-size: 0.68rem; color: var(--primary); font-weight: bold; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.5px;">Squad Roster</div>
+                                         <% if (teamPlayers.length === 0) { %>
+                                             <div style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">No players bought yet.</div>
+                                         <% } else { %>
+                                             <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                                 <% teamPlayers.sort((a,b)=>b.soldPrice-a.soldPrice).forEach(p => { %>
+                                                     <div style="display: flex; justify-content: space-between; font-size: 0.72rem; background: rgba(0,0,0,0.2); padding: 0.25rem 0.45rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.01);">
+                                                         <span style="color: #cbd5e1;"><%= p.name %> <%= p.isCaptain ? '👑' : '' %></span>
+                                                         <span style="color: var(--success); font-weight: bold;"><%= formatCurrency(p.soldPrice || 0) %></span>
+                                                     </div>
+                                                 <% }) %>
+                                             </div>
+                                         <% } %>
+                                     </div>
+                                 </div>
+                             <% }) %>
+                         </div>
+                     </div>
+                     
+                     <script>
+                         function switchRightTab(tab) {
+                             const btnBidding = document.getElementById('tabBtnBidding');
+                             const btnStandings = document.getElementById('tabBtnStandings');
+                             const contentBidding = document.getElementById('tabContentBidding');
+                             const contentStandings = document.getElementById('tabContentStandings');
+ 
+                             if (tab === 'bidding') {
+                                 btnBidding.style.background = 'rgba(15, 23, 42, 0.8)';
+                                 btnBidding.style.color = 'var(--success)';
+                                 btnBidding.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+                                 
+                                 btnStandings.style.background = 'rgba(255,255,255,0.01)';
+                                 btnStandings.style.color = 'var(--text-muted)';
+                                 btnStandings.style.borderColor = 'transparent';
+ 
+                                 contentBidding.style.display = 'flex';
+                                 contentStandings.style.display = 'none';
+                             } else {
+                                 btnStandings.style.background = 'rgba(15, 23, 42, 0.8)';
+                                 btnStandings.style.color = 'var(--success)';
+                                 btnStandings.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+                                 
+                                 btnBidding.style.background = 'rgba(255,255,255,0.01)';
+                                 btnBidding.style.color = 'var(--text-muted)';
+                                 btnBidding.style.borderColor = 'transparent';
+ 
+                                 contentStandings.style.display = 'flex';
+                                 contentBidding.style.display = 'none';
+                             }
+                         }
+                         
+                         function toggleAdminRosterTab(teamName) {
+                             const clean = teamName.replace(/\s+/g, '-');
+                             const el = document.getElementById('tab-roster-' + clean);
+                             if (el) {
+                                 if (el.style.display === 'none') {
+                                     el.style.display = 'block';
+                                 } else {
+                                     el.style.display = 'none';
+                                 }
+                             }
+                         }
+                     </script>
+                 </div>
+             </div>
+         </div>
+
+         <!-- DATA MANAGEMENT MODAL -->
+         <div id="dataModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7,11,20,0.92); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+             <div class="panel animate-fade-in" style="width: 95%; max-width: 1250px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: var(--bg-dark); padding: 1.5rem 2rem; border-radius: 16px; box-shadow: var(--shadow-luxury); text-align: left;">
+                 
+                 <!-- Header -->
+                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
+                     <h2 style="font-size: 1.45rem; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif;">⚙️ Database & System Management</h2>
+                     <button onclick="document.getElementById('dataModal').style.display='none'" class="btn btn-danger" style="padding: 0.45rem 1.25rem; font-weight: 800; font-size: 0.8rem; border-radius: 8px;">Close (X)</button>
+                 </div>
+
+                 <!-- Navigation Tabs -->
+                 <div style="display: flex; gap: 0.2rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0px; flex-shrink: 0;">
+                     <button class="modal-tab-btn active" onclick="switchModalTab('franchises')">🛡️ FRANCHISES</button>
+                     <button class="modal-tab-btn" onclick="switchModalTab('players')">👤 PLAYERS</button>
+                     <button class="modal-tab-btn" onclick="switchModalTab('categories')">📁 CATEGORIES</button>
+                     <button class="modal-tab-btn" onclick="switchModalTab('auction')">🏆 ADD AUCTION</button>
+                     <button class="modal-tab-btn" onclick="switchModalTab('advanced')">⚡ SYSTEM CONSOLE</button>
+                 </div>
+
+                 <!-- Tabs Content Container -->
+                 <div class="sleek-scroll" style="flex: 1; overflow-y: auto; padding-right: 0.4rem; min-height: 0;">
+                     
+                     <!-- TAB: CATEGORIES -->
+                     <div id="modalTabCategories" class="modal-tab-content" style="display: none;">
+                         <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.5rem; align-items: start;">
+                             <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
+                                 <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">📁 Add New Category</h3>
+                                 <form id="addCategoryForm" class="stacked-form">
+                                     <input type="hidden" name="submitAction" id="categorySubmitAction" value="add">
+                                     <input type="hidden" name="id" value="">
+                                     
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Category Name *:</label>
+                                         <input type="text" name="name" placeholder="Category Name" required class="form-control" style="border-radius: 8px !important;">
+                                     </div>
+
+                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                         <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                             <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Max Players / Team:</label>
+                                             <input type="number" name="maxPlayers" value="0" class="form-control" style="border-radius: 8px !important;">
+                                         </div>
+                                         <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                             <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Min Players:</label>
+                                             <input type="number" name="minPlayers" value="0" class="form-control" style="border-radius: 8px !important;">
+                                         </div>
+                                     </div>
+
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Base Bid:</label>
+                                         <input type="number" name="baseBid" value="0" class="form-control" style="border-radius: 8px !important;">
+                                     </div>
+
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Increment:</label>
+                                         <input type="number" name="increment" value="0" class="form-control" style="border-radius: 8px !important;">
+                                     </div>
+
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Reserve Bid:</label>
+                                         <input type="number" name="reserveBid" value="0" class="form-control" style="border-radius: 8px !important;">
+                                     </div>
+
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Highest Bid (per Player):</label>
+                                         <input type="number" name="highestBidPerPlayer" value="0" class="form-control" style="border-radius: 8px !important;">
+                                     </div>
+
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Category Highest Bid (all Players):</label>
+                                         <input type="number" name="categoryHighestBidAll" value="0" class="form-control" style="border-radius: 8px !important;">
+                                     </div>
+
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem; width: 100px;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Category Color:</label>
+                                         <div style="display: flex; align-items: center; justify-content: center; background: var(--bg-dark); border: 1px solid var(--border-color); padding: 0.3rem; border-radius: 8px; height: 38px;">
+                                             <input type="color" name="color" value="#ffffff" style="border: none; background: none; width: 28px; height: 28px; cursor: pointer; padding: 0;" title="Category Color">
+                                         </div>
+                                     </div>
+
+                                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                         <button type="submit" id="saveNewCategoryBtn" onclick="document.getElementById('categorySubmitAction').value='add_and_new'" class="btn btn-primary" style="flex: 1.2; padding: 0.55rem; font-size: 0.8rem;">SAVE & NEW</button>
+                                         <button type="submit" id="addCategoryBtn" onclick="document.getElementById('categorySubmitAction').value='add'" class="btn btn-secondary" style="flex: 1; padding: 0.55rem; font-size: 0.8rem;">SAVE</button>
+                                     </div>
+                                 </form>
+                             </div>
+                             <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; overflow-y: auto; max-height: 70vh; border-radius: 12px;">
+                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.4rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                                     <h3 style="margin: 0; font-size: 1rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">Existing Categories</h3>
+                                     <div style="display: flex; gap: 0.35rem;">
+                                         <button type="button" onclick="openBulkAddModal()" class="btn btn-secondary" style="padding: 0.3rem 0.65rem; font-size: 0.72rem; font-weight: 700; border-radius: 6px;">📁 Bulk Add</button>
+                                         <button type="button" onclick="openBulkRemoveModal()" class="btn btn-danger" style="padding: 0.3rem 0.65rem; font-size: 0.72rem; font-weight: 700; background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); border-radius: 6px;">🗑️ Bulk Remove</button>
+                                     </div>
+                                 </div>
+                                 <div id="modalCategoryList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                     <% data.categories.forEach(cat => { %>
+                                         <% 
+                                             const catPlayers = cat.id.startsWith('cat_all_')
+                                                 ? data.players.filter(p => p.status === 'sold')
+                                                 : data.players.filter(p => p.category_id === cat.id && p.status === 'sold');
+                                             const totalSold = catPlayers.reduce((sum, p) => sum + (p.soldPrice || 0), 0);
+                                             const soldCount = catPlayers.length;
+                                             const avgPrice = soldCount > 0 ? (totalSold / soldCount) : 0;
+                                             const currency = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+                                             
+                                             const minPlayers = cat.id.startsWith('cat_all_') 
+                                                 ? (data.auctionDetails ? (data.auctionDetails.playersPerTeamMin || 0) : 0)
+                                                 : (cat.minPlayers || 0);
+                                             const maxPlayers = cat.id.startsWith('cat_all_') 
+                                                 ? (data.auctionDetails ? (data.auctionDetails.playersPerTeamMax || 0) : 0)
+                                                 : (cat.maxPlayers || 0);
+                                             const baseBid = cat.id.startsWith('cat_all_') 
+                                                 ? (data.auctionDetails ? (data.auctionDetails.baseBid || 0) : 0)
+                                                 : (cat.baseBid || 0);
+                                         %>
+                                         <div class="list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: rgba(15, 23, 42, 0.45); border-radius: 8px; border-left: 4px solid <%= cat.color %>; border: 1px solid var(--border-color);">
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem; text-align: left;">
+                                                 <span style="font-weight: 800; font-size: 0.88rem; color: #fff;"><%= cat.name %></span>
+                                                 <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem;">
+                                                     <span>Min/Max: <%= minPlayers %>/<%= maxPlayers %></span>
+                                                     <span>Base Bid: <%= currency %><%= baseBid.toLocaleString() %></span>
+                                                     <span style="color: var(--accent); font-weight: 700;">Avg: <%= currency %><%= Math.round(avgPrice).toLocaleString() %></span>
+                                                 </div>
+                                             </div>
+                                             <div style="display: flex; gap: 0.35rem;">
+                                                 <button type="button" class="btn edit-category-btn" data-id="<%= cat.id %>" data-name="<%= cat.name %>" data-maxplayers="<%= maxPlayers %>" data-minplayers="<%= minPlayers %>" data-basebid="<%= baseBid %>" data-increment="<%= cat.increment %>" data-reservebid="<%= cat.reserveBid %>" data-highestbidperplayer="<%= cat.highestBidPerPlayer %>" data-categoryhighestbidall="<%= cat.categoryHighestBidAll %>" data-color="<%= cat.color %>" style="background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" title="Edit Category Details">✏️ Edit</button>
+                                                 <% if (!cat.id.startsWith('cat_all_')) { %>
+                                                     <button type="button" onclick="deleteCategory('<%= cat.id %>')" class="btn btn-danger" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; font-weight: 600; border-radius: 6px;">DELETE</button>
+                                                 <% } %>
+                                             </div>
+                                         </div>
+                                     <% }) %>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+
+                     <!-- TAB: FRANCHISES -->
+                     <div id="modalTabFranchises" class="modal-tab-content" style="display: block;">
+                         <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.5rem; align-items: start;">
+                             <!-- Form Card -->
+                             <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
+                                 <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">🛡️ Add New Franchise</h3>
+                                  <form id="addTeamForm" class="stacked-form" enctype="multipart/form-data">
+                                     <input type="hidden" name="submitAction" id="teamSubmitAction" value="add">
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Team Logo Asset *:</label>
+                                         <div style="display: flex; align-items: center; gap: 0.85rem; background: var(--bg-dark); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                                             <div id="logoPreviewContainer" style="width: 50px; height: 50px; border-radius: 6px; border: 1.5px dashed rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden; background: #04060f; flex-shrink: 0;">
+                                                 <img id="logoPreview" src="/uploads/default-player.svg" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.35;">
+                                             </div>
+                                             <div style="flex: 1;">
+                                                 <input type="file" name="logo" id="logoInput" accept="image/*" class="form-control" style="font-size: 0.75rem; background: transparent; border: none; padding: 0;" onchange="if (this.files[0]) { document.getElementById('logoPreview').src = URL.createObjectURL(this.files[0]); document.getElementById('logoPreview').style.opacity = '1'; }">
+                                                 <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.15rem;">PNG, JPG or SVG formats.</div>
+                                             </div>
+                                         </div>
+                                     </div>
+
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Team Name *:</label>
+                                         <input type="text" name="name" placeholder="Team Name" required class="form-control" style="border-radius: 8px !important;">
+                                     </div>
+
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Team Short Name *:</label>
+                                         <input type="text" name="shortName" placeholder="Short Name" required class="form-control" style="border-radius: 8px !important;">
+                                     </div>
+
+                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Shortcut Keyboard Key *:</label>
+                                         <input type="text" name="shortcutKey" placeholder="Shortcut Key (e.g. A, 1)" required maxlength="1" class="form-control" style="border-radius: 8px !important;">
+                                     </div>
+
+                                     <div style="display: flex; gap: 1rem;">
+                                         <div style="display: flex; flex-direction: column; gap: 0.3rem; width: 100px;">
+                                             <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Theme Color:</label>
+                                             <div style="display: flex; align-items: center; justify-content: center; background: var(--bg-dark); border: 1px solid var(--border-color); padding: 0.3rem; border-radius: 8px; height: 38px;">
+                                                 <input type="color" name="color" value="#3b82f6" style="border: none; background: none; width: 28px; height: 28px; cursor: pointer; padding: 0;" title="Team Theme Color">
+                                             </div>
+                                         </div>
+                                     </div>
+
+                                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                         <button type="submit" id="saveNewTeamBtn" onclick="document.getElementById('teamSubmitAction').value='add_and_new'" class="btn btn-primary" style="flex: 1.2; padding: 0.55rem; font-size: 0.8rem;">SAVE & NEW</button>
+                                         <button type="submit" id="addTeamBtn" onclick="document.getElementById('teamSubmitAction').value='add'" class="btn btn-secondary" style="flex: 1; padding: 0.55rem; font-size: 0.8rem;">SAVE</button>
+                                     </div>
+                                  </form>
+                             </div>
+
+                             <!-- Directory Table Card -->
+                             <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
+                                 <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">📋 Registered Franchises Directory</h3>
+                                 <div style="max-height: 52vh; overflow-y: auto;">
+                                     <table class="data-table" id="teamsTable">
+                                         <thead>
+                                             <tr>
+                                                 <th style="font-size: 0.72rem !important;">TEAM IDENTITY</th>
+                                                 <th style="font-size: 0.72rem !important;">SHORT NAME</th>
+                                                 <th style="text-align: center; font-size: 0.72rem !important;">NOMINATE KEY</th>
+                                                 <th style="text-align: right; font-size: 0.72rem !important;">WALLET BUDGET</th>
+                                                 <th style="text-align: right; font-size: 0.72rem !important;">ACTIONS</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody>
+                                             <% 
+                                             const tblUnits = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+                                             const formatTblCurrency = (amt) => ['₹', '$', '€', '£'].includes(tblUnits) ? `${tblUnits}${amt.toLocaleString()}` : `${amt.toLocaleString()} ${tblUnits}`;
+                                             %>
+                                             <% data.teams.forEach(team => { %>
+                                                 <tr onclick="toggleAdminRoster('<%= team.name %>')" style="cursor: pointer;">
+                                                     <td style="vertical-align: middle;">
+                                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                             <% if (team.logo) { %>
+                                                                 <img src="<%= team.logo %>" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.12);">
+                                                             <% } else { %>
+                                                                 <span class="color-dot" <%- 'style="background-color: ' + team.color + '; width: 10px; height: 10px; border-radius: 3px; display: inline-block;"' %>></span>
+                                                             <% } %>
+                                                             <span style="font-weight: 800; color: #fff; font-size: 0.88rem;"><%= team.name %></span>
+                                                             <span class="admin-toggle-arrow" style="font-size: 0.7rem; color: var(--text-muted); margin-left: 0.15rem;">▼</span>
+                                                         </div>
+                                                     </td>
+                                                     <td style="color: var(--text-muted); vertical-align: middle;"><%= team.shortName || '--' %></td>
+                                                     <td style="text-align: center; vertical-align: middle;"><span style="background: rgba(59, 130, 246, 0.08); color: var(--accent); padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.72rem; font-weight: bold; border: 1px solid rgba(59,130,246,0.15);">Key <%= team.shortcutKey || '--' %></span></td>
+                                                     <td style="text-align: right; font-weight: 700; color: var(--success); vertical-align: middle;"><%= formatTblCurrency(team.budget) %></td>
+                                                     <td style="text-align: right; vertical-align: middle;" onclick="event.stopPropagation();">
+                                                         <button type="button" class="btn edit-team-btn" data-id="<%= team.id %>" data-name="<%= team.name %>" data-shortname="<%= team.shortName || '' %>" data-shortcutkey="<%= team.shortcutKey || '' %>" data-budget="<%= team.budget %>" data-color="<%= team.color %>" data-logo="<%= team.logo || '' %>" style="background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.2rem; margin-right: 0.2rem;" title="Edit Franchise Details">✏️ Edit</button>
+                                                         <button type="button" onclick="deleteTeam('<%= team.id %>')" class="btn btn-danger" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; font-weight: 600; border-radius: 6px; cursor: pointer;" title="Delete Franchise Team">🗑️ Delete</button>
+                                                     </td>
+                                                 </tr>
+                                                 <tr class="admin-roster-row" id="admin-roster-<%= team.name.replace(/\s+/g, '-') %>" style="display: none; background: rgba(7, 11, 20, 0.45);">
+                                                     <td colspan="5" style="padding: 0.85rem 1.15rem; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                                         <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                                                             <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem; display: flex; justify-content: space-between; align-items: center;">
+                                                                 <span>Squad Roster & Nominate Captain Authority</span>
+                                                                 <span style="font-size: 0.68rem; text-transform: none; font-weight: normal; color: var(--warning);">★ Click a player card to toggle Nominate as Captain</span>
+                                                             </div>
+                                                             <% const teamPlayers = data.players.filter(p => p.soldTo === team.name); %>
+                                                             <% if (teamPlayers.length === 0) { %>
+                                                                 <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic; text-align: left;">No players drafted to this franchise yet.</div>
+                                                             <% } else { %>
+                                                                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem;">
+                                                                     <% teamPlayers.sort((a, b) => b.soldPrice - a.soldPrice).forEach(player => { %>
+                                                                         <div onclick="nominateCaptain('<%= player.id %>', '<%= team.name %>')" class="captain-card-option" <%- 'style="display: flex; justify-content: space-between; align-items: center; background: ' + (player.isCaptain ? 'rgba(212, 175, 55, 0.06)' : 'rgba(0,0,0,0.25)') + '; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid ' + (player.isCaptain ? 'var(--border-color-active)' : 'rgba(255,255,255,0.02)') + '; cursor: pointer; transition: all 0.2s;"' %>>
+                                                                             <div style="display: flex; align-items: center; gap: 0.45rem; text-align: left;">
+                                                                                 <img src="<%= player.photo ? player.photo : '/uploads/default-player.svg' %>" <%- 'style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1.5px solid ' + (player.isCaptain ? 'var(--primary)' : 'rgba(255,255,255,0.08)') + ';"' %>>
+                                                                                 <div style="display: flex; flex-direction: column;">
+                                                                                     <span <%- 'style="font-size: 0.76rem; font-weight: 700; color: ' + (player.isCaptain ? 'var(--primary)' : '#f8fafc') + ';"' %>>
+                                                                                         <%= player.name %> <%= player.isCaptain ? '👑' : '' %>
+                                                                                     </span>
+                                                                                     <span style="font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase;"><%= player.role %></span>
+                                                                                 </div>
+                                                                             </div>
+                                                                             <span style="font-size: 0.76rem; font-weight: bold; color: var(--success);"><%= formatTblCurrency(player.soldPrice) %></span>
+                                                                         </div>
+                                                                     <% }) %>
+                                                                 </div>
+                                                             <% } %>
+                                                         </div>
+                                                     </td>
+                                                 </tr>
+                                             <% }) %>
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+
+                     <!-- TAB: PLAYERS -->
+                     <div id="modalTabPlayers" class="modal-tab-content" style="display: none;">
+                         <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.5rem; align-items: start;">
+                             <!-- Left Form & CSV Upload Column -->
+                             <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                                 <!-- Add Player Form -->
+                                 <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
+                                     <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">👤 Register New Player</h3>
+                                     <form id="addPlayerForm" class="stacked-form" enctype="multipart/form-data">
+                                         <input type="hidden" name="submitAction" id="playerSubmitAction" value="add">
+                                         
+                                         <!-- Top Row: Photo & Fast fields -->
+                                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                                             <!-- Left: Profile Pic Picker -->
+                                             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                                 <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">Profile Pic:</label>
+                                                 <div style="display: flex; align-items: center; gap: 0.6rem; background: var(--bg-dark); padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                                                     <div style="width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.08); overflow: hidden; background: #04060f; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                                                         <img id="playerPhotoPreview" src="/uploads/default-player.svg" style="width: 100%; height: 100%; object-fit: cover;">
+                                                     </div>
+                                                     <div style="flex: 1; overflow: hidden;">
+                                                         <input type="file" name="photo" id="playerPhotoInput" accept="image/*" style="font-size: 0.7rem; color: var(--text-muted); border: none; background: transparent; padding: 0; width: 100%;" onchange="if (this.files[0]) { document.getElementById('playerPhotoPreview').src = URL.createObjectURL(this.files[0]); }">
+                                                     </div>
+                                                 </div>
+                                             </div>
+
+                                             <!-- Right: Form No & Age -->
+                                             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                                 <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                     <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Form No:</label>
+                                                     <input type="text" name="formNo" id="playerFormNoInput" placeholder="Form Number" class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                                     <span id="formNoError" style="color: var(--danger); font-size: 0.68rem; display: none; margin-top: 1px;">⚠️ Already registered!</span>
+                                                 </div>
+                                                 <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                     <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Age:</label>
+                                                     <input type="number" name="age" placeholder="Age" class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                                 </div>
+                                             </div>
+                                         </div>
+
+                                         <!-- Second Row: Name & Father Name -->
+                                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">Name *:</label>
+                                                 <input type="text" name="name" placeholder="Name" required class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                             </div>
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Father Name:</label>
+                                                 <input type="text" name="fatherName" placeholder="Father Name" class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                             </div>
+                                         </div>
+
+                                         <!-- Third Row: Mobile No & Tag/Owner -->
+                                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Mobile No:</label>
+                                                 <input type="text" name="phone" placeholder="Mobile Number" class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                             </div>
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Tag/Owner:</label>
+                                                 <select name="tagOwner" class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                                     <option value="">Select tag</option>
+                                                     <option value="Icon Player">Icon Player</option>
+                                                     <option value="Premium Player">Premium Player</option>
+                                                     <option value="A Category">A Category</option>
+                                                     <option value="B Category">B Category</option>
+                                                     <option value="Custom">Custom Tag</option>
+                                                 </select>
+                                             </div>
+                                         </div>
+
+                                         <!-- Custom tag input -->
+                                         <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                             <input type="text" name="customTag" placeholder="Custom tag (if applicable)" class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                         </div>
+
+                                         <!-- Fourth Row: Playing Style Icon Radios -->
+                                         <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                                             <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">Playing Style:</label>
+                                             <input type="hidden" name="role" id="playerRoleInput" value="Batsman" required>
+                                             <div style="display: flex; gap: 1rem; align-items: center; justify-content: center; background: var(--bg-dark); padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                                                 <div onclick="selectPlayingStyle('Batsman')" id="style-Batsman" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: rgba(212, 175, 55, 0.15); border: 2.5px solid var(--primary); cursor: pointer; transition: all 0.2s; font-size: 1.35rem; box-shadow: 0 0 10px rgba(212, 175, 55, 0.25);" title="Batsman">🏏</div>
+                                                 <div onclick="selectPlayingStyle('Bowler')" id="style-Bowler" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #04060f; border: 2.5px solid rgba(255,255,255,0.08); cursor: pointer; transition: all 0.2s; font-size: 1.35rem;" title="Bowler">🔴</div>
+                                                 <div onclick="selectPlayingStyle('Wicket-Keeper')" id="style-Wicket-Keeper" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #04060f; border: 2.5px solid rgba(255,255,255,0.08); cursor: pointer; transition: all 0.2s; font-size: 1.35rem;" title="Wicket-Keeper">🧤</div>
+                                                 <div onclick="selectPlayingStyle('All-Rounder')" id="style-All-Rounder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #04060f; border: 2.5px solid rgba(255,255,255,0.08); cursor: pointer; transition: all 0.2s; font-size: 1.35rem;" title="All-Rounder">💫</div>
+                                             </div>
+                                         </div>
+
+                                         <!-- Fifth Row: Specifications -->
+                                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem;">
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">Spec 1:</label>
+                                                 <select name="specification1" class="form-control" style="padding: 0.45rem !important; font-size: 0.78rem !important; border-radius: 8px !important;">
+                                                     <option value="">-Spec 1-</option>
+                                                     <option value="Right Handed">Right Handed</option>
+                                                     <option value="Left Handed">Left Handed</option>
+                                                 </select>
+                                             </div>
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">Spec 2:</label>
+                                                 <select name="specification2" class="form-control" style="padding: 0.45rem !important; font-size: 0.78rem !important; border-radius: 8px !important;">
+                                                     <option value="">-Spec 2-</option>
+                                                     <option value="Fast Bowler">Fast Bowler</option>
+                                                     <option value="Spin Bowler">Spin Bowler</option>
+                                                     <option value="Medium Pacer">Medium Pacer</option>
+                                                 </select>
+                                             </div>
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">Spec 3:</label>
+                                                 <select name="specification3" class="form-control" style="padding: 0.45rem !important; font-size: 0.78rem !important; border-radius: 8px !important;">
+                                                     <option value="">-Spec 3-</option>
+                                                     <option value="Opening Batsman">Opening Batsman</option>
+                                                     <option value="Middle Order">Middle Order</option>
+                                                     <option value="Finisher">Finisher</option>
+                                                 </select>
+                                             </div>
+                                         </div>
+
+                                         <!-- Sixth Row: T-shirt size & Jersey Name -->
+                                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">T-shirt size:</label>
+                                                 <input type="text" name="tshirtSize" placeholder="S/M/L/XL/..." class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                             </div>
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Jersey Name:</label>
+                                                 <input type="text" name="jerseyName" placeholder="Jersey Name" class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                             </div>
+                                         </div>
+
+                                         <!-- Seventh Row: Jersey Number & Trouser Size -->
+                                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Jersey Number:</label>
+                                                 <input type="text" name="jerseyNumber" placeholder="Jersey Number" class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                             </div>
+                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                 <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Trouser Size:</label>
+                                                 <input type="text" name="trouserSize" placeholder="S/M/L/XL/..." class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                             </div>
+                                         </div>
+
+                                         <!-- Eighth Row: Detail -->
+                                         <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                             <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Detail:</label>
+                                             <textarea name="detail" placeholder="Detail" rows="2" class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important; resize: vertical;"></textarea>
+                                         </div>
+                                         
+                                         <!-- Category Selection -->
+                                         <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                             <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">Category:</label>
+                                             <select name="category_id" class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                                 <% data.categories.forEach(cat => { %>
+                                                     <option value="<%= cat.id %>"><%= cat.name %> (Max: <%= cat.maxPlayers %>)</option>
+                                                 <% }) %>
+                                             </select>
+                                         </div>
+
+                                         <!-- Ninth Row: Base Value -->
+                                         <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                             <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">Base Price *:</label>
+                                             <input type="number" name="basePrice" placeholder="Base Price" required class="form-control" style="padding: 0.45rem 0.7rem !important; border-radius: 8px !important;">
+                                             <span style="font-size: 0.68rem; color: var(--text-muted); margin-top: 0.1rem;">(If different from Minimum Base or Category Base Value)</span>
+                                         </div>
+
+                                         <!-- Action Buttons -->
+                                         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                             <button type="submit" id="saveNewPlayerBtn" onclick="document.getElementById('playerSubmitAction').value='add_and_new'" class="btn btn-primary" style="flex: 1.2; padding: 0.55rem; font-size: 0.8rem;">SAVE & NEW</button>
+                                             <button type="submit" id="addPlayerBtn" onclick="document.getElementById('playerSubmitAction').value='add'" class="btn btn-secondary" style="flex: 1; padding: 0.55rem; font-size: 0.8rem;">SAVE</button>
+                                         </div>
+                                     </form>
+                                 </div>
+
+                                 <!-- CSV / Excel Upload Card -->
+                                 <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
+                                     <h3 style="margin: 0 0 0.85rem 0; font-size: 0.95rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">📥 CSV / Excel Bulk Import</h3>
+                                     <form id="uploadCsvForm" class="stacked-form">
+                                         <label style="color: var(--text-muted); font-size: 0.75rem; line-height: 1.4;">Upload a spreadsheet CSV or Excel (.xlsx, .xls) file. Columns: <strong>Name, BasePrice, Role</strong></label>
+                                         <div style="display: flex; gap: 0.4rem; align-items: center; margin-top: 0.4rem;">
+                                             <input type="file" name="csvFile" accept=".csv, .xlsx, .xls" required class="form-control" style="font-size: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border-color); padding: 0.35rem !important; border-radius: 8px !important;">
+                                             <button type="submit" class="btn btn-primary" style="padding: 0.55rem 1.15rem; font-size: 0.8rem; font-weight: 800; white-space: nowrap; border-radius: 8px;">Upload</button>
+                                         </div>
+                                     </form>
+                                 </div>
+                             </div>
+
+                             <!-- Right Column (Directory & Bulk Photo Upload) -->
+                             <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+
+                                 <!-- Players Table -->
+                                 <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
+                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.85rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                                         <h3 style="margin: 0; font-size: 1rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">📋 Registered Players Directory</h3>
+                                         <button id="bulkUnsoldBtn" onclick="bulkUnsoldSelectedPlayers()" class="btn" style="background: rgba(245, 158, 11, 0.15); color: #fb923c; border: 1px solid rgba(245, 158, 11, 0.25); padding: 0.35rem 0.85rem; border-radius: 6px; font-weight: bold; font-size: 0.75rem; cursor: pointer;" disabled>
+                                             ↩️ Bulk Unsold (0 Selected)
+                                         </button>
+                                     </div>
+                                     <div style="max-height: 52vh; overflow-y: auto;">
+                                         <table class="data-table" id="playersTable">
+                                             <thead>
+                                                 <tr>
+                                                     <th style="width: 36px; text-align: center;"><input type="checkbox" id="selectAllPlayers" onchange="toggleSelectAllPlayers(this)"></th>
+                                                     <th style="font-size: 0.72rem !important;">PLAYER NUMBER</th>
+                                                     <th style="font-size: 0.72rem !important;">PLAYER NAME</th>
+                                                     <th style="font-size: 0.72rem !important;">CATEGORY</th>
+                                                     <th style="font-size: 0.72rem !important;">PLAYING ROLE</th>
+                                                     <th style="text-align: right; font-size: 0.72rem !important;">STATUS</th>
+                                                     <th style="text-align: right; font-size: 0.72rem !important;">ACTIONS</th>
+                                                 </tr>
+                                             </thead>
+                                             <tbody>
+                                                 <% data.players.sort((a, b) => a.name.localeCompare(b.name)).forEach(player => { %>
+                                                     <% 
+                                                         const cat = data.categories ? data.categories.find(c => c.id === player.category_id) : null;
+                                                         const catName = cat ? cat.name : 'OPEN';
+                                                     %>
+                                                     <tr style="font-size: 0.85rem;">
+                                                         <td style="text-align: center; vertical-align: top; padding: 0.65rem 0.5rem !important;">
+                                                             <% if (player.status === 'sold') { %>
+                                                                 <input type="checkbox" class="player-select-checkbox" data-id="<%= player.id %>" onchange="updateBulkBtnState()">
+                                                             <% } else { %>
+                                                                 <input type="checkbox" disabled style="opacity: 0.25;">
+                                                             <% } %>
+                                                         </td>
+                                                         <td style="font-family: monospace; font-weight: bold; vertical-align: top; color: var(--accent); padding: 0.65rem 0.5rem !important;">
+                                                             #<%= player.formNo || 'N/A' %>
+                                                         </td>
+                                                         <td style="font-weight: 700; vertical-align: top; text-align: left; padding: 0.65rem 0.5rem !important;">
+                                                             <%= player.name %>
+                                                             <% if (player.detail) { %>
+                                                                 <div style="font-size: 0.7rem; font-weight: normal; color: var(--text-muted); margin-top: 0.25rem; white-space: pre-wrap; line-height: 1.3; background: rgba(0,0,0,0.2); padding: 0.3rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); font-family: monospace; max-width: 400px; max-height: 70px; overflow-y: auto; text-align: left;"><%= player.detail %></div>
+                                                             <% } %>
+                                                         </td>
+                                                         <td style="color: var(--text-muted); vertical-align: top; text-align: left; padding: 0.65rem 0.5rem !important;"><%= catName %></td>
+                                                         <td style="color: var(--text-muted); vertical-align: top; text-align: left; padding: 0.65rem 0.5rem !important;"><%= player.role %></td>
+                                                         <td style="text-align: right; vertical-align: top; padding: 0.65rem 0.5rem !important;">
+                                                             <span class="badge badge-<%= player.status %>" style="font-size: 0.65rem !important; padding: 0.15rem 0.4rem !important;"><%= player.status.toUpperCase() %></span>
+                                                         </td>
+                                                          <td style="text-align: right; vertical-align: top; padding: 0.65rem 0.5rem !important;" onclick="event.stopPropagation();">
+                                                              <% if (player.status === 'sold') { %>
+                                                                  <button onclick="markPlayerUnsold('<%= player.id %>')" class="btn" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-right: 0.25rem;" title="Revert player to Unsold status">↩️ Unsold</button>
+                                                              <% } %>
+                                                              <button class="btn edit-player-btn" data-id="<%= player.id %>" data-name="<%= player.name %>" data-role="<%= player.role %>" data-baseprice="<%= player.basePrice %>" data-phone="<%= player.phone || '' %>" data-photo="<%= player.photo || '' %>" data-formno="<%= player.formNo || '' %>" data-age="<%= player.age || '' %>" data-fathername="<%= player.fatherName || '' %>" data-tagowner="<%= player.tagOwner || '' %>" data-customtag="<%= player.customTag || '' %>" data-specification1="<%= player.specification1 || '' %>" data-specification2="<%= player.specification2 || '' %>" data-specification3="<%= player.specification3 || '' %>" data-tshirtsize="<%= player.tshirtSize || '' %>" data-jerseyname="<%= player.jerseyName || '' %>" data-jerseynumber="<%= player.jerseyNumber || '' %>" data-trousersize="<%= player.trouserSize || '' %>" data-detail="<%= player.detail || '' %>" style="background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-right: 0.25rem;" title="Edit Player Details">✏️ Edit</button>
+                                                             <button onclick="deletePlayer('<%= player.id %>')" class="btn btn-danger" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; font-weight: 600; border-radius: 6px;" title="Delete Player Completely">🗑️ Delete</button>
+                                                         </td>
+                                                     </tr>
+                                                 <% }) %>
+                                             </tbody>
+                                         </table>
+                                     </div>
+                                 </div>
+
+                                 <!-- Bulk Player Photo Upload Card -->
+                                 <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
+                                     <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">📸 Bulk Player Photo Upload</h3>
+                                     
+                                     <!-- Step 1: Select Upload Source -->
+                                     <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; text-align: left;">
+                                         <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">1. Select Upload Source:</label>
+                                         <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                                             <button type="button" class="btn bulk-source-btn active" id="btnSourceExcel" onclick="switchBulkPhotoSource('excel')" style="flex: 1; padding: 0.45rem; font-size: 0.72rem; font-weight: bold; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 6px;">📄 Excel</button>
+                                             <button type="button" class="btn bulk-source-btn" id="btnSourceFolder" onclick="switchBulkPhotoSource('folder')" style="flex: 1; padding: 0.45rem; font-size: 0.72rem; font-weight: bold; background: rgba(255, 255, 255, 0.02); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 6px;">📁 Folder</button>
+                                             <button type="button" class="btn bulk-source-btn" id="btnSourceGdrive" onclick="switchBulkPhotoSource('gdrive')" style="flex: 1; padding: 0.45rem; font-size: 0.72rem; font-weight: bold; background: rgba(255, 255, 255, 0.02); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 6px;">☁️ GDrive</button>
+                                         </div>
+                                     </div>
+
+                                     <!-- Inputs container based on source -->
+                                     <div id="bulkSourceInputs" style="margin-bottom: 1rem; text-align: left;">
+                                         <!-- Excel Input -->
+                                         <div id="inputGroupExcel" class="bulk-input-group" style="display: block;">
+                                             <label style="color: var(--text-muted); font-size: 0.72rem; display: block; margin-bottom: 0.35rem; line-height: 1.4;">
+                                                 Upload spreadsheet (.xlsx, .xls, .csv). Supported columns: <strong>Player ID</strong>, <strong>Form Number</strong>, <strong>Player Name</strong>, and <strong>Photo URL</strong>.
+                                             </label>
+                                             <input type="file" id="bulkExcelFileInput" accept=".xlsx, .xls, .csv" class="form-control" style="font-size: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border-color); padding: 0.35rem !important; border-radius: 8px !important;">
+                                         </div>
+
+                                         <!-- Local Folder Input -->
+                                         <div id="inputGroupFolder" class="bulk-input-group" style="display: none;">
+                                             <label style="color: var(--text-muted); font-size: 0.72rem; display: block; margin-bottom: 0.35rem; line-height: 1.4;">
+                                                 Select folder of images. Filenames should match Player ID, Form Number, Player Number, or Player Name.
+                                             </label>
+                                             <input type="file" id="bulkFolderFileInput" webkitdirectory directory multiple class="form-control" style="font-size: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border-color); padding: 0.35rem !important; border-radius: 8px !important;">
+                                         </div>
+
+                                         <!-- Google Drive Input -->
+                                         <div id="inputGroupGdrive" class="bulk-input-group" style="display: none;">
+                                             <label style="color: var(--text-muted); font-size: 0.72rem; display: block; margin-bottom: 0.35rem; line-height: 1.4;">
+                                                 Paste a public Google Drive file or folder link. Images will be automatically fetched, matched, and assigned.
+                                             </label>
+                                             <input type="text" id="bulkGDriveLinkInput" placeholder="Paste Google Drive Link" class="form-control" style="border-radius: 8px !important;">
+                                         </div>
+                                     </div>
+
+                                     <!-- Step 2: Upload & Sync button -->
+                                     <button type="button" id="bulkSyncBtn" onclick="executeBulkPhotoUpload()" class="btn btn-success" style="width: 100%; padding: 0.65rem; font-size: 0.8rem; border-radius: 8px;">
+                                         ⚡ Upload & Sync
+                                     </button>
+
+                                     <!-- Progress / Result Summary Display -->
+                                     <div id="bulkSyncStatusContainer" style="display: none; margin-top: 0.85rem; background: rgba(7, 11, 20, 0.4); border-radius: 8px; border: 1px solid var(--border-color); padding: 0.75rem; flex-direction: column; gap: 0.5rem; text-align: left;">
+                                         <div style="display: flex; justify-content: space-between; align-items: center;">
+                                             <span id="bulkStatusTitle" style="font-weight: bold; font-size: 0.75rem; color: #f8fafc;">Syncing...</span>
+                                             <span id="bulkStatusCount" style="font-family: monospace; font-size: 0.72rem; color: var(--text-muted);">0/0</span>
+                                         </div>
+                                         <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden;">
+                                             <div id="bulkStatusProgressBar" style="width: 0%; height: 100%; background: var(--success); transition: width 0.1s ease;"></div>
+                                         </div>
+                                         
+                                         <!-- Summary Report Section -->
+                                         <div id="bulkSummaryReport" style="display: none; flex-direction: column; gap: 0.3rem; font-size: 0.75rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem;">
+                                             <div style="font-weight: bold; color: var(--success); margin-bottom: 0.15rem; font-size: 0.78rem;">Import Completed Successfully</div>
+                                             <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Total Photos:</span><span id="sumTotal" style="font-weight: bold; color: #f8fafc;">0</span></div>
+                                             <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Successfully Assigned:</span><span id="sumAssigned" style="font-weight: bold; color: var(--success);">0</span></div>
+                                             <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Skipped:</span><span id="sumSkipped" style="font-weight: bold; color: var(--warning);">0</span></div>
+                                             <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Failed:</span><span id="sumFailed" style="font-weight: bold; color: var(--danger);">0</span></div>
+                                             <div style="margin: 0.25rem 0; border-top: 1px dashed rgba(255,255,255,0.03);"></div>
+                                             <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Matched by ID/Form/Number:</span><span id="sumById" style="color: #cbd5e1;">0</span></div>
+                                             <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Matched by Name:</span><span id="sumByName" style="color: #cbd5e1;">0</span></div>
+                                             
+                                             <!-- Unmatched List -->
+                                             <div id="unmatchedListContainer" style="display: none; margin-top: 0.35rem; font-size: 0.68rem; background: rgba(239, 68, 68, 0.04); border: 1px solid rgba(239, 68, 68, 0.1); padding: 0.35rem; border-radius: 4px; max-height: 80px; overflow-y: auto;">
+                                                 <div style="color: #f87171; font-weight: bold; margin-bottom: 0.1rem;">Unmatched Photos:</div>
+                                                 <ul id="unmatchedList" style="margin: 0; padding-left: 0.85rem; color: #fca5a5; line-height: 1.2;"></ul>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+
+                     <!-- TAB 3: ADD AUCTION -->
+                     <div id="modalTabAuction" class="modal-tab-content" style="display: none;">
+                         <!-- Inner Auction Tabs Header -->
+                         <div style="display: flex; gap: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 1.25rem; padding-bottom: 0px;">
+                             <button type="button" id="innerTabBtnForm" onclick="switchInnerAuctionTab('form')" class="modal-tab-btn active">➕ Create / Edit Auction</button>
+                             <button type="button" id="innerTabBtnList" onclick="switchInnerAuctionTab('list')" class="modal-tab-btn">📦 Created Auctions (<%= data.auctionsList ? data.auctionsList.length : 0 %>)</button>
+                         </div>
+
+                         <!-- INNER TAB 1: FORM -->
+                         <div id="innerTabAuctionForm" style="display: block;">
+                             <form id="updateAuctionForm" enctype="multipart/form-data" class="stacked-form" style="max-width: 600px; margin: 0 auto; gap: 1rem;">
+                                 <input type="hidden" name="auctionId" id="editAuctionIdInput" value="">
+                                 <input type="hidden" name="submitAction" id="auctionSubmitActionInput" value="create">
+                                 
+                                 <!-- Auction Logo Picker -->
+                                 <div style="display: flex; gap: 1.25rem; align-items: center; text-align: left;">
+                                     <label style="font-weight: 700; color: var(--text-muted); width: 130px; font-size: 0.78rem; text-transform: uppercase;">Auction Logo</label>
+                                     <div style="display: flex; gap: 0.85rem; align-items: center;">
+                                         <div style="width: 72px; height: 72px; border-radius: 8px; border: 2px dashed rgba(255,255,255,0.12); background: rgba(15, 23, 42, 0.3); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+                                             <img id="auctionLogoPreview" src="/uploads/default-auction.svg" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.src='/uploads/default-auction.svg'">
+                                         </div>
+                                         <div style="position: relative; overflow: hidden; display: inline-block;">
+                                             <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.85rem; border-radius: 6px; pointer-events: none;">CHOOSE FILE</button>
+                                             <input type="file" name="logo" accept="image/*" onchange="previewAuctionLogo(this)" style="position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
+                                         </div>
+                                     </div>
+                                 </div>
+
+                                 <!-- Sports Type & Season Row -->
+                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; text-align: left;">
+                                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Sports Type*</label>
+                                         <select name="sportsType" id="editSportsType" required class="form-control" style="border-radius: 8px !important;">
+                                             <option value="Cricket" selected>Cricket</option>
+                                             <option value="Football">Football</option>
+                                             <option value="Kabaddi">Kabaddi</option>
+                                             <option value="Basketball">Basketball</option>
+                                             <option value="Other">Other</option>
+                                         </select>
+                                     </div>
+                                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Season</label>
+                                         <select name="season" id="editSeason" class="form-control" style="border-radius: 8px !important;">
+                                             <option value="2026" selected>2026</option>
+                                             <option value="2025">2025</option>
+                                             <option value="2024">2024</option>
+                                             <option value="2023">2023</option>
+                                         </select>
+                                     </div>
+                                 </div>
+
+                                 <!-- Auction Name Row -->
+                                 <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem; text-align: left;">
+                                     <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Auction Name*</label>
+                                     <input type="text" name="name" id="editAuctionName" required class="form-control" placeholder="IPL Mega Auction 2026" style="border-radius: 8px !important;">
+                                 </div>
+
+                                 <!-- Auction Date & Time Row -->
+                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; text-align: left;">
+                                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Auction Date*</label>
+                                         <input type="date" name="auctionDate" id="editAuctionDate" required class="form-control" style="color-scheme: dark; border-radius: 8px !important;">
+                                     </div>
+                                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Auction Time</label>
+                                         <input type="time" name="auctionTime" id="editAuctionTime" class="form-control" style="color-scheme: dark; border-radius: 8px !important;">
+                                     </div>
+                                 </div>
+
+                                 <!-- Points Per Team & Units Row -->
+                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; text-align: left;">
+                                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Purse Points Per Team*</label>
+                                         <input type="number" name="pointsPerTeam" id="editPointsPerTeam" required class="form-control" value="100000" style="border-radius: 8px !important;">
+                                     </div>
+                                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Purse Units (Symbol)</label>
+                                         <input type="text" name="units" id="editUnits" class="form-control" placeholder="e.g. ₹, $, CR/LAC" value="CR/LAC" style="border-radius: 8px !important;">
+                                     </div>
+                                 </div>
+
+                                 <!-- Base Bid & Bid Increase by Stacked -->
+                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; text-align: left;">
+                                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Default Base Bid*</label>
+                                         <input type="number" step="any" name="baseBid" id="editBaseBid" required class="form-control" value="1000.00" style="border-radius: 8px !important;">
+                                     </div>
+                                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Default Bid Increments*</label>
+                                         <input type="number" step="any" name="bidIncreaseBy" id="editBidIncreaseBy" required class="form-control" value="500.00" style="border-radius: 8px !important;">
+                                     </div>
+                                 </div>
+
+                                 <!-- Player Per Team Limits -->
+                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; text-align: left;">
+                                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Player Count / Team (Max)*</label>
+                                         <input type="number" name="playersPerTeamMax" id="editPlayersMax" required class="form-control" value="16" style="border-radius: 8px !important;">
+                                     </div>
+                                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                         <label style="font-weight: 700; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Player Count / Team (Min)</label>
+                                         <input type="number" name="playersPerTeamMin" id="editPlayersMin" class="form-control" value="0" style="border-radius: 8px !important;">
+                                     </div>
+                                 </div>
+
+                                 <!-- Submit Button Row -->
+                                 <div style="margin-top: 0.75rem; display: flex; gap: 0.75rem; justify-content: flex-start;">
+                                     <button type="submit" onclick="document.getElementById('auctionSubmitActionInput').value='create'" class="btn btn-success" style="padding: 0.65rem 1.75rem; font-size: 0.85rem; border-radius: 8px;">➕ Create Event</button>
+                                     <button type="submit" id="saveAuctionChangesBtn" onclick="document.getElementById('auctionSubmitActionInput').value='update'" class="btn btn-primary" style="display: none; padding: 0.65rem 1.75rem; font-size: 0.85rem; border-radius: 8px;">💾 Save Event</button>
+                                     <button type="button" id="cancelAuctionEditBtn" onclick="resetAuctionForm()" class="btn btn-secondary" style="padding: 0.65rem 1.25rem; font-size: 0.85rem; border-radius: 8px;">Cancel</button>
+                                 </div>
+                             </form>
+                         </div>
+                         
+                         <!-- INNER TAB 2: CREATED AUCTIONS LIST BOX FORMAT -->
+                         <div id="innerTabAuctionList" style="display: none;">
+                             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem;">
+                                 <% if (data.auctionsList && data.auctionsList.length > 0) { %>
+                                     <% data.auctionsList.forEach((auc, i) => { %>
+                                         <% const isCurrent = auc.id === (data.auctionDetails ? data.auctionDetails.id : 'active_auction'); %>
+                                         <div class="panel auction-card-box <%= isCurrent ? 'active-auction-box' : '' %>" style="text-align: left; border-radius: 12px; padding: 1.15rem; background: rgba(15, 23, 42, 0.35);">
+                                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                 <span style="background: rgba(59,130,246,0.1); color: var(--accent); font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 5px; font-weight: bold; border: 1px solid rgba(59,130,246,0.15);"><%= auc.sportsType || 'Cricket' %></span>
+                                                 <span style="color: var(--text-muted); font-size: 0.72rem; font-weight: 700;"><%= auc.season || '2026' %></span>
+                                             </div>
+                                             <h4 style="color: #fff; font-size: 0.95rem; margin: 0 0 0.5rem 0; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><%= auc.name || 'Unnamed Auction' %></h4>
+                                             <div style="color: var(--text-muted); font-size: 0.76rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.2rem;">
+                                                 <div>📅 Date: <%= auc.auctionDate || 'N/A' %> <%= auc.auctionTime || '' %></div>
+                                                 <div>💰 Purse: <%= auc.pointsPerTeam || 0 %> <%= auc.units || '' %></div>
+                                             </div>
+                                             <div style="display: flex; gap: 0.4rem; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 0.75rem;">
+                                                 <button type="button" class="btn select-auction-btn" data-id="<%= auc.id %>" style="flex: 1.3; padding: 0.4rem; font-size: 0.75rem; background: rgba(34, 197, 94, 0.1) !important; border: 1px solid rgba(34, 197, 94, 0.2) !important; color: var(--success); font-weight: bold; border-radius: 6px;">✅ Choose</button>
+                                                 <button type="button" class="btn edit-auction-btn" data-id="<%= auc.id %>" data-name="<%= auc.name %>" data-sport="<%= auc.sportsType %>" data-season="<%= auc.season %>" data-date="<%= auc.auctionDate %>" data-time="<%= auc.auctionTime %>" data-purse="<%= auc.pointsPerTeam %>" data-units="<%= auc.units %>" data-base="<%= auc.baseBid %>" data-inc="<%= auc.bidIncreaseBy %>" data-max="<%= auc.playersPerTeamMax %>" data-min="<%= auc.playersPerTeamMin %>" style="flex: 1; padding: 0.4rem; font-size: 0.75rem; background: rgba(59, 130, 246, 0.1) !important; border: 1px solid rgba(59, 130, 246, 0.2) !important; color: #60a5fa; font-weight: bold; border-radius: 6px;">✏️ Edit</button>
+                                                 <button type="button" onclick="deleteAuctionBox('<%= auc.id %>')" class="btn btn-danger" style="flex: 1; padding: 0.4rem; font-size: 0.75rem; border-radius: 6px;">🗑️ Delete</button>
+                                             </div>
+                                         </div>
+                                     <% }) %>
+                                 <% } else { %>
+                                     <div style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">No auctions created yet.</div>
+                                 <% } %>
+                             </div>
+                         </div>
+                         
+                         <style>
+                             .auction-card-box { border: 1px solid var(--border-color); }
+                             .auction-card-box.active-auction-box { border: 1.5px solid var(--primary); box-shadow: var(--glow-gold); }
+                         </style>
+
+                         <script>
+                             function switchInnerAuctionTab(tab) {
+                                 localStorage.setItem('keepInnerAuctionTab', tab);
+                                 if (tab === 'form') {
+                                     document.getElementById('innerTabAuctionForm').style.display = 'block';
+                                     document.getElementById('innerTabAuctionList').style.display = 'none';
+                                     document.getElementById('innerTabBtnForm').classList.add('active');
+                                     document.getElementById('innerTabBtnList').classList.remove('active');
+                                 } else {
+                                     document.getElementById('innerTabAuctionForm').style.display = 'none';
+                                     document.getElementById('innerTabAuctionList').style.display = 'block';
+                                     document.getElementById('innerTabBtnForm').classList.remove('active');
+                                     document.getElementById('innerTabBtnList').classList.add('active');
+                                 }
+                             }
+
+                             function resetAuctionForm() {
+                                 document.getElementById('updateAuctionForm').reset();
+                                 document.getElementById('editAuctionIdInput').value = '';
+                                 document.getElementById('auctionSubmitActionInput').value = 'create';
+                                 document.getElementById('saveAuctionChangesBtn').style.display = 'none';
+                             }
+
+                             function loadAuctionIntoForm(id, name, type, season, date, time, pts, units, base, inc, max, min) {
+                                 document.getElementById('editAuctionIdInput').value = id;
+                                 document.getElementById('editAuctionName').value = name || '';
+                                 document.getElementById('editSportsType').value = type || 'Cricket';
+                                 document.getElementById('editSeason').value = season || '2026';
+                                 document.getElementById('editAuctionDate').value = date || '';
+                                 document.getElementById('editAuctionTime').value = time || '';
+                                 document.getElementById('editPointsPerTeam').value = pts || 100000;
+                                 document.getElementById('editUnits').value = units || 'CR/LAC';
+                                 document.getElementById('editBaseBid').value = base || 1000;
+                                 document.getElementById('editBidIncreaseBy').value = inc || 500;
+                                 document.getElementById('editPlayersMax').value = max || 16;
+                                 document.getElementById('editPlayersMin').value = min || 0;
+                                 
+                                 document.getElementById('auctionSubmitActionInput').value = 'update';
+                                 document.getElementById('saveAuctionChangesBtn').style.display = 'inline-block';
+                                 
+                                 switchInnerAuctionTab('form');
+                             }
+
+                             async function deleteAuctionBox(id) {
+                                 if (id === 'active_auction') {
+                                     return alert('⚠️ The main default auction cannot be deleted!');
+                                 }
+                                 if (!confirm('🗑️ Are you sure you want to permanently delete this auction event?')) return;
+                                 
+                                 const res = await fetch('/admin/delete-auction-details', {
+                                     method: 'POST',
+                                     headers: { 'Content-Type': 'application/json' },
+                                     body: JSON.stringify({ auctionId: id })
+                                 });
+                                 const result = await res.json();
+                                 if (result.success) {
+                                     localStorage.setItem('keepDataModalOpen', 'true');
+                                     localStorage.setItem('keepDataModalTab', 'auction');
+                                     localStorage.setItem('keepInnerAuctionTab', 'list');
+                                     location.reload();
+                                 } else {
+                                     alert('Error: ' + result.error);
+                                 }
+                             }
+
+                             document.addEventListener('click', function(e) {
+                                 const editBtn = e.target.closest('.edit-auction-btn');
+                                 if (editBtn) {
+                                     const d = editBtn.dataset;
+                                     loadAuctionIntoForm(d.id, d.name, d.sport, d.season, d.date, d.time, d.purse, d.units, d.base, d.inc, d.max, d.min);
+                                 }
+                             });
+
+                             setTimeout(() => {
+                                 const innerTab = localStorage.getItem('keepInnerAuctionTab');
+                                 if (innerTab) switchInnerAuctionTab(innerTab);
+                             }, 100);
+                         </script>
+                     </div>
+                     
+                     <script>
+                         function previewAuctionLogo(input) {
+                             if (input.files && input.files[0]) {
+                                 const reader = new FileReader();
+                                 reader.onload = function(e) {
+                                     document.getElementById('auctionLogoPreview').src = e.target.result;
+                                 }
+                                 reader.readAsDataURL(input.files[0]);
+                             }
+                         }
+                     </script>
+
+                     <!-- TAB 4: SYSTEM CONSOLE (Advanced) -->
+                     <div id="modalTabAdvanced" class="modal-tab-content" style="display: none;">
+                         <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem; align-items: start;">
+                             <!-- Left Column: Modifier & Reset -->
+                             <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                                 <!-- Global Timer Controls -->
+                                 <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
+                                     <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--primary); font-weight: 800; text-align: left; text-transform: uppercase;">⏰ Global Timer Controls</h3>
+                                     <style>
+                                         .timer-switch { position: relative; display: inline-block; width: 56px; height: 30px; }
+                                         .timer-switch input { opacity: 0; width: 0; height: 0; }
+                                         .timer-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--danger); transition: .4s; border-radius: 30px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
+                                         .timer-slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+                                         .timer-switch input:checked + .timer-slider { background-color: var(--success); }
+                                         .timer-switch input:checked + .timer-slider:before { transform: translateX(26px); }
+                                     </style>
+                                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: var(--bg-dark); padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: left;">
+                                         <div style="display: flex; flex-direction: column;">
+                                             <span style="color: #fff; font-weight: bold; font-size: 0.88rem;">Main Clock State</span>
+                                             <span style="color: var(--text-muted); font-size: 0.68rem;">Enable or disable the auction timer globally</span>
+                                         </div>
+                                         <label class="timer-switch">
+                                             <input type="checkbox" id="timerOnOffToggle" checked onchange="if(window.socket) window.socket.emit('toggleTimerOff');">
+                                             <span class="timer-slider"></span>
+                                         </label>
+                                     </div>
+                                 </div>
+
+                                 <!-- Budget Modifier Card -->
+                                 <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
+                                     <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--primary); font-weight: 800; text-align: left; text-transform: uppercase;">💰 Manual Budget Adjuster</h3>
+                                     <form id="adjustBudgetForm" class="stacked-form">
+                                         <input type="hidden" name="actionType" id="budgetActionType" value="add">
+                                         <div style="display: flex; gap: 0.75rem;">
+                                             <select name="teamName" id="adjustBudgetTeamSelect" required class="form-control" style="flex: 1.3; border-radius: 8px !important;">
+                                                 <option value="" disabled selected>Select Franchise</option>
+                                                 <% data.teams.sort((a, b) => a.name.localeCompare(b.name)).forEach(team => { %>
+                                                     <option value="<%= team.name %>"><%= team.name %></option>
+                                                 <% }) %>
+                                             </select>
+                                             <input type="number" name="amount" placeholder="Amount ($)" required class="form-control" style="flex: 1; border-radius: 8px !important;">
+                                         </div>
+                                         <div style="display: flex; gap: 0.5rem; margin-top: 0.35rem;">
+                                             <button type="submit" onclick="document.getElementById('budgetActionType').value='add'" class="btn btn-success" style="flex: 1; padding: 0.6rem; font-size: 0.78rem; border-radius: 8px;">+ ADD BUDGET</button>
+                                             <button type="submit" onclick="document.getElementById('budgetActionType').value='deduct'" class="btn btn-danger" style="flex: 1; padding: 0.6rem; font-size: 0.78rem; border-radius: 8px;">- DEDUCT BUDGET</button>
+                                         </div>
+                                     </form>
+                                 </div>
+
+                                 <!-- Danger Zone Reset Card -->
+                                 <div class="panel" style="background: rgba(239, 68, 68, 0.02); padding: 1.25rem; border: 1px solid rgba(239, 68, 68, 0.2) !important; border-radius: 12px;">
+                                     <h3 style="margin: 0 0 0.65rem 0; font-size: 1rem; color: #fca5a5; font-weight: 800; text-align: left; text-transform: uppercase;">🚨 Administrative Danger Zone</h3>
+                                     <p style="font-size: 0.72rem; color: #f87171; line-height: 1.4; margin: 0 0 1rem 0; text-align: left;">Master resets clear all sold/unsold states, reset player directories back to available, refund wallet budgets, and clear draft records immediately. This is irreversible.</p>
+                                     <button id="masterResetBtn" class="btn btn-danger" style="width: 100%; padding: 0.65rem; font-size: 0.8rem; font-weight: 800; border-radius: 8px;">🚨 RESET ENTIRE DRAFT AUCTION</button>
+                                     <button id="clearAllPlayersBtn" class="btn btn-danger" style="width: 100%; padding: 0.65rem; font-size: 0.8rem; font-weight: 800; margin-top: 0.5rem; background: rgba(239, 68, 68, 0.1) !important; border: 1px solid rgba(239, 68, 68, 0.25) !important; border-radius: 8px;">🗑️ DELETE ALL PLAYERS ONLY</button>
+                                     <button id="clearAllTeamsBtn" class="btn btn-danger" style="width: 100%; padding: 0.65rem; font-size: 0.8rem; font-weight: 800; margin-top: 0.5rem; background: rgba(239, 68, 68, 0.1) !important; border: 1px solid rgba(239, 68, 68, 0.25) !important; border-radius: 8px;">🗑️ DELETE ALL FRANCHISES ONLY</button>
+                                     <button id="clearAllDataBtn" class="btn btn-danger" style="width: 100%; padding: 0.65rem; font-size: 0.8rem; font-weight: 800; margin-top: 0.5rem; background: var(--danger-gradient) !important; border-radius: 8px;">🗑️ DELETE ALL DATA (RESET ALL)</button>
+                                 </div>
+                             </div>
+
+                             <!-- Right Column: Unsold re-auction -->
+                             <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
+                                 <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--primary); font-weight: 800; text-align: left; text-transform: uppercase;">🔁 Re-auction Unsold Players</h3>
+                                 <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem;">
+                                     <input type="text" id="unsoldSearchInput" placeholder="Search by #No or Name..." class="form-control" style="flex: 1; border-radius: 8px !important;" oninput="renderReleasePlayers()">
+                                     <select id="unsoldSortSelect" class="form-control" style="max-width: 130px; border-radius: 8px !important;" onchange="renderReleasePlayers()">
+                                         <option value="name-asc">Sort: A-Z</option>
+                                         <option value="num-asc"># Asc</option>
+                                         <option value="num-desc"># Desc</option>
+                                     </select>
+                                 </div>
+                                 <div id="advancedPlayersListContainer" class="sleek-scroll" style="max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.45rem; padding-right: 0.25rem;">
+                                     <% const unsoldPlayers = data.players.filter(p => p.status === 'unsold').sort((a, b) => a.name.localeCompare(b.name)); %>
+                                     <% if (unsoldPlayers.length === 0) { %>
+                                         <div style="font-size: 0.76rem; color: var(--text-muted); text-align: center; padding: 2rem;">No unsold players.</div>
+                                     <% } %>
+                                     <% unsoldPlayers.forEach(player => { %>
+                                         <% 
+                                             const cat = data.categories ? data.categories.find(c => c.id === player.category_id) : null;
+                                             const catName = cat ? cat.name : 'OPEN';
+                                             const units = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+                                             const formattedBase = ['₹', '$', '€', '£'].includes(units) ? `${units}${player.basePrice.toLocaleString()}` : `${player.basePrice.toLocaleString()} ${units}`;
+                                         %>
+                                         <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.45); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                                             <div style="display: flex; flex-direction: column; text-align: left;">
+                                                 <span style="font-weight: 800; font-size: 0.82rem; color: #fff;">#<%= player.formNo || 'N/A' %> <%= player.name %></span>
+                                                 <div style="font-size: 0.7rem; color: var(--text-muted); display: flex; gap: 0.5rem; margin-top: 0.1rem; flex-wrap: wrap;">
+                                                     <span>Cat: <%= catName %></span>
+                                                     <span>Base: <%= formattedBase %></span>
+                                                     <span style="color: var(--danger); font-weight: bold;">UNSOLD</span>
+                                                 </div>
+                                             </div>
+                                             <button onclick="resetPlayer('<%= player.id %>')" class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.72rem; font-weight: bold; border-radius: 6px;">Nominate</button>
+                                         </div>
+                                     <% }) %>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+
+                 </div>
+             </div>
+         </div>
+
+         <!-- BULK CATEGORY ASSIGNMENT MODAL -->
+         <div id="bulkCategoryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7,11,20,0.92); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+             <div class="panel animate-fade-in" style="width: 95%; max-width: 800px; height: 80vh; display: flex; flex-direction: column; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: var(--bg-dark); padding: 1.5rem 2rem; border-radius: 16px; box-shadow: var(--shadow-luxury); text-align: left;">
+                 <!-- Modal Header -->
+                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem; margin-bottom: 1rem; flex-shrink: 0;">
+                     <h2 id="bulkCategoryModalTitle" style="font-size: 1.25rem; font-weight: 800; color: var(--accent); margin: 0; display: flex; align-items: center; gap: 0.4rem; font-family: 'Plus Jakarta Sans', sans-serif;">📁 Bulk Assign Players to Categories</h2>
+                     <button onclick="closeBulkCategoryModal()" class="btn btn-danger" style="padding: 0.4rem 0.95rem; border-radius: 6px; font-weight: 800; font-size: 0.75rem;">Close</button>
+                 </div>
+                 
+                 <!-- Modal Body (Two Column Layout for Players & Categories) -->
+                 <div style="flex: 1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.25rem; min-height: 0; overflow: hidden;">
+                     <!-- Column 1: Player Selection -->
+                     <div style="display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--border-color); padding: 0.85rem; border-radius: 10px; background: rgba(15, 23, 42, 0.35);">
+                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                             <h4 style="margin: 0; color: #cbd5e1; font-size: 0.82rem; font-weight: bold;">Select Players (<span id="bulkPlayerSelectedCount">0</span> selected)</h4>
+                         </div>
+                         <!-- Search input -->
+                         <input type="text" id="bulkPlayerSearchInput" placeholder="Search player by name..." class="form-control" style="margin-bottom: 0.5rem; border-radius: 8px !important;" oninput="filterBulkPlayersList()">
+                         
+                         <!-- Select All Checkbox -->
+                         <label style="display: flex; align-items: center; gap: 0.45rem; color: var(--text-muted); font-size: 0.78rem; cursor: pointer; padding: 0.35rem 0.5rem; background: rgba(255,255,255,0.01); border-radius: 6px; margin-bottom: 0.45rem;">
+                             <input type="checkbox" id="bulkPlayerSelectAll" onchange="toggleSelectAllBulkPlayers(this)" style="cursor: pointer;">
+                             <span>Select All Visible</span>
+                         </label>
+                         
+                         <!-- Players Scrollable List -->
+                         <div id="bulkPlayersListContainer" class="sleek-scroll" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem; padding-right: 0.2rem;">
+                             <!-- Filled dynamically with javascript -->
+                         </div>
+                     </div>
+                     
+                     <!-- Column 2: Category Selection -->
+                     <div style="display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--border-color); padding: 0.85rem; border-radius: 10px; background: rgba(15, 23, 42, 0.35);">
+                         <h4 style="margin: 0 0 0.5rem 0; color: #cbd5e1; font-size: 0.82rem; font-weight: bold;">Select Categories (<span id="bulkCategorySelectedCount">0</span> selected)</h4>
+                         <!-- Select All Categories Checkbox -->
+                         <label style="display: flex; align-items: center; gap: 0.45rem; color: var(--text-muted); font-size: 0.78rem; cursor: pointer; padding: 0.35rem 0.5rem; background: rgba(255,255,255,0.01); border-radius: 6px; margin-bottom: 0.45rem;">
+                             <input type="checkbox" id="bulkCategorySelectAll" onchange="toggleSelectAllBulkCategories(this)" style="cursor: pointer;">
+                             <span>Select All Categories</span>
+                         </label>
+                         
+                         <!-- Categories Scrollable List -->
+                         <div id="bulkCategoriesListContainer" class="sleek-scroll" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem; padding-right: 0.2rem;">
+                             <!-- Filled dynamically with javascript -->
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <!-- Modal Footer -->
+                 <div style="display: flex; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border-color); padding-top: 0.85rem; margin-top: 1rem; gap: 0.85rem; flex-shrink: 0;">
+                     <!-- Loading indicator -->
+                     <div id="bulkSpinner" style="display: none; align-items: center; gap: 0.45rem; color: var(--text-muted); font-size: 0.8rem;">
+                         <div class="spinner-border"></div>
+                         <span>Processing...</span>
+                     </div>
+                     
+                     <button id="bulkActionBtn" onclick="executeBulkAssignment()" class="btn btn-primary" style="padding: 0.65rem 1.75rem; font-size: 0.85rem; font-weight: 800; border-radius: 8px;">Assign Players</button>
+                 </div>
+             </div>
+         </div>
+
+         <style>
+             @keyframes spin { to { transform: rotate(360deg); } }
+             .spinner-border {
+                 border: 2px solid currentColor;
+                 border-right-color: transparent;
+                 border-radius: 50%;
+                 width: 1rem;
+                 height: 1rem;
+                 display: inline-block;
+                 animation: spin 0.75s linear infinite;
+             }
+         </style>
+
+         <!-- Client Script for Modal Navigation -->
+         <script>
+             function switchModalTab(tab) {
+                 localStorage.setItem('keepDataModalTab', tab);
+                 document.querySelectorAll('.modal-tab-content').forEach(el => el.style.display = 'none');
+                 document.querySelectorAll('.modal-tab-btn').forEach(btn => {
+                     btn.classList.remove('active');
+                 });
+ 
+                 document.getElementById('modalTab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
+                 const btn = document.querySelector(`[onclick="switchModalTab('${tab}')"]`);
+                 if (btn) btn.classList.add('active');
+             }
+             window.switchModalTab = switchModalTab;
+         </script>
+
+     </main>
+ </div>
+ 
+ <script>
+     window.activeAuctionId = "<%= data.auctionDetails ? data.auctionDetails.id : 'active_auction' %>";
+     window.auctionCurrencyUnit = "<%= data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹' %>";
+     window.auctionMaxPlayers = parseInt("<%= data.auctionDetails && data.auctionDetails.playersPerTeamMax ? data.auctionDetails.playersPerTeamMax : 15 %>", 10) || 15;
+     window.auctionMinPlayers = parseInt("<%= data.auctionDetails && data.auctionDetails.playersPerTeamMin ? data.auctionDetails.playersPerTeamMin : 0 %>", 10) || 0;
+     window.auctionBaseBid = parseFloat("<%= data.auctionDetails && data.auctionDetails.baseBid ? data.auctionDetails.baseBid : 500 %>") || 500;
+     window.auctionBidIncreaseBy = parseFloat("<%= data.auctionDetails && data.auctionDetails.bidIncreaseBy ? data.auctionDetails.bidIncreaseBy : 500 %>") || 500;
+     window.auctionState = <%- JSON.stringify(data.auctionState) %>;
+     window.currentPlayersDataCache = <%- JSON.stringify(data.players) %>;
+     window.currentTeamsCache = <%- JSON.stringify(data.teams) %>;
+     window.auctionCategoriesCache = <%- JSON.stringify(data.categories) %>;
+ </script>
+ <script src="/js/media-controller.js?v=<%= Date.now() %>"></script>
+ <script src="/js/admin.js?v=<%= Date.now() %>"></script>
+ </body>
+ </html>

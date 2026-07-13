@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Teams</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body style="background-color: var(--bg-dark);">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>Admin Panel</h2>
+            <ul class="nav-links">
+                <li><a href="/admin/dashboard">Dashboard</a></li>
+                <li><a href="/admin/teams" class="active">Manage Teams</a></li>
+                <li><a href="/admin/players">Manage Players</a></li>
+                <li><a href="/admin/auction">Live Auction Control</a></li>
+                <li><a href="/logout" style="color: var(--danger); margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1.5rem; border-radius: 0;"><span class="icon">🚪</span> Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <header class="topbar" style="height: 60px; flex-shrink: 0;">
+                <h1 style="font-size: 1.25rem; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif;">Manage Franchises</h1>
+            </header>
+            
+            <div style="padding: 2rem; display: flex; flex-direction: column; gap: 2rem;">
+                <!-- Add New Team Form Panel -->
+                <div class="panel" style="padding: 2rem;">
+                    <h3 style="margin-bottom: 1.5rem; font-size: 1.15rem; font-weight: 800; color: var(--primary); font-family: 'Plus Jakarta Sans', sans-serif; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-color); padding-bottom: 0.6rem;">Add New Franchise</h3>
+                    <form action="/admin/add-team" method="POST" style="display: flex; gap: 1.25rem; flex-wrap: wrap; align-items: flex-end;">
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem; flex: 2; min-width: 220px;">
+                            <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Team Name</label>
+                            <input type="text" name="name" placeholder="Franchise Name" required class="form-control form-control-lg" style="border-radius: 10px !important;">
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem; flex: 1.2; min-width: 160px;">
+                            <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Purse Budget</label>
+                            <input type="number" name="budget" placeholder="Budget Amount" required class="form-control form-control-lg" style="border-radius: 10px !important;">
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem; min-width: 100px;">
+                            <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Theme Color</label>
+                            <div style="display: flex; align-items: center; justify-content: center; height: 44px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 10px; width: 100px;">
+                                <input type="color" name="color" value="#3b82f6" style="border: none; background: none; width: 34px; height: 34px; cursor: pointer; padding: 0;">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg" style="padding: 0.8rem 2rem; font-weight: 800; border-radius: 12px;">Add Franchise</button>
+                    </form>
+                </div>
+                
+                <!-- Registered Teams Table Panel -->
+                <div class="panel" style="padding: 0; overflow: hidden;">
+                    <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--primary); font-family: 'Plus Jakarta Sans', sans-serif; text-transform: uppercase; letter-spacing: 1px;">Registered Franchises</h3>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Total Teams: <span style="color: #fff; font-weight: 700;"><%= teams.length %></span></span>
+                    </div>
+                    <div class="list-container sleek-scroll" style="max-height: 520px; overflow-y: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 1rem !important; border-bottom: 1px solid var(--border-color) !important; font-size: 0.75rem !important;">Franchise Name</th>
+                                    <th style="padding: 1rem !important; border-bottom: 1px solid var(--border-color) !important; font-size: 0.75rem !important;">Purse Budget</th>
+                                    <th style="text-align: right; padding: 1rem !important; border-bottom: 1px solid var(--border-color) !important; font-size: 0.75rem !important;">Theme Color Accent</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% teams.forEach(team => { %>
+                                    <tr>
+                                        <td style="font-weight: 700; font-size: 0.95rem; padding: 1rem !important; vertical-align: middle;">
+                                            <span class="color-dot" <%- 'style="background-color: ' + team.color + '; width: 12px; height: 12px; display: inline-block; border-radius: 3px; margin-right: 8px; box-shadow: 0 0 8px ' + team.color + ';"' %>></span>
+                                            <%= team.name %>
+                                        </td>
+                                        <td style="font-weight: bold; color: var(--success); text-shadow: 0 0 10px rgba(34, 197, 94, 0.1); padding: 1rem !important; vertical-align: middle;">$<%= team.budget.toLocaleString() %></td>
+                                        <td style="text-align: right; padding: 1rem !important; vertical-align: middle;"><div <%- 'style="width: 22px; height: 22px; background-color: ' + team.color + '; border-radius: 50%; display: inline-block; border: 2px solid rgba(255,255,255,0.15); box-shadow: 0 0 10px ' + team.color + ';"' %>></div></td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

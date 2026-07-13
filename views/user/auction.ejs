@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Auction Room</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body style="background-color: var(--bg-dark);">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
+            <div class="sidebar-header" style="text-align: center; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--border-color);">
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">YOUR TEAM</div>
+                <h2 style="font-size: 1.2rem; font-weight: 800; border: none; padding: 0.2rem 0; margin: 0; background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;"><%= username %></h2>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/user/dashboard?username=<%= username %>">🏠 Dashboard</a></li>
+                <li><a href="/user/auction?username=<%= username %>" class="active">⚡ Live Auction Room</a></li>
+                <li><a href="/logout" style="color: var(--danger); margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1.5rem; border-radius: 0;"><span class="icon">🚪</span> Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 2rem;">
+            <header class="topbar" style="width: 100%; margin-bottom: 2rem !important; border-radius: 12px; background: rgba(15, 23, 42, 0.5) !important; border: 1px solid var(--border-color) !important; height: 60px; flex-shrink: 0; padding: 0 1.5rem !important;">
+                <h1 style="font-size: 1.15rem; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif;">Live Bidding Arena</h1>
+            </header>
+            
+            <div class="grid animate-fade-in" style="width: 100%; max-width: 750px; display: flex; flex-direction: column; gap: 1.25rem;">
+                <!-- Hero Player Panel -->
+                <div class="panel player-card" style="position: relative; width: 100%; border: 1px solid rgba(212, 175, 55, 0.2) !important; border-radius: 14px; padding: 2.5rem 2rem;">
+                    <!-- Sold / Unsold Overlay -->
+                    <div id="statusOverlay" class="status-overlay" style="border-radius: 12px;">
+                        <div id="statusText" class="status-text"></div>
+                    </div>
+                    
+                    <!-- Spotlight Avatar Frame -->
+                    <div class="player-spotlight-frame">
+                        <img id="livePlayerPhoto" src="/uploads/default-player.svg" style="width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 3.5px solid var(--primary); background: var(--bg-dark);">
+                    </div>
+
+                    <h2 id="livePlayerName" class="player-name" style="font-size: 2.5rem !important; margin-bottom: 0.2rem; font-family: 'Plus Jakarta Sans', sans-serif;">Waiting for Host...</h2>
+                    <div id="livePlayerRole" class="player-role" style="font-size: 0.95rem !important; margin-bottom: 0.85rem;">--</div>
+                    
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem;">
+                        <div id="liveCategoryDisplay" class="player-role" style="font-size: 0.8rem !important; color: var(--accent); font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.25); padding: 0.2rem 0.75rem; border-radius: 5px; background: rgba(59, 130, 246, 0.04); display: none; text-transform: uppercase;">--</div>
+                        <div id="liveBasePriceDisplay" class="player-role" style="font-size: 0.8rem !important; color: var(--success); font-weight: 700; border: 1px solid rgba(34, 197, 94, 0.25); padding: 0.2rem 0.75rem; border-radius: 5px; background: rgba(34, 197, 94, 0.04); display: none; text-transform: uppercase;">Base Bid: --</div>
+                    </div>
+                    <div id="livePlayerCaptainBadge" style="display: none; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; font-size: 0.7rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 5px; margin: 0.5rem auto 1rem; width: fit-content; text-transform: uppercase; letter-spacing: 0.5px;">👑 TEAM CAPTAIN</div>
+                    
+                    <!-- Bid Readout Panel -->
+                    <div class="bid-display" id="bidDisplay" style="margin: 1.5rem 0; padding: 1.25rem !important;">
+                        <div class="current-bid-label" style="font-size: 0.78rem !important; letter-spacing: 2px !important; margin-bottom: 0.35rem;">Current Bid</div>
+                        <%
+                            const units = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+                            const displayBid = ['₹', '$', '€', '£'].includes(units) ? `${units}${(data.auctionState.currentBid || 0).toLocaleString()}` : `${(data.auctionState.currentBid || 0).toLocaleString()} ${units}`;
+                        %>
+                        <div id="liveBidAmount" class="current-bid-amount" style="font-size: 3.5rem !important; line-height: 1;"><%= displayBid %></div>
+                        <div id="liveHighestBidder" class="highest-bidder" style="font-size: 0.95rem !important; margin-top: 0.6rem;"><%= data.auctionState.highestBidder ? '🏆 ' + data.auctionState.highestBidder : 'None' %></div>
+                    </div>
+                    
+                    <div id="liveTimer" class="timer" style="position: absolute; top: 1.25rem; right: 1.25rem;">30</div>
+                </div>
+
+                <!-- Bidding Panel Form controls -->
+                <div class="panel" style="width: 100%; text-align: center; padding: 1.75rem 2rem; border-radius: 14px;">
+                    <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--primary); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; font-family: 'Plus Jakarta Sans', sans-serif;">Place Your Bid</h3>
+                    <div class="bid-controls" style="display: flex; gap: 0.6rem; justify-content: center; align-items: stretch; max-width: 480px; margin: 0 auto;">
+                        <input type="number" id="bidAmountInput" placeholder="Bid Amount" step="100" class="form-control" style="font-size: 1.05rem !important; font-weight: 700; text-align: center; flex: 1; border-radius: 10px !important;">
+                        <button id="placeBidBtn" class="btn btn-success" style="font-size: 0.95rem; padding: 0.75rem 2rem; font-weight: 800; border-radius: 10px;">Place Bid</button>
+                    </div>
+                    <p id="bidError" class="error-msg" style="color: var(--danger); margin-top: 0.85rem; font-weight: 700; font-size: 0.85rem; min-height: 20px;"></p>
+                </div>
+            </div>
+            
+            <!-- Store username in a hidden element for JS access -->
+            <div id="teamNameData" data-teamname="<%= username %>" style="display: none;"></div>
+        </main>
+    </div>
+    <script>
+        window.auctionCurrencyUnit = "<%= data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹' %>";
+        window.auctionMaxPlayers = parseInt("<%= data.auctionDetails && data.auctionDetails.playersPerTeamMax ? data.auctionDetails.playersPerTeamMax : 15 %>", 10) || 15;
+        window.auctionBaseBid = parseFloat("<%= data.auctionDetails && data.auctionDetails.baseBid ? data.auctionDetails.baseBid : 500 %>") || 500;
+        window.auctionBidIncreaseBy = parseFloat("<%= data.auctionDetails && data.auctionDetails.bidIncreaseBy ? data.auctionDetails.bidIncreaseBy : 500 %>") || 500;
+        window.auctionState = <%- JSON.stringify(data.auctionState) %>;
+    </script>
+    <script src="/js/user.js?v=<%= Date.now() %>"></script>
+</body>
+</html>

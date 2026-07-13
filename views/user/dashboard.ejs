@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Dashboard - Live Auction</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body style="overflow: hidden; height: 100vh; margin: 0; padding: 0; background-color: var(--bg-dark);">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <%
+      const unitsLocal = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+      const formatCurrencyLocal = (amt) => {
+        return ['₹', '$', '€', '£'].includes(unitsLocal) ? `${unitsLocal}${amt.toLocaleString()}` : `${amt.toLocaleString()} ${unitsLocal}`;
+      };
+    %>
+    <div class="app-container" style="display: flex; flex-direction: column; height: 100vh; width: 100vw; max-width: 100%; overflow: hidden;">
+        <!-- Header -->
+        <header class="topbar" style="height: 60px; flex-shrink: 0; background: rgba(15, 23, 42, 0.7) !important; border-bottom: 1px solid var(--border-color) !important; padding: 0.75rem 2.2rem !important;">
+            <div style="display: flex; align-items: center; gap: 0.85rem;">
+                <% 
+                let sportsIcon = '🏆';
+                if (data.auctionDetails && data.auctionDetails.sportsType === 'Cricket') sportsIcon = '🏏';
+                else if (data.auctionDetails && data.auctionDetails.sportsType === 'Football') sportsIcon = '⚽';
+                else if (data.auctionDetails && data.auctionDetails.sportsType === 'Kabaddi') sportsIcon = '🤼';
+                else if (data.auctionDetails && data.auctionDetails.sportsType === 'Basketball') sportsIcon = '🏀';
+                %>
+                <% if (data.auctionDetails && data.auctionDetails.logo) { %>
+                    <img src="<%= data.auctionDetails.logo %>" style="width: 32px; height: 32px; border-radius: 6px; object-fit: contain; border: 1px solid var(--border-color); background: var(--bg-dark);" onerror="this.src='/uploads/default-auction.svg'">
+                <% } else { %>
+                    <div style="font-size: 1.5rem; filter: drop-shadow(0 2px 8px rgba(212, 175, 55, 0.3));"><%= sportsIcon %></div>
+                <% } %>
+                <div>
+                    <h1 style="font-size: 1.15rem; margin: 0; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-family: 'Plus Jakarta Sans', sans-serif;"><%= data.auctionDetails ? data.auctionDetails.name : 'LIVE AUCTION' %></h1>
+                    <div style="color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-top: 0.1rem;"><%= data.auctionDetails && data.auctionDetails.season ? data.auctionDetails.season + ' SEASON' : 'ARENA' %></div>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                <div style="color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">CURRENT SET</div>
+                <div id="liveCategorySet" style="font-size: 0.95rem; color: var(--accent); font-weight: 800;"><%= data.auctionState.activeCategoryName || 'General' %></div>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div style="flex: 1; overflow: hidden; height: calc(100vh - 60px);">
+            <div class="grid" style="display: grid; grid-template-columns: 68% 32%; height: 100%; width: 100%; gap: 0;">
+                
+                <!-- Left Column: Player Board -->
+                <div style="border-right: 1px solid var(--border-color); background: rgba(7, 11, 20, 0.25); display: flex; flex-direction: column; height: 100%; position: relative;">
+                    <!-- Center Player Card -->
+                    <div class="sleek-scroll" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; position: relative; padding: 2rem; min-height: 0; overflow-y: auto;">
+                        <div class="panel player-card animate-fade-in" style="position: relative; width: 100%; max-width: 620px; padding: 2.2rem; border: 1px solid rgba(212, 175, 55, 0.2) !important; margin: auto 0; box-shadow: var(--shadow-luxury);">
+                            <!-- Sold / Unsold Banner Overlay -->
+                            <div id="statusOverlay" class="status-overlay" style="border-radius: 12px;">
+                                <div id="statusText" class="status-text"></div>
+                            </div>
+                            
+                            <!-- Player Info Block -->
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 1.75rem; margin-bottom: 1.75rem; flex-wrap: wrap;">
+                                <div class="player-spotlight-frame" style="width: 100px; height: 100px; margin: 0;">
+                                    <img id="livePlayerPhoto" src="/uploads/default-player.svg" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); background: var(--bg-dark);">
+                                </div>
+                                <div style="text-align: left;">
+                                    <h2 id="livePlayerName" class="player-name" style="font-size: 2.4rem !important; margin: 0; line-height: 1.1; margin-bottom: 0.2rem; font-family: 'Plus Jakarta Sans', sans-serif;">Waiting...</h2>
+                                    <div id="livePlayerRole" class="player-role" style="font-size: 0.95rem !important; margin-bottom: 0.75rem;">--</div>
+                                    <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                        <div id="liveCategoryDisplay" class="player-role" style="font-size: 0.8rem !important; color: var(--accent); font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.15rem 0.65rem; border-radius: 4px; display: none; background: rgba(59, 130, 246, 0.03); text-transform: uppercase;">--</div>
+                                        <div id="liveBasePriceDisplay" class="player-role" style="font-size: 0.8rem !important; color: var(--success); font-weight: 700; border: 1px solid rgba(34, 197, 94, 0.2); padding: 0.15rem 0.65rem; border-radius: 4px; display: none; background: rgba(34, 197, 94, 0.03); text-transform: uppercase;">Base Bid: --</div>
+                                    </div>
+                                    <div id="livePlayerAge" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem; font-weight: 500;">Age: --</div>
+                                    <div id="livePlayerCaptainBadge" style="display: none; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; font-size: 0.7rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 5px; margin-top: 0.5rem; width: fit-content; text-transform: uppercase; letter-spacing: 0.5px;">👑 TEAM CAPTAIN</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Player Details Box -->
+                            <div id="livePlayerDetailContainer" style="display: none; padding: 0.85rem 1.15rem; background: rgba(15, 23, 42, 0.45); border-radius: 10px; border: 1px solid var(--border-color); font-size: 0.8rem; text-align: left; margin: 1.25rem 0; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); width: 100%;">
+                                <span style="color: var(--text-muted); display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.3rem; font-weight: bold;">Player Details & Info:</span>
+                                <div id="bioDetail" style="color: #cbd5e1; font-family: monospace; white-space: pre-wrap; line-height: 1.4; font-size: 0.75rem;">--</div>
+                            </div>
+                            
+                            <!-- Bid Readout Panel -->
+                            <div class="bid-display" id="bidDisplay" style="margin: 1.25rem 0; padding: 1.5rem !important; text-align: center;">
+                                <div class="current-bid-label" style="font-size: 0.78rem !important; letter-spacing: 2.5px !important; margin-bottom: 0.3rem;">CURRENT BID</div>
+                                <div id="liveBidAmount" class="current-bid-amount" style="font-size: 3.5rem !important; line-height: 1;"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></div>
+                                <div id="liveHighestBidder" class="highest-bidder" style="font-size: 0.95rem !important; margin-top: 0.55rem;"><%= data.auctionState.highestBidder ? '🏆 ' + data.auctionState.highestBidder : 'None' %></div>
+                            </div>
+                            <div id="liveTimer" class="timer" style="position: absolute; top: 1.25rem; right: 1.25rem;">30</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Team Standings Leaderboard -->
+                <div style="background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: flex; flex-direction: column; height: 100%;">
+                    <div style="padding: 1.15rem 1.5rem; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.15);">
+                        <h3 style="margin: 0; color: var(--primary); font-size: 0.88rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; font-family: 'Plus Jakarta Sans', sans-serif;">Franchise Standings</h3>
+                    </div>
+                    <div id="teamList" class="sleek-scroll" style="overflow-y: auto; flex: 1; padding: 1.15rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                        <% data.teams.sort((a, b) => a.name.localeCompare(b.name)).forEach((team, index) => { %>
+                            <% const teamPlayers = data.players.filter(p => p.soldTo === team.name); %>
+                            <div class="team-card" data-teamname="<%= team.name %>" onclick="toggleRoster('<%= team.name %>')" style="border-left: 4.5px solid <%= team.color %>; cursor: pointer; padding: 0.75rem 1rem !important; border-radius: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="font-weight: 800; color: #fff; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                                        <% if (team.logo) { %>
+                                            <img src="<%= team.logo %>" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);">
+                                        <% } else { %>
+                                            <span class="color-dot" <%- 'style="background-color: ' + team.color + '; width: 10px; height: 10px; display: inline-block; border-radius: 50%;"' %>></span>
+                                        <% } %>
+                                        <div>
+                                            <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700;"><%= team.name %></div>
+                                            <div style="font-size: 0.68rem; color: var(--text-muted); font-weight: normal; margin-top: 0.08rem; text-transform: uppercase; letter-spacing: 0.5px;">PURSE: <span style="color: var(--success); font-weight: 700;"><%= formatCurrencyLocal(team.budget) %></span></div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                        <div style="font-size: 1.15rem; font-weight: 800; color: #fff;"><%= teamPlayers.length %><span style="font-size: 0.7rem; font-weight: normal; color: var(--text-muted);">/18</span></div>
+                                        <span class="toggle-arrow" style="font-size: 0.8rem; color: var(--text-muted);">▼</span>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 0.5rem; background: rgba(255,255,255,0.03); height: 3px; border-radius: 2px; overflow: hidden;">
+                                    <%- '<div style="background: ' + team.color + '; height: 100%; width: ' + Math.min(100, ((teamPlayers.length / 18) * 100)) + '%; box-shadow: 0 0 6px ' + team.color + ';"></div>' %>
+                                </div>
+                                <!-- Collapsible Roster Tray -->
+                                <div class="team-roster-list" style="margin-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 0.5rem; display: none; flex-direction: column; gap: 0.25rem; max-height: 165px; overflow-y: auto;">
+                                    <% if (teamPlayers.length === 0) { %>
+                                        <div style="font-size: 0.7rem; color: var(--text-muted); font-style: italic; padding: 0.15rem 0; text-align: left;">No players drafted yet</div>
+                                    <% } else { %>
+                                        <% teamPlayers.sort((a, b) => b.soldPrice - a.soldPrice).forEach(player => { %>
+                                            <div <%- 'style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 0.3rem 0.45rem; border-radius: 5px; border: 1px solid ' + (player.isCaptain ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255,255,255,0.01)') + ';"' %>>
+                                                <div style="display: flex; flex-direction: column; text-align: left;">
+                                                    <span <%- 'style="font-size: 0.75rem; font-weight: 700; color: ' + (player.isCaptain ? '#fbbf24' : '#f8fafc') + ';"' %>><%= player.name %> <%= player.isCaptain ? '👑' : '' %></span>
+                                                    <span style="font-size: 0.58rem; color: var(--text-muted); text-transform: uppercase; font-weight: 500;"><%= player.role %></span>
+                                                </div>
+                                                <span style="font-size: 0.75rem; font-weight: bold; color: var(--success);"><%= formatCurrencyLocal(player.soldPrice || 0) %></span>
+                                            </div>
+                                        <% }) %>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Store username in a hidden element for JS access -->
+        <div id="teamNameData" data-teamname="<%= username %>" style="display: none;"></div>
+    </div>
+    <script>
+        window.auctionCurrencyUnit = "<%= data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹' %>";
+        window.auctionMaxPlayers = parseInt("<%= data.auctionDetails && data.auctionDetails.playersPerTeamMax ? data.auctionDetails.playersPerTeamMax : 15 %>", 10) || 15;
+        window.auctionBaseBid = parseFloat("<%= data.auctionDetails && data.auctionDetails.baseBid ? data.auctionDetails.baseBid : 500 %>") || 500;
+        window.auctionBidIncreaseBy = parseFloat("<%= data.auctionDetails && data.auctionDetails.bidIncreaseBy ? data.auctionDetails.bidIncreaseBy : 500 %>") || 500;
+        window.auctionState = <%- JSON.stringify(data.auctionState) %>;
+    </script>
+    <script src="/js/user.js?v=<%= Date.now() %>"></script>
+    <script>
+        function toggleRoster(teamName) {
+            const card = document.querySelector(`.team-card[data-teamname="${teamName}"]`);
+            const tray = card.querySelector('.team-roster-list');
+            const arrow = card.querySelector('.toggle-arrow');
+            
+            if (tray.style.display === 'none') {
+                tray.style.display = 'flex';
+                arrow.textContent = '▲';
+                card.style.background = 'var(--bg-secondary)';
+            } else {
+                tray.style.display = 'none';
+                arrow.textContent = '▼';
+                card.style.background = 'var(--bg-card)';
+            }
+        }
+    </script>
+</body>
+</html>

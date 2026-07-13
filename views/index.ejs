@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuctionSaaS - The Ultimate Auction Platform</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body style="display: flex; flex-direction: column; min-height: 100vh;">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    
+    <%- include('partials/navbar') %>
+
+    <div class="main-content" style="flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 2rem;">
+        <div class="panel animate-fade-in" style="max-width: 800px; background: transparent; border: none; box-shadow: none;">
+            <div class="brand-logo" style="margin: 0 auto 2rem;">
+                <span class="logo-icon">🏆</span>
+            </div>
+            <h1 style="font-size: 4rem; font-weight: 800; margin-bottom: 1.5rem; line-height: 1.1; letter-spacing: -1.5px;">The Ultimate Auction Platform</h1>
+            <p style="font-size: 1.25rem; color: var(--text-muted); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto;">This software is restricted to authorized Administrators only. Login to host auctions and instantly share live viewing links with your audience.</p>
+            <div style="display: flex; justify-content: center; gap: 1.5rem;">
+                <a href="/login" class="btn btn-primary btn-lg">Admin Login</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Dashboard - AuctionSaaS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .dashboard-section { display: none; animation: fadeIn 0.4s ease; }
+        .dashboard-section.active { display: block; }
+    </style>
+</head>
+<body style="background-color: var(--bg-dark); min-height: 100vh;">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    
+    <%- include('partials/navbar') %>
+
+    <div class="app-container" style="height: calc(100vh - 65px); width: 100%;">
+        <!-- Sidebar -->
+        <aside class="sidebar" style="background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
+            <div class="sidebar-header" style="border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.15);">
+                <h2 style="font-size: 0.72rem; text-align: left; text-transform: uppercase; background: none; -webkit-text-fill-color: initial; color: var(--text-muted); border: none; padding: 0; letter-spacing: 1px; font-weight: 700;">Welcome,</h2>
+                <div style="color: #ffffff; font-size: 1.2rem; font-weight: 800; margin-top: 0.2rem; letter-spacing: -0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><%= user.username %></div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" class="tab-link active" data-target="section-home">🏠 Home</a></li>
+                <li><a href="#" class="tab-link" data-target="section-new-auction">➕ New Auction</a></li>
+                <li><a href="#" class="tab-link" data-target="section-my-auctions">📋 My Auctions</a></li>
+                <li><a href="/logout" style="color: var(--danger); margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1.5rem; border-radius: 0;"><span class="icon">🚪</span> Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" style="background: transparent;">
+            <header class="topbar" style="background: transparent !important; border-bottom: 1px solid var(--border-color) !important; padding: 1rem 2rem !important; height: 60px; flex-shrink: 0;">
+                <h1 id="pageTitle" style="font-size: 1.25rem; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif;">Home</h1>
+            </header>
+
+            <!-- Home Section -->
+            <div id="section-home" class="dashboard-section active" style="padding: 2.5rem;">
+                <div class="panel" style="max-width: 800px; padding: 2rem;">
+                    <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--primary); margin-bottom: 1rem; font-family: 'Plus Jakarta Sans', sans-serif;">Welcome to the Multi-Auction Platform</h2>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 0px;">
+                        This is your central hub. As an Admin, you can create new auctions and manage your existing ones. When you create an auction, a Live Link is generated for you to share with anyone!
+                    </p>
+                </div>
+            </div>
+
+            <!-- New Auction Section -->
+            <div id="section-new-auction" class="dashboard-section" style="padding: 2.5rem;">
+                <div class="panel" style="max-width: 600px; padding: 2rem;">
+                    <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--primary); margin-bottom: 1.5rem; font-family: 'Plus Jakarta Sans', sans-serif;">Create New Auction</h2>
+                    <form id="createAuctionForm" class="stacked-form">
+                        <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Auction Name</label>
+                            <input type="text" name="name" required class="form-control form-control-lg" placeholder="e.g. IPL Mega Auction 2026" style="border-radius: 10px !important;">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg" style="margin-top: 1rem; font-weight: 700; font-size: 0.92rem; border-radius: 12px;">Create & Generate Code</button>
+                    </form>
+                    <div id="createResult" class="mt-3" style="display:none; color: var(--success); font-weight: bold; font-size: 0.95rem; padding: 1.2rem; background: rgba(34, 197, 94, 0.06); border: 1px solid rgba(34, 197, 94, 0.18); border-radius: 10px; margin-top: 1.5rem;"></div>
+                </div>
+            </div>
+
+            <!-- My Auctions Section -->
+            <div id="section-my-auctions" class="dashboard-section" style="padding: 2.5rem;">
+                <div class="panel" style="padding: 2rem;">
+                    <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; font-family: 'Plus Jakarta Sans', sans-serif;">My Auctions</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.88rem;">Manage the auctions you have created.</p>
+                    <div class="list-container sleek-scroll" style="max-height: 550px; background: rgba(15, 23, 42, 0.3); border: 1px solid var(--border-color); border-radius: 12px; overflow-x: auto;">
+                        <table class="data-table" id="myAuctionsTable">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 1rem !important; border-bottom: 1px solid var(--border-color) !important; font-size: 0.75rem !important;">Auction Name</th>
+                                    <th style="padding: 1rem !important; border-bottom: 1px solid var(--border-color) !important; font-size: 0.75rem !important;">Live Spectator Link (Share this!)</th>
+                                    <th style="padding: 1rem !important; border-bottom: 1px solid var(--border-color) !important; font-size: 0.75rem !important;">Status</th>
+                                    <th style="text-align: right; padding: 1rem !important; border-bottom: 1px solid var(--border-color) !important; font-size: 0.75rem !important;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // SPA Tab Switching Logic
+        const tabs = document.querySelectorAll('.tab-link');
+        const sections = document.querySelectorAll('.dashboard-section');
+        const pageTitle = document.getElementById('pageTitle');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = tab.getAttribute('data-target');
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                sections.forEach(s => s.classList.remove('active'));
+                document.getElementById(target).classList.add('active');
+                
+                pageTitle.textContent = tab.textContent.replace(/[^\w\s]/g, '').trim();
+
+                if(target === 'section-my-auctions') {
+                    loadMyAuctions();
+                }
+            });
+        });
+
+        // Create Auction
+        document.getElementById('createAuctionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = e.target.name.value;
+            const res = await fetch('/api/create-auction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const result = await res.json();
+            if(result.success) {
+                const resDiv = document.getElementById('createResult');
+                const liveLink = window.location.origin + '/live/' + result.id;
+                resDiv.style.display = 'block';
+                resDiv.innerHTML = `Auction Created!<br><br>Share this Live Link with anyone to watch:<br><input type="text" value="${liveLink}" readonly class="form-control mt-2" style="font-family: monospace; font-size: 0.88rem; border-radius: 8px !important;" onclick="this.select()">`;
+                e.target.reset();
+            }
+        });
+
+        // Load My Auctions
+        async function loadMyAuctions() {
+            const res = await fetch('/api/my-auctions');
+            const result = await res.json();
+            const tbody = document.querySelector('#myAuctionsTable tbody');
+            if(result.success) {
+                if(result.auctions.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.9rem;">No auctions created yet.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = result.auctions.map(a => `
+                    <tr>
+                        <td style="font-weight: 700; font-size: 0.95rem; vertical-align: middle; padding: 1rem !important;">${a.name}</td>
+                        <td style="vertical-align: middle; padding: 1rem !important;">
+                            <input type="text" value="${window.location.origin}/live/${a.id}" readonly class="form-control" style="background: rgba(7, 11, 20, 0.4); font-family: monospace; font-size: 0.82rem; border-radius: 8px !important; padding: 0.45rem 0.75rem !important;" onclick="this.select()">
+                        </td>
+                        <td style="vertical-align: middle; padding: 1rem !important;"><span class="badge badge-available">${a.status.toUpperCase()}</span></td>
+                        <td style="text-align: right; vertical-align: middle; padding: 1rem !important;"><a href="/admin/dashboard?auction_id=${a.id}" class="btn btn-primary" style="padding: 0.45rem 1rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px;">Manage Dashboard</a></td>
+                    </tr>
+                `).join('');
+            }
+        }
+    </script>
+</body>
+</html>

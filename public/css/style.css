@@ -1,0 +1,756 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Manrope:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+    /* Luxury Dark Enterprise Theme Colors */
+    --bg-dark: #060B16;
+    --bg-secondary: #0E1628;
+    --bg-card: #131E33;
+    --bg-elevated: #18243A;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-active: #D4AF37; /* Royal Gold */
+    
+    /* Brand Accent Colors */
+    --primary: #D4AF37; /* Royal Gold */
+    --accent: #3B82F6; /* Electric Blue */
+    --success: #16C784; /* Success Green */
+    --danger: #EF4444; /* Danger Red */
+    --warning: #F59E0B; /* Warning Amber */
+    
+    /* Text Settings */
+    --text-main: #FFFFFF;
+    --text-muted: #94A3B8;
+    --text-disabled: #64748B;
+    
+    /* Broadcast Gradients */
+    --primary-gradient: linear-gradient(135deg, #FFF066 0%, #D4AF37 50%, #B8901C 100%);
+    --accent-gradient: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+    --success-gradient: linear-gradient(135deg, #34D399 0%, #16C784 100%);
+    --danger-gradient: linear-gradient(135deg, #F87171 0%, #EF4444 100%);
+    --broadcast-bg: linear-gradient(180deg, #131E33 0%, #0E1628 100%);
+    
+    /* Broadcast Element Radius */
+    --radius-small: 8px;
+    --radius-button: 10px;
+    --radius-card: 12px;
+    
+    /* Drop Shadows & Television Glows */
+    --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.4);
+    --shadow-luxury: 0 10px 25px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --glow-gold: 0 0 15px rgba(212, 175, 55, 0.15);
+    --glow-blue: 0 0 15px rgba(59, 130, 246, 0.15);
+}
+
+/* Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', 'Inter', 'Manrope', sans-serif !important;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    line-height: 1.5;
+    overflow-x: hidden;
+    min-height: 100vh;
+    background-image: 
+        radial-gradient(circle at 50% 0%, rgba(28, 35, 90, 0.8) 0%, #05081c 100%),
+        radial-gradient(circle at 10% 40%, rgba(56, 189, 248, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 90% 70%, rgba(236, 201, 75, 0.04) 0%, transparent 40%);
+    background-attachment: fixed;
+}
+
+/* TV Ambient Glow Orbs */
+.glow-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(140px);
+    z-index: -2;
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+.orb-1 {
+    top: -10%; left: -10%;
+    width: 550px; height: 550px;
+    background: radial-gradient(circle, rgba(236, 201, 75, 0.15) 0%, transparent 70%);
+}
+
+.orb-2 {
+    bottom: -10%; right: -10%;
+    width: 650px; height: 650px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+}
+
+/* Animations */
+.animate-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Main Layout Wrapper */
+.app-container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.dashboard-layout {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* TV Broadcast Ticker Side Panel (Sidebar) */
+.sidebar {
+    width: 260px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    flex-shrink: 0;
+    box-shadow: 8px 0 25px rgba(0, 0, 0, 0.4);
+}
+
+.sidebar h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 800;
+    padding: 1.4rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    border-bottom: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.sidebar-header {
+    padding: 1.25rem 1.4rem;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.nav-links {
+    list-style: none;
+    padding: 1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: var(--text-muted);
+    padding: 0.75rem 0.95rem;
+    border-radius: var(--radius-small);
+    font-weight: 600;
+    font-size: 0.88rem;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid transparent;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.nav-links a:hover {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-main);
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
+.nav-links a.active {
+    background: linear-gradient(90deg, rgba(236, 201, 75, 0.1) 0%, rgba(236, 201, 75, 0.01) 100%);
+    color: var(--primary);
+    border-color: rgba(236, 201, 75, 0.22);
+    box-shadow: inset 3px 0 0 var(--primary);
+}
+
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-dark);
+}
+
+/* Broadcast Header Banner */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(13, 17, 48, 0.7) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1.5px solid var(--primary) !important; /* Gold horizontal divider banner */
+    padding: 0.8rem 1.75rem !important;
+    margin-bottom: 0 !important;
+    z-index: 90;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.topbar h1 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.15rem !important;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Broadcast Panels & Cards */
+.panel, .glass-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    padding: 1.35rem;
+    box-shadow: var(--shadow-luxury);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.panel:hover, .glass-panel:hover {
+    border-color: rgba(236, 201, 75, 0.22);
+    box-shadow: var(--shadow-luxury), var(--glow-gold);
+}
+
+.panel-header {
+    margin-bottom: 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.65rem;
+}
+
+.panel-header h3 {
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--primary);
+}
+
+/* Stats Broadcast Ticker Widget */
+.stats-bar {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.stat-pill {
+    background: rgba(13, 17, 48, 0.6) !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: var(--radius-small) !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    color: var(--text-muted) !important;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    text-transform: uppercase;
+}
+
+.stat-pill span {
+    color: #FFFFFF !important;
+    font-weight: 800 !important;
+}
+
+/* Broadcast Player Spotlight Card */
+.player-card {
+    background: radial-gradient(circle at center, #1b2259 0%, #0d1130 100%);
+    border: 1.5px solid var(--border-active) !important;
+    border-radius: var(--radius-card);
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-luxury);
+}
+
+/* Studio Spotlight Glow Frame */
+.player-spotlight-frame {
+    position: relative;
+    width: 105px;
+    height: 105px;
+    margin: 0 auto 1.15rem;
+}
+
+.player-spotlight-frame::after {
+    content: '';
+    position: absolute;
+    inset: -15px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(236, 201, 75, 0.22) 0%, transparent 65%);
+    z-index: 1;
+    animation: broadcastGlow 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes broadcastGlow {
+    from { opacity: 0.4; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1.1); }
+}
+
+.player-card img {
+    position: relative;
+    z-index: 2;
+    border: 3.5px solid var(--primary);
+    box-shadow: 0 0 15px rgba(236, 201, 75, 0.35);
+}
+
+.player-name {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 2.2rem !important;
+    font-weight: 900 !important;
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+    color: #FFFFFF;
+    text-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+.player-role {
+    font-size: 0.88rem !important;
+    color: var(--accent) !important;
+    text-transform: uppercase;
+    letter-spacing: 2px !important;
+    font-weight: 800 !important;
+}
+
+/* Lower-Third Scoreboard Bid Display */
+.bid-display {
+    background: #090c22 !important;
+    border: 1px solid rgba(236, 201, 75, 0.2) !important;
+    border-radius: 10px;
+    padding: 1.15rem !important;
+    position: relative;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+}
+
+.bid-display::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    padding: 1.5px;
+    background: linear-gradient(180deg, rgba(236,201,75,0.25) 0%, transparent 50%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+.current-bid-label {
+    font-size: 0.75rem !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase;
+    letter-spacing: 2.5px !important;
+    font-weight: 700 !important;
+}
+
+.current-bid-amount {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 3.2rem !important;
+    font-weight: 900 !important;
+    color: var(--success) !important;
+    text-shadow: 0 0 15px rgba(34, 197, 94, 0.25);
+    letter-spacing: -0.5px;
+}
+
+.highest-bidder {
+    font-size: 0.9rem !important;
+    color: var(--accent) !important;
+    font-weight: 800;
+    background: rgba(56, 189, 248, 0.1) !important;
+    border: 1px solid rgba(56, 189, 248, 0.22) !important;
+    border-radius: 6px !important;
+    padding: 0.3rem 0.85rem !important;
+    display: inline-block;
+    text-transform: uppercase;
+}
+
+/* Broadcast Live Timer Clock */
+.timer {
+    font-family: 'Plus Jakarta Sans', monospace;
+    font-size: 1.65rem;
+    width: 64px;
+    height: 64px;
+    background: #05081c !important;
+    border: 3.5px solid var(--accent) !important;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    box-shadow: var(--glow-blue), inset 0 2px 8px rgba(0,0,0,0.6) !important;
+    color: #FFFFFF;
+    transition: all 0.25s ease;
+}
+
+.timer.warning {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 2px 8px rgba(0,0,0,0.6) !important;
+    color: var(--danger) !important;
+    animation: tvPulse 0.8s ease infinite;
+}
+
+@keyframes tvPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* TV Graphic Overlays */
+.status-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(5, 8, 28, 0.95);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+}
+
+.status-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.status-text {
+    font-size: 3.5rem !important;
+    font-weight: 900 !important;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    transform: scale(0.6) rotate(-8deg);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.status-overlay.active .status-text {
+    transform: scale(1) rotate(-4deg);
+}
+
+.text-sold {
+    color: var(--success) !important;
+    border: 3.5px solid var(--success);
+    padding: 0.4rem 2rem;
+    border-radius: 10px;
+    background: rgba(34, 197, 94, 0.05);
+    box-shadow: 0 0 25px rgba(34, 197, 94, 0.2);
+}
+
+.text-unsold {
+    color: var(--danger) !important;
+    border: 3.5px solid var(--danger);
+    padding: 0.4rem 2rem;
+    border-radius: 10px;
+    background: rgba(239, 68, 68, 0.05);
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.2);
+}
+
+/* Forms & inputs */
+.form-control, select.form-control {
+    width: 100%;
+    background: var(--bg-dark) !important;
+    border: 1px solid var(--border-color) !important;
+    color: #FFFFFF !important;
+    padding: 0.6rem 0.85rem !important;
+    border-radius: var(--radius-small) !important;
+    font-family: inherit;
+    font-size: 0.85rem !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    outline: none;
+}
+
+.form-control:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(236, 201, 75, 0.12) !important;
+}
+
+.form-control-lg {
+    padding: 0.75rem 1rem !important;
+    font-size: 0.92rem !important;
+}
+
+.stacked-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* TV Broadcast Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1.25rem;
+    border-radius: var(--radius-button);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: inherit;
+    color: #FFFFFF;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: var(--shadow-soft);
+}
+
+.btn:active {
+    transform: scale(0.96) !important;
+}
+
+.btn-primary {
+    background: var(--primary-gradient) !important;
+    color: #05081C !important;
+    border: none !important;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-soft), 0 0 12px rgba(236, 201, 75, 0.25);
+    filter: brightness(1.08);
+}
+
+.btn-success {
+    background: var(--success-gradient) !important;
+    border: none !important;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-soft), 0 0 12px rgba(34, 197, 94, 0.25);
+    filter: brightness(1.08);
+}
+
+.btn-danger {
+    background: var(--danger-gradient) !important;
+    border: none !important;
+}
+
+.btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-soft), 0 0 12px rgba(239, 68, 68, 0.25);
+    filter: brightness(1.08);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    transform: translateY(-1px);
+}
+
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+/* Custom Scrollbars */
+.sleek-scroll::-webkit-scrollbar,
+.list-container::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+.sleek-scroll::-webkit-scrollbar-track,
+.list-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sleek-scroll::-webkit-scrollbar-thumb,
+.list-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.sleek-scroll::-webkit-scrollbar-thumb:hover,
+.list-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(236, 201, 75, 0.15);
+}
+
+/* Broadcast Leaderboard Standings Table */
+.data-table, table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th, table th {
+    padding: 0.75rem 0.95rem !important;
+    color: var(--primary) !important;
+    font-weight: 800 !important;
+    font-size: 0.72rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: 1.5px solid var(--primary) !important;
+    background: var(--bg-secondary) !important;
+}
+
+.data-table td, table td {
+    padding: 0.75rem 0.95rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02) !important;
+    font-size: 0.85rem !important;
+    color: var(--text-main);
+}
+
+.data-table tr:hover, table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.012) !important;
+}
+
+/* Badges */
+.badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    border: 1px solid transparent;
+}
+
+.badge-available, .badge-available-status {
+    background: rgba(56, 189, 248, 0.08);
+    color: var(--accent);
+    border-color: rgba(56, 189, 248, 0.15);
+}
+
+.badge-sold, .badge-sold-status {
+    background: rgba(34, 197, 94, 0.08);
+    color: var(--success);
+    border-color: rgba(34, 197, 94, 0.15);
+}
+
+.badge-unsold, .badge-unsold-status {
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.15);
+}
+
+/* Standings Leaderboard Team Selectors */
+.team-tab-btn {
+    background: rgba(255, 255, 255, 0.01) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-muted) !important;
+    padding: 0.3rem 0.75rem !important;
+    border-radius: 5px !important;
+    font-size: 0.72rem !important;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-transform: uppercase;
+}
+
+.team-tab-btn:hover {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #FFFFFF !important;
+}
+
+.team-tab-btn.active {
+    background: rgba(236, 201, 75, 0.08) !important;
+    color: var(--primary) !important;
+    border-color: rgba(236, 201, 75, 0.22) !important;
+    box-shadow: var(--glow-gold) !important;
+}
+
+/* Franchise Team Cards */
+.team-card {
+    padding: 0.85rem 1rem !important;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-small) !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.team-card:hover {
+    background: var(--bg-secondary) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+    transform: translateX(1px);
+}
+
+/* Dot helpers */
+.color-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+/* Modal Tabs */
+.modal-tab-btn {
+    outline: none;
+    border: none;
+    background: none;
+    padding: 0.65rem 1rem;
+    cursor: pointer;
+    font-weight: 800;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modal-tab-btn:hover {
+    color: #FFFFFF;
+}
+
+.modal-tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    text-shadow: var(--glow-gold);
+}
+
+/* Brand Graphic Logo container */
+.brand-logo {
+    width: 55px;
+    height: 55px;
+    background: var(--primary-gradient);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(236, 201, 75, 0.2);
+    margin: 0 auto 1.15rem;
+}
+
+.brand-logo span {
+    font-size: 1.5rem;
+    color: var(--bg-dark);
+}
+
+/* Grid layout utilities */
+.grid {
+    display: grid;
+    gap: 1rem;
+}
