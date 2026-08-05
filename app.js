@@ -49,7 +49,11 @@ const PORT = process.env.PORT || 3000;
 const data = require('./models/data');
 
 data.init().then(() => {
-    server.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`);
-    });
-});
+    if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+        server.listen(PORT, () => {
+            console.log(`Server is running on http://localhost:${PORT}`);
+        });
+    }
+}).catch(console.error);
+
+module.exports = app;
