@@ -55,9 +55,12 @@ body {
     overflow-x: hidden;
     min-height: 100vh;
     background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
         radial-gradient(circle at 50% 0%, rgba(28, 35, 90, 0.8) 0%, #05081c 100%),
         radial-gradient(circle at 10% 40%, rgba(56, 189, 248, 0.04) 0%, transparent 40%),
         radial-gradient(circle at 90% 70%, rgba(236, 201, 75, 0.04) 0%, transparent 40%);
+    background-size: 30px 30px, 30px 30px, 100% 100%, 100% 100%, 100% 100%;
     background-attachment: fixed;
 }
 
@@ -75,12 +78,20 @@ body {
     top: -10%; left: -10%;
     width: 550px; height: 550px;
     background: radial-gradient(circle, rgba(236, 201, 75, 0.15) 0%, transparent 70%);
+    animation: drift 15s ease-in-out infinite alternate;
 }
 
 .orb-2 {
     bottom: -10%; right: -10%;
     width: 650px; height: 650px;
     background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+    animation: drift 20s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes drift {
+    0% { transform: translate(0, 0) scale(1); opacity: 0.2; }
+    50% { transform: translate(30px, 20px) scale(1.1); opacity: 0.3; }
+    100% { transform: translate(-20px, 40px) scale(0.95); opacity: 0.2; }
 }
 
 /* Animations */
@@ -222,12 +233,13 @@ body {
     border-radius: var(--radius-card);
     padding: 1.35rem;
     box-shadow: var(--shadow-luxury);
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .panel:hover, .glass-panel:hover {
-    border-color: rgba(236, 201, 75, 0.22);
-    box-shadow: var(--shadow-luxury), var(--glow-gold);
+    transform: translateY(-3px);
+    border-color: rgba(236, 201, 75, 0.3);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), var(--glow-gold);
 }
 
 .panel-header {
