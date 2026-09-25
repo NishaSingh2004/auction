@@ -330,7 +330,8 @@
             // Only show operator panel if auction is actively going on (name is not WAITING) 
             // and time is 0.
             const nameEl = document.getElementById('livePlayerName');
-            const isActive = nameEl && !nameEl.textContent.includes('WAITING') && !nameEl.textContent.includes('All players');
+            const nameText = nameEl ? nameEl.textContent.toUpperCase() : '';
+            const isActive = nameEl && !nameText.includes('WAITING') && !nameText.includes('ALL PLAYERS') && !nameText.includes('NO PLAYERS');
             
             // Allow 00:00 format as well
             if ((timeVal === 0 || timeStr === '00:00') && isActive) {
@@ -353,11 +354,18 @@
             
             // Force initial check
             const nameEl = document.getElementById('livePlayerName');
-            const isActive = nameEl && !nameEl.textContent.includes('WAITING') && !nameEl.textContent.includes('All players');
+            const nameText = nameEl ? nameEl.textContent.toUpperCase() : '';
+            const isActive = nameEl && !nameText.includes('WAITING') && !nameText.includes('ALL PLAYERS') && !nameText.includes('NO PLAYERS');
             if(parseInt(liveTimer.textContent.trim(), 10) === 0 && isActive) {
                 document.getElementById('biddingControlsPanel').style.display = 'none';
                 document.getElementById('operatorActionPanel').style.display = 'flex';
             }
+        }
+        
+        // Also observe livePlayerName so if a player is loaded while timer is already 0, it updates!
+        const livePlayerName = document.getElementById('livePlayerName');
+        if (livePlayerName) {
+            timerObserver.observe(livePlayerName, { childList: true, characterData: true, subtree: true });
         }
     });
     </script>
