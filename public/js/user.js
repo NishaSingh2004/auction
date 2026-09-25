@@ -447,6 +447,11 @@ socket.on('dataUpdate', ({ teams, players, categories }) => {
     if (teams) teamsCache = teams;
     if (players) playersCache = players;
     if (categories) categoriesCache = categories;
+    
+    if (typeof renderPlayerListTable === 'function') {
+        renderPlayerListTable();
+    }
+    
     const teamList = document.getElementById('teamList');
     if (teamList) {
         teamList.innerHTML = teams.sort((a, b) => a.name.localeCompare(b.name)).map((team) => {
@@ -667,3 +672,64 @@ function checkBiddingValidity() {
         bidError.textContent = '';
     }
 }
+
+function renderPlayerListTable() {
+    const tbody = document.getElementById('playerListTableBody');
+    if (!tbody || !window.playersCache) return;
+    
+    let html = '';
+    const players = window.playersCache;
+    const teams = window.teamsCache || [];
+    
+    players.forEach(p => {
+        let statusColor = '#fbbf24'; // available
+        if (p.status === 'sold') statusColor = '#10b981';
+        if (p.status === 'unsold') statusColor = '#ef4444';
+        
+        let teamHtml = '-';
+        if (p.status === 'sold' && p.soldTo) {
+            const team = teams.find(t => t.name === p.soldTo);
+            const teamLogo = team && team.logo ? `<img src="${team.logo}" style="width:24px; height:24px; border-radius:50%; object-fit:contain; background:#fff; padding:2px;">` : '';
+            teamHtml = `<div style="display:flex; align-items:center; gap:0.5rem;">${teamLogo} <span style="font-weight:800; color:#fff; font-size:0.85rem;">${formatCurrency(p.soldPrice || 0)}</span></div>`;
+        }
+        
+        let roleIcon = '⚾';
+        if (p.role === 'Batsman') roleIcon = '🏏';
+        if (p.role === 'Bowler') roleIcon = '🥎';
+        if (p.role === 'All Rounder' || p.role === 'All-Rounder') roleIcon = '⚡';
+        
+        let paddedId = p.id || '00';
+        if (!isNaN(paddedId) && paddedId.toString().length < 3) {
+            paddedId = paddedId.toString().padStart(3, '0');
+        }
+        
+        html += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+                <td style="padding: 1rem; color: rgba(255,255,255,0.7); font-size: 0.9rem; font-family: monospace;">${paddedId}</td>
+                <td style="padding: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <img src="${p.photo || '/uploads/default-player.svg'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); background: #1a1c23;">
+                        <span style="color: #fff; font-weight: 800; font-size: 0.95rem;">${p.name}</span>
+                    </div>
+                </td>
+                <td style="padding: 1rem;">
+                    <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; color: rgba(255,255,255,0.8);">
+                        <span>${roleIcon}</span> ${p.role}
+                    </div>
+                </td>
+                <td style="padding: 1rem; color: rgba(255,255,255,0.6); font-size: 0.85rem;">${formatCurrency(p.basePrice || 0)}</td>
+                <td style="padding: 1rem; font-weight: 800; font-size: 0.85rem; color: ${statusColor}; text-transform: uppercase;">
+                    ${p.status}
+                </td>
+                <td style="padding: 1rem;">
+                    ${teamHtml}
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// Ensure it renders if we click it later
+

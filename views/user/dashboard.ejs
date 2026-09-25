@@ -57,9 +57,9 @@
 
             <!-- Center Indicators State 1 (Home) -->
             <div id="navCenterHome" style="display: flex; align-items: center; gap: 2.5rem; position: absolute; left: 50%; transform: translateX(-50%);">
-                <div onclick="toggleLiveBidView(true)" style="cursor: pointer; border: 1px solid #fbbf24; border-radius: 6px; padding: 0.25rem 1.5rem; color: #fbbf24; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; text-align: center; transition: all 0.2s;">LIVE<br>BID</div>
-                <div style="cursor: pointer; color: rgba(255,255,255,0.5); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; text-align: center; transition: all 0.2s;">PLAYER<br>LIST</div>
-                <div style="cursor: pointer; color: rgba(255,255,255,0.5); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; text-align: center; transition: all 0.2s;">TEAM<br>VIEW</div>
+                <div id="tabLiveBid" onclick="toggleLiveBidView(true)" style="cursor: pointer; border: 1px solid #fbbf24; border-radius: 6px; padding: 0.25rem 1.5rem; color: #fbbf24; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; text-align: center; transition: all 0.2s;">LIVE<br>BID</div>
+                <div id="tabPlayerList" onclick="togglePlayerListView()" style="cursor: pointer; border: 1px solid transparent; border-radius: 6px; padding: 0.25rem 1.5rem; color: rgba(255,255,255,0.5); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; text-align: center; transition: all 0.2s;">PLAYER<br>LIST</div>
+                <div id="tabTeamView" style="cursor: pointer; border: 1px solid transparent; border-radius: 6px; padding: 0.25rem 1.5rem; color: rgba(255,255,255,0.5); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; text-align: center; transition: all 0.2s;">TEAM<br>VIEW</div>
             </div>
 
             <!-- Right Info & Indicators -->
@@ -86,12 +86,19 @@
         </header>
 
         <script>
+            window.playersCache = <%- JSON.stringify(data.players) %>;
+            window.teamsCache = <%- JSON.stringify(data.teams) %>;
+            
             function toggleLiveBidView(isLive) {
                 const navRoundTimerWrapper = document.getElementById('navRoundTimerWrapper');
                 const navCenterHome = document.getElementById('navCenterHome');
                 const navCenterLive = document.getElementById('navCenterLive');
                 const bidHistoryColumn = document.getElementById('bidHistoryColumn');
                 const mainGrid = document.getElementById('mainGrid');
+                const playerListContainer = document.getElementById('playerListContainer');
+                
+                if (playerListContainer) playerListContainer.style.display = 'none';
+                if (mainGrid) mainGrid.style.display = 'grid';
                 
                 if (isLive) {
                     if (navRoundTimerWrapper) navRoundTimerWrapper.style.display = 'flex';
@@ -108,11 +115,65 @@
                     
                     if (mainGrid) mainGrid.style.gridTemplateColumns = '37% auto 25%';
                 }
+                
+                // Update tab styles
+                const btnLiveBid = document.getElementById('tabLiveBid');
+                const btnPlayerList = document.getElementById('tabPlayerList');
+                if (btnLiveBid) { btnLiveBid.style.borderColor = '#fbbf24'; btnLiveBid.style.color = '#fbbf24'; }
+                if (btnPlayerList) { btnPlayerList.style.borderColor = 'transparent'; btnPlayerList.style.color = 'rgba(255,255,255,0.5)'; }
+            }
+            
+            function togglePlayerListView() {
+                const navRoundTimerWrapper = document.getElementById('navRoundTimerWrapper');
+                const navCenterLive = document.getElementById('navCenterLive');
+                const mainGrid = document.getElementById('mainGrid');
+                const playerListContainer = document.getElementById('playerListContainer');
+                const navCenterHome = document.getElementById('navCenterHome');
+                
+                if (navRoundTimerWrapper) navRoundTimerWrapper.style.display = 'none';
+                if (navCenterLive) navCenterLive.style.display = 'none';
+                if (navCenterHome) navCenterHome.style.display = 'flex';
+                
+                if (mainGrid) mainGrid.style.display = 'none';
+                if (playerListContainer) {
+                    playerListContainer.style.display = 'block';
+                    if (typeof renderPlayerListTable === 'function') renderPlayerListTable();
+                }
+                
+                // Update tab styles
+                const btnLiveBid = document.getElementById('tabLiveBid');
+                const btnPlayerList = document.getElementById('tabPlayerList');
+                if (btnLiveBid) { btnLiveBid.style.borderColor = 'transparent'; btnLiveBid.style.color = 'rgba(255,255,255,0.5)'; }
+                if (btnPlayerList) { btnPlayerList.style.borderColor = '#fbbf24'; btnPlayerList.style.color = '#fbbf24'; }
             }
         </script>
 
         <!-- Main Workspace -->
-        <div style="flex: 1; overflow: hidden; height: calc(100vh - 60px);">
+        <div style="flex: 1; overflow: hidden; height: calc(100vh - 60px); position: relative;">
+            
+            <!-- PLAYER DATABASE LIST VIEW -->
+            <div id="playerListContainer" style="display: none; height: 100%; overflow-y: auto; padding: 1.5rem; background: #0f1115;">
+                <div class="panel" style="background: #14151a; border-radius: 12px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                    <h2 style="font-size: 1.2rem; color: #fff; margin: 0 0 1.5rem 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">PLAYER DATABASE</h2>
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 1rem; color: rgba(255,255,255,0.5); font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">#ID</th>
+                                <th style="padding: 1rem; color: rgba(255,255,255,0.5); font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Player Info</th>
+                                <th style="padding: 1rem; color: rgba(255,255,255,0.5); font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Role</th>
+                                <th style="padding: 1rem; color: rgba(255,255,255,0.5); font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Base Price</th>
+                                <th style="padding: 1rem; color: rgba(255,255,255,0.5); font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Status</th>
+                                <th style="padding: 1rem; color: rgba(255,255,255,0.5); font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Sold To / Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="playerListTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- LIVE BIDDING GRID VIEW -->
             <div id="mainGrid" class="grid" style="display: grid; grid-template-columns: 37% auto 25%; height: 100%; width: 100%; gap: 1.5rem; padding: 1.5rem; background: #0f1115; transition: all 0.3s;">
                 
                 <!-- 1. Left Column: Player Profile -->
