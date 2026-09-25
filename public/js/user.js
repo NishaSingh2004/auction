@@ -96,16 +96,58 @@ function updateUI(state) {
             liveTimer.classList.remove('warning');
         }
 
+        const playerImageStatusOverlay = document.getElementById('playerImageStatusOverlay');
+        const playerStatusStamp = document.getElementById('playerStatusStamp');
+        const bidHistoryUnsoldOverlay = document.getElementById('bidHistoryUnsoldOverlay');
+        
         if (state.status === 'sold') {
             statusText.textContent = 'SOLD';
             statusText.className = 'status-text text-sold';
             statusOverlay.classList.add('active');
+            
+            // New UI
+            if (playerStatusStamp) {
+                playerStatusStamp.textContent = 'SOLD';
+                playerStatusStamp.style.color = 'rgba(110, 231, 183, 0.95)';
+                playerStatusStamp.style.textShadow = '0 0 80px rgba(16, 185, 129, 1), 0 0 30px rgba(16, 185, 129, 1)';
+                playerStatusStamp.style.opacity = '1';
+                playerStatusStamp.style.transform = 'translate(-50%, -50%) scale(1)';
+            }
+            if (playerImageStatusOverlay) {
+                playerImageStatusOverlay.style.background = 'rgba(16, 185, 129, 0.4)';
+                playerImageStatusOverlay.style.opacity = '1';
+            }
+            if (bidHistoryUnsoldOverlay) bidHistoryUnsoldOverlay.style.opacity = '0';
         } else if (state.status === 'unsold') {
             statusText.textContent = 'UNSOLD';
             statusText.className = 'status-text text-unsold';
             statusOverlay.classList.add('active');
+            
+            // New UI
+            if (playerStatusStamp) {
+                playerStatusStamp.textContent = 'UNSOLD';
+                playerStatusStamp.style.color = 'rgba(255, 180, 180, 0.95)';
+                playerStatusStamp.style.textShadow = '0 0 80px rgba(220, 38, 38, 1), 0 0 30px rgba(220, 38, 38, 1)';
+                playerStatusStamp.style.opacity = '1';
+                playerStatusStamp.style.transform = 'translate(-50%, -50%) scale(1)';
+            }
+            if (playerImageStatusOverlay) {
+                playerImageStatusOverlay.style.background = 'rgba(220, 38, 38, 0.4)';
+                playerImageStatusOverlay.style.opacity = '1';
+            }
+            if (bidHistoryUnsoldOverlay) bidHistoryUnsoldOverlay.style.opacity = '1';
         } else {
             statusOverlay.classList.remove('active');
+            
+            // New UI clear
+            if (playerStatusStamp) {
+                playerStatusStamp.style.opacity = '0';
+                playerStatusStamp.style.transform = 'translate(-50%, -50%) scale(0.8)';
+            }
+            if (playerImageStatusOverlay) {
+                playerImageStatusOverlay.style.opacity = '0';
+            }
+            if (bidHistoryUnsoldOverlay) bidHistoryUnsoldOverlay.style.opacity = '0';
         }
 
         if (bidAmountInput) {
