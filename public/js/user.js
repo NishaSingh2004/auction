@@ -63,6 +63,13 @@ function updateUI(state) {
         const basePriceDisplay = document.getElementById('liveBasePriceDisplay');
         if (basePriceDisplay) basePriceDisplay.style.display = 'none';
     } else if (state.currentPlayer) {
+        if (window.lastPlayerId !== state.currentPlayer.id) {
+            window.lastPlayerId = state.currentPlayer.id;
+            const historyList = document.getElementById('bidHistoryList');
+            if (historyList) {
+                historyList.innerHTML = '<div id="bidHistoryEmptyMsg" style="padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; font-style: italic; text-align: center;">Awaiting bids...</div>';
+            }
+        }
         livePlayerName.textContent = state.currentPlayer.name;
         livePlayerRole.textContent = state.currentPlayer.role;
         liveBidAmount.textContent = formatCurrency(state.currentBid);
@@ -196,6 +203,50 @@ socket.on('bidUpdate', (data) => {
         window.auctionState.currentBid = data.currentBid;
         window.auctionState.highestBidder = data.highestBidder;
     }
+    
+    // Update Simulated Bid History for User Dashboard
+    const historyList = document.getElementById('bidHistoryList');
+    const emptyMsg = document.getElementById('bidHistoryEmptyMsg');
+    if (historyList) {
+        if (emptyMsg) emptyMsg.style.display = 'none';
+        const bidTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+        
+        let teamLogoHtml = '<span style="width: 20px; height: 20px; background: rgba(255,255,255,0.1); border-radius: 2px; display: inline-block;"></span>';
+        if (teamsCache && data.highestBidder) {
+            const bidderTeam = teamsCache.find(t => t.name === data.highestBidder);
+            if (bidderTeam) {
+                if (bidderTeam.logo) {
+                    teamLogoHtml = `<img src="${bidderTeam.logo}" style="width: 20px; height: 20px; border-radius: 2px; object-fit: cover;">`;
+                } else {
+                    teamLogoHtml = `<span style="width: 20px; height: 20px; background: ${bidderTeam.color}; border-radius: 2px; display: inline-block;"></span>`;
+                }
+            }
+        }
+
+        const historyItem = document.createElement('div');
+        historyItem.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 1.15rem; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.3s; animation: fadeIn 0.3s ease-out forwards;';
+        historyItem.innerHTML = `
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                ${teamLogoHtml}
+                <div>
+                    <div style="font-weight: 800; font-size: 1.1rem; color: #fff; text-transform: uppercase;">${data.highestBidder}</div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted);">${bidTime}</div>
+                </div>
+            </div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary);">${formatCurrency(data.currentBid)}</div>
+        `;
+        historyList.prepend(historyItem);
+        
+        // Dim older items slightly
+        const children = historyList.children;
+        for (let i = 1; i < children.length; i++) {
+            if (children[i].id !== 'bidHistoryEmptyMsg') {
+                const amountDiv = children[i].querySelector('div:last-child');
+                if (amountDiv) amountDiv.style.color = 'rgba(255,255,255,0.4)';
+            }
+        }
+    }
+
     if (bidAmountInput) {
         const inc = getActiveCategoryIncrement(window.auctionState);
         bidAmountInput.value = currentBid + inc;
