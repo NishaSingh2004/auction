@@ -19,135 +19,184 @@
     %>
     <div class="app-container" style="display: flex; flex-direction: column; height: 100vh; width: 100vw; max-width: 100%; overflow: hidden;">
         <!-- Header -->
-        <header class="topbar" style="height: 60px; flex-shrink: 0; background: rgba(15, 23, 42, 0.7) !important; border-bottom: 1px solid var(--border-color) !important; padding: 0.75rem 2.2rem !important;">
-            <div style="display: flex; align-items: center; gap: 0.85rem;">
-                <% 
-                let sportsIcon = '🏆';
-                if (data.auctionDetails && data.auctionDetails.sportsType === 'Cricket') sportsIcon = '🏏';
-                else if (data.auctionDetails && data.auctionDetails.sportsType === 'Football') sportsIcon = '⚽';
-                else if (data.auctionDetails && data.auctionDetails.sportsType === 'Kabaddi') sportsIcon = '🤼';
-                else if (data.auctionDetails && data.auctionDetails.sportsType === 'Basketball') sportsIcon = '🏀';
-                %>
-                <% if (data.auctionDetails && data.auctionDetails.logo) { %>
-                    <img src="<%= data.auctionDetails.logo %>" style="width: 32px; height: 32px; border-radius: 6px; object-fit: contain; border: 1px solid var(--border-color); background: var(--bg-dark);" onerror="this.src='/uploads/default-auction.svg'">
-                <% } else { %>
-                    <div style="font-size: 1.5rem; filter: drop-shadow(0 2px 8px rgba(212, 175, 55, 0.3));"><%= sportsIcon %></div>
-                <% } %>
-                <div>
-                    <h1 style="font-size: 1.15rem; margin: 0; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-family: 'Plus Jakarta Sans', sans-serif;"><%= data.auctionDetails ? data.auctionDetails.name : 'LIVE AUCTION' %></h1>
-                    <div style="color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-top: 0.1rem;"><%= data.auctionDetails && data.auctionDetails.season ? data.auctionDetails.season + ' SEASON' : 'ARENA' %></div>
+        <header class="topbar" style="height: 60px; flex-shrink: 0; background: #0f1115 !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; padding: 0 1.5rem !important; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 1.5rem; height: 100%;">
+                <!-- Logo & League Name -->
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <% if (data.auctionDetails && data.auctionDetails.logo) { %>
+                        <img src="<%= data.auctionDetails.logo %>" style="width: 32px; height: 32px; border-radius: 50%; object-fit: contain;">
+                    <% } else { %>
+                        <div style="font-size: 1.5rem;">🏆</div>
+                    <% } %>
+                    <h1 style="font-size: 1.3rem; margin: 0; font-weight: 900; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; text-transform: uppercase; letter-spacing: -0.5px;"><%= data.auctionDetails ? data.auctionDetails.name : 'ELITE PREMIER LEAGUE' %></h1>
+                </div>
+                
+                <div style="width: 1px; height: 30px; background: rgba(255,255,255,0.1);"></div>
+                
+                <!-- Sponsor -->
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="color: rgba(255,255,255,0.4); font-size: 0.55rem; text-transform: uppercase; line-height: 1.2; font-weight: 700;">PRESENTED<br>BY</div>
+                    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1rem; border-radius: 4px; font-size: 0.65rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">SPONSOR</div>
                 </div>
             </div>
-            <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                <div style="color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">CURRENT SET</div>
-                <div id="liveCategorySet" style="font-size: 0.95rem; color: var(--accent); font-weight: 800;"><%= data.auctionState.activeCategoryName || 'General' %></div>
+
+            <!-- Center Indicators -->
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <div style="background: rgba(255,255,255,0.05); padding: 0.2rem 1.2rem; border-radius: 4px; font-size: 0.55rem; color: rgba(255,255,255,0.5); text-transform: uppercase; text-align: center; font-weight: 700; border: 1px solid rgba(255,255,255,0.1);">SIM:<br><span style="color:#fff;">SOLD</span></div>
+                <div style="background: rgba(255,255,255,0.05); padding: 0.2rem 1.2rem; border-radius: 4px; font-size: 0.55rem; color: rgba(255,255,255,0.5); text-transform: uppercase; text-align: center; font-weight: 700; border: 1px solid rgba(255,255,255,0.1);">SIM:<br><span style="color:#fff;">UNSOLD</span></div>
+                <div style="background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.3); padding: 0.4rem 1.5rem; border-radius: 20px; font-size: 0.65rem; color: rgba(255, 180, 180, 0.9); text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 0.5rem; font-weight: 800;">
+                    <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 5px #ef4444; animation: tvPulse 1.5s infinite;"></span> AUCTION LIVE
+                </div>
+            </div>
+
+            <!-- Right Info -->
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <div style="color: rgba(255,255,255,0.5); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">PLAYER <span style="color: #fff; font-size: 1rem; font-weight: 800;">#<span id="navPlayerId">--</span></span></div>
+                <div style="color: rgba(255,255,255,0.5); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">ROUND <span id="navRound" style="color: #fff; font-size: 1rem; font-weight: 800;">1</span></div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="color: rgba(255,255,255,0.5); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">TIMER</div>
+                    <div id="liveTimer" style="color: #fff; font-size: 1.2rem; font-weight: 800; font-family: monospace;">00:30</div>
+                </div>
             </div>
         </header>
 
         <!-- Main Workspace -->
         <div style="flex: 1; overflow: hidden; height: calc(100vh - 60px);">
-            <div class="grid" style="display: grid; grid-template-columns: 35% 30% 35%; height: 100%; width: 100%; gap: 1.5rem; padding: 1.5rem; background: #111111;">
+            <div class="grid" style="display: grid; grid-template-columns: 32% 34% 34%; height: 100%; width: 100%; gap: 1.5rem; padding: 1.5rem; background: #0f1115;">
                 
-                <!-- 1. Left Column: Player Profile (Like Image) -->
-                <div style="background: #1a1a1a; display: flex; flex-direction: column; height: 100%; position: relative; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                <!-- 1. Left Column: Player Profile -->
+                <div style="display: flex; flex-direction: column; height: 100%; gap: 1rem; position: relative;">
                     <!-- Image Section (Top Half) -->
-                    <div style="position: relative; height: 50%; width: 100%; overflow: hidden; background: #000;">
-                        <img id="livePlayerPhoto" src="/uploads/default-player.svg" style="width: 100%; height: 100%; object-fit: cover; filter: grayscale(20%) contrast(1.1);">
+                    <div style="position: relative; height: 48%; width: 100%; overflow: hidden; background: #1a1c23; border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
+                        <img id="livePlayerPhoto" src="/uploads/default-player.svg" style="width: 100%; height: 100%; object-fit: cover; filter: grayscale(10%) contrast(1.1); object-position: top;">
                         
-                        <!-- Red/Dark overlay for Unsold/Sold status -->
-                        <div id="playerImageStatusOverlay" style="position: absolute; inset: 0; background: rgba(220, 38, 38, 0.4); mix-blend-mode: multiply; opacity: 0; transition: opacity 0.3s ease; z-index: 1; pointer-events: none;"></div>
-                        <!-- Massive Status Stamp -->
-                        <div id="playerStatusStamp" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%) scale(0.8); font-size: 8rem; font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif; color: rgba(255, 180, 180, 0.95); text-shadow: 0 0 80px rgba(220, 38, 38, 1), 0 0 30px rgba(220, 38, 38, 1); letter-spacing: -2px; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 2;">UNSOLD</div>
+                        <div id="playerImageStatusOverlay" style="position: absolute; inset: 0; background: rgba(220, 38, 38, 0.4); mix-blend-mode: multiply; opacity: 0; transition: opacity 0.3s ease; z-index: 1;"></div>
+                        <div id="playerStatusStamp" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%) scale(0.8); font-size: 5rem; font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif; color: rgba(255, 180, 180, 0.95); text-shadow: 0 0 80px rgba(220, 38, 38, 1), 0 0 30px rgba(220, 38, 38, 1); letter-spacing: -2px; opacity: 0; transition: all 0.4s; z-index: 2;">UNSOLD</div>
                         
-                        <!-- Gradient Overlay -->
-                        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 70%; background: linear-gradient(to top, #1a1a1a 0%, transparent 100%); z-index: 3;"></div>
-                        <h2 id="livePlayerName" style="position: absolute; bottom: 10px; left: 20px; font-size: 3.5rem !important; margin: 0; line-height: 1; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; color: #fff; z-index: 4;">Waiting...</h2>
+                        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 60%; background: linear-gradient(to top, rgba(26,28,35,1) 0%, transparent 100%); z-index: 3;"></div>
+                        <div style="position: absolute; bottom: 15px; left: 20px; z-index: 4;">
+                            <div id="livePlayerRole" style="font-size: 0.75rem; color: rgba(255,255,255,0.6); text-transform: uppercase; font-weight: 800; letter-spacing: 1.5px; margin-bottom: 0.1rem;">BATSMAN</div>
+                            <h2 id="livePlayerName" style="font-size: 2.8rem !important; margin: 0; line-height: 1; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; color: #fff;">Waiting...</h2>
+                        </div>
                     </div>
                     
-                    <!-- Stats Section (Bottom Half) -->
-                    <div style="padding: 1.5rem; display: flex; flex-direction: column; flex: 1;">
-                        <div style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">Base Price: <span id="liveBasePriceDisplay" style="color: #fff; font-weight: 700;">--</span></div>
-                        
-                        <!-- Stats Grid -->
-                        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; padding: 1.25rem 1rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 1.5rem;">
-                            <div><div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.2rem;">ROLE</div><div id="livePlayerRole" style="font-size: 1.1rem; color: #fff; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</div></div>
-                            <div><div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.2rem;">CATEGORY</div><div id="liveCategoryDisplay" style="font-size: 1.1rem; color: #fff; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</div></div>
-                            <div><div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.2rem;">AGE</div><div id="livePlayerAge" style="font-size: 1.1rem; color: #fff; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</div></div>
-                            <div style="grid-column: span 2;"><div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.2rem;">CAPTAIN</div><div id="livePlayerCaptainBadge" style="font-size: 1.1rem; color: var(--primary); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</div></div>
+                    <!-- Stats Grid Section (Bottom Half) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: min-content; gap: 0.4rem; flex: 1;">
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">MATCHES</div>
+                            <div style="font-size: 1.3rem; color: #fff; font-weight: 800;">234</div>
                         </div>
-
-                        <!-- Current Bid Box -->
-                        <div class="bid-display" id="bidDisplay" style="background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0.02) 100%); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; position: relative;">
-                            <div style="position: absolute; top: 1.5rem; right: 1.5rem; width: 40px; height: 40px;"><div id="liveTimer" class="timer" style="width: 100%; height: 100%; font-size: 1.2rem; border-width: 2px !important; background: transparent !important; box-shadow: none !important;">30</div></div>
-                            
-                            <div id="statusOverlay" class="status-overlay" style="border-radius: 8px; background: rgba(0,0,0,0.8);"><div id="statusText" class="status-text" style="font-size: 2.5rem !important;"></div></div>
-                            
-                            <div>
-                                <div style="font-size: 0.75rem; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 0.5rem;">CURRENT BID</div>
-                                <div id="liveBidAmount" class="current-bid-amount" style="font-size: 3.2rem !important; color: #fff !important; text-shadow: none; font-weight: 900 !important; letter-spacing: -1px; line-height: 1;"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></div>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.2rem;">BIDDER</div>
-                                <div id="liveHighestBidder" style="font-size: 1.4rem; color: #fff; font-weight: 900; text-transform: uppercase;"><%= data.auctionState.highestBidder ? data.auctionState.highestBidder : '--' %></div>
-                            </div>
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">RUNS</div>
+                            <div style="font-size: 1.3rem; color: #fff; font-weight: 800;">7263</div>
+                        </div>
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">SR</div>
+                            <div style="font-size: 1.3rem; color: #fff; font-weight: 800;">130.4</div>
+                        </div>
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">AVG</div>
+                            <div style="font-size: 1.3rem; color: #fff; font-weight: 800;">37.2</div>
+                        </div>
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">AGE</div>
+                            <div id="livePlayerAge" style="font-size: 1.3rem; color: #fff; font-weight: 800;">--</div>
+                        </div>
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">CATEGORY</div>
+                            <div id="liveCategoryDisplay" style="font-size: 1.1rem; color: #fff; font-weight: 800;">--</div>
+                        </div>
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem; grid-column: span 2;">
+                            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">BASE PRICE</div>
+                            <div id="liveBasePriceDisplay" style="font-size: 1.3rem; color: #fff; font-weight: 800;">--</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. Middle Column: Bid History (Simulated) -->
-                <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden; padding-top: 1rem; position: relative;">
-                    <div style="font-size: 1.25rem; color: #fff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1.5rem; font-family: 'Plus Jakarta Sans', sans-serif;">BID HISTORY</div>
-                    <div id="bidHistoryList" class="sleek-scroll" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0;">
-                        <!-- JS will populate this on 'bidUpdate' -->
-                        <div id="bidHistoryEmptyMsg" style="padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; font-style: italic; text-align: center;">Awaiting bids...</div>
+                <!-- 2. Middle Column: Bid Panel -->
+                <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden; position: relative;">
+                    <!-- Current Bid Block -->
+                    <div style="background: #14151a; border-top: 4px solid #fbbf24; border-radius: 4px 4px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; margin-bottom: 0.4rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.02);">
+                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; margin-bottom: 0.75rem;">CURRENT BID</div>
+                        <div id="liveBidAmount" style="font-size: 3.5rem; color: #fbbf24; font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif; line-height: 1; letter-spacing: -1px; margin-bottom: 2rem;"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></div>
+                        
+                        <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.05); margin-bottom: 1.5rem;"></div>
+                        
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div id="currentBidderLogoBox" style="width: 45px; height: 45px; background: #1a1c23; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+                                🏆
+                            </div>
+                            <div style="text-align: left;">
+                                <div style="font-size: 0.65rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; margin-bottom: 0.2rem;">CURRENT BIDDER</div>
+                                <div id="liveHighestBidder" style="font-size: 1.5rem; color: #fff; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px;"><%= data.auctionState.highestBidder ? data.auctionState.highestBidder : 'NO BIDS YET' %></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bid History Block -->
+                    <div style="background: #14151a; flex: 1; display: flex; flex-direction: column; padding: 1.5rem; overflow: hidden; border-radius: 0 0 4px 4px;">
+                        <div style="font-size: 0.75rem; color: #fff; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1.5rem;">BID HISTORY</div>
+                        <div id="bidHistoryList" class="sleek-scroll" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0;">
+                            <div id="bidHistoryEmptyMsg" style="color: rgba(255,255,255,0.3); font-size: 0.8rem; font-style: italic;">Waiting for bids...</div>
+                        </div>
                     </div>
                     
                     <!-- Unsold Overlay for Middle Column -->
-                    <div id="bidHistoryUnsoldOverlay" style="position: absolute; inset: 0; top: 3.5rem; background: rgba(50, 10, 10, 0.5); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 8px; display: flex; flex-direction: column; align-items: center; padding-top: 3rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;">
+                    <div id="bidHistoryUnsoldOverlay" style="position: absolute; inset: 0; background: rgba(20, 10, 10, 0.95); border: 1px solid rgba(220, 38, 38, 0.1); border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(4px);">
                         <div style="font-size: 0.85rem; color: rgba(220, 38, 38, 0.9); font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 0.75rem;">AUCTION STATUS</div>
-                        <div style="font-size: 4rem; color: rgba(220, 38, 38, 0.5); font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -2px; margin-bottom: 2.5rem; line-height: 1;">PASSED</div>
-                        <div style="background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.25); padding: 1.25rem 2.5rem; border-radius: 6px; font-size: 1.2rem; color: rgba(220, 38, 38, 0.9); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;">NO BIDS RECEIVED</div>
+                        <div style="font-size: 4.5rem; color: rgba(220, 38, 38, 0.4); font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -2px; margin-bottom: 2rem; line-height: 1;">PASSED</div>
+                        <div style="background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.25); padding: 1rem 2rem; border-radius: 6px; font-size: 1.2rem; color: rgba(220, 38, 38, 0.9); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;">NO BIDS RECEIVED</div>
                     </div>
                 </div>
 
                 <!-- 3. Right Column: Team Purses -->
-                <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden; padding-top: 1rem;">
-                    <div style="font-size: 1.25rem; color: #fff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1.5rem; font-family: 'Plus Jakarta Sans', sans-serif;">TEAM PURSES</div>
-                    <div id="teamList" class="sleek-scroll" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0.85rem;">
-                        <% data.teams.sort((a, b) => a.name.localeCompare(b.name)).forEach((team, index) => { %>
-                            <% const teamPlayers = data.players.filter(p => p.soldTo === team.name); %>
-                            <!-- Team Card -->
-                            <div class="team-card" data-teamname="<%= team.name %>" style="border: 1px solid rgba(255,255,255,0.05); background: #1a1a1a; padding: 1.25rem; border-radius: 8px; position: relative;">
-                                <!-- Left Color Strip -->
-                                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: <%= team.color %>; border-radius: 8px 0 0 8px;"></div>
-                                
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                        <% if (team.logo) { %>
-                                            <img src="<%= team.logo %>" style="width: 28px; height: 28px; border-radius: 4px; object-fit: cover;">
-                                        <% } else { %>
-                                            <span style="width: 14px; height: 14px; background-color: <%= team.color %>; display: inline-block; border-radius: 2px;"></span>
-                                        <% } %>
-                                        <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; font-size: 1.1rem; color: #fff; text-transform: uppercase;"><%= team.shortName || team.name %></div>
-                                    </div>
-                                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;"><%= teamPlayers.length %>/18 PLYRS</div>
-                                </div>
-                                
-                                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.25rem;">
-                                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Remaining</div>
-                                    <div style="font-size: 1.75rem; font-weight: 900; color: #fff;"><%= formatCurrencyLocal(team.budget) %></div>
-                                </div>
+                <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+                    <div style="background: #14151a; border-radius: 6px; padding: 1.5rem; flex: 1; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.02);">
+                        <!-- Auction Progress -->
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                            <div style="font-size: 0.8rem; color: #fff; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">AUCTION PROGRESS</div>
+                            <div style="font-size: 1.5rem; color: #fff; font-weight: 900;">65%</div>
+                        </div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 2rem;">
+                            <div style="background: #cbd5e1; width: 65%; height: 100%;"></div>
+                        </div>
 
-                                <!-- Progress Bar -->
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
-                                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800;">BUDGET SPENT</div>
-                                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800;"><%= Math.round((teamPlayers.length/18)*100) %>%</div>
+                        <div style="font-size: 0.8rem; color: #fff; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1.5rem;">TEAM PURSES</div>
+                        
+                        <div id="teamList" class="sleek-scroll" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 1.25rem;">
+                            <% data.teams.sort((a, b) => a.name.localeCompare(b.name)).forEach((team, index) => { %>
+                                <% const teamPlayers = data.players.filter(p => p.soldTo === team.name); %>
+                                <div class="team-card" data-teamname="<%= team.name %>" style="display: flex; flex-direction: column; gap: 0.6rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <% if (team.logo) { %>
+                                                <img src="<%= team.logo %>" style="width: 28px; height: 28px; background: #cbd5e1; padding: 2px; border-radius: 50%; object-fit: contain;">
+                                            <% } else { %>
+                                                <div style="width: 28px; height: 28px; background: #cbd5e1; color: #000; font-size: 0.5rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border-radius: 50%;">IMG</div>
+                                            <% } %>
+                                            <div style="font-size: 1rem; color: #fff; font-weight: 800; text-transform: uppercase;"><%= team.shortName || team.name %></div>
+                                        </div>
+                                        <div style="font-size: 1.5rem; font-weight: 900; color: #fff;"><%= formatCurrencyLocal(team.budget) %></div>
+                                    </div>
+                                    
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                                        <div>
+                                            <div style="font-size: 0.55rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.1rem;">MAX BID</div>
+                                            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.8); font-weight: 700;"><%= formatCurrencyLocal(team.budget * 0.8) %></div>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <div style="font-size: 0.55rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.1rem;">PLAYERS</div>
+                                            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.8); font-weight: 700;"><%= teamPlayers.length %>/25</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Progress Bar Line -->
+                                    <div style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 0.2rem;">
+                                        <div style="background: <%= team.color %>; height: 100%; width: <%= Math.min(100, ((teamPlayers.length / 25) * 100)) %>%;"></div>
+                                    </div>
                                 </div>
-                                <div style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
-                                    <div style="background: <%= team.color %>; height: 100%; width: <%= Math.min(100, ((teamPlayers.length / 18) * 100)) %>%;"></div>
-                                </div>
-                            </div>
-                        <% }) %>
+                            <% }) %>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -79,6 +79,12 @@ function updateUI(state) {
         currentBid = state.currentBid;
         auctionActive = state.status === 'active';
         
+        const navPlayerId = document.getElementById('navPlayerId');
+        if (navPlayerId) navPlayerId.textContent = state.currentPlayer.id || '--';
+        
+        const navRound = document.getElementById('navRound');
+        if (navRound) navRound.textContent = state.activeCategoryName || window.auctionState.activeCategoryName || '1';
+        
         if (livePlayerPhoto) {
             livePlayerPhoto.src = state.currentPlayer.photo ? state.currentPlayer.photo : '/uploads/default-player.svg';
         }
@@ -278,6 +284,18 @@ socket.on('bidUpdate', (data) => {
             <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary);">${formatCurrency(data.currentBid)}</div>
         `;
         historyList.prepend(historyItem);
+        
+        // Update the big current bidder logo box
+        const currentBidderLogoBox = document.getElementById('currentBidderLogoBox');
+        if (currentBidderLogoBox) {
+            if (teamLogoHtml.includes('img')) {
+                currentBidderLogoBox.innerHTML = teamLogoHtml.replace('20px', '45px').replace('20px', '45px');
+            } else if (teamLogoHtml.includes('span')) {
+                currentBidderLogoBox.innerHTML = teamLogoHtml.replace('20px', '45px').replace('20px', '45px');
+            } else {
+                currentBidderLogoBox.innerHTML = '🏆';
+            }
+        }
         
         // Dim older items slightly
         const children = historyList.children;
