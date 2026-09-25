@@ -49,6 +49,9 @@
             <div id="bioDetail"></div>
             <button id="manualBidUpBtn">▲</button>
             <button id="manualBidDownBtn">▼</button>
+            <div id="liveTimer">30</div>
+            <button id="timerResetBtn"></button>
+            <button id="timerPauseBtn"></button>
             <button id="resetTimerBtn"></button>
             <img id="livePlayerPhoto" src="/uploads/default-player.svg">
         </div>
@@ -113,20 +116,6 @@
                     <img id="livePlayerPhotoBg" src="/uploads/default-player.svg" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.4; filter: blur(3px);">
                     <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.95) 100%);"></div>
                     
-                    <!-- Timer Widget -->
-                    <div style="position: absolute; top: 1.5rem; right: 1.5rem; z-index: 30; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
-                        <div style="background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 0.6rem 1.25rem; display: flex; align-items: center; gap: 1.25rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-                            <div style="display: flex; flex-direction: column; align-items: center;">
-                                <span style="font-size: 0.65rem; color: #fbbf24; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">Time Left</span>
-                                <div id="liveTimer" style="font-size: 2.75rem; font-weight: 900; color: #fff; line-height: 1; font-family: monospace; text-shadow: 0 0 10px rgba(255,255,255,0.3);">30</div>
-                            </div>
-                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                <button id="timerPauseBtn" class="btn" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; cursor: pointer; transition: all 0.2s; white-space: nowrap;">⏸ Pause</button>
-                                <button id="timerResetBtn" class="btn" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; cursor: pointer; transition: all 0.2s; white-space: nowrap;">🔄 Reset Timer</button>
-                            </div>
-                        </div>
-                    </div>
-                    
                     <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; padding-bottom: 2rem;">
                         <h2 id="livePlayerName" style="font-size: 4.5rem; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; color: #fff; margin: 0; text-transform: uppercase; letter-spacing: -2px; text-shadow: 0 4px 20px rgba(0,0,0,0.8);">WAITING...</h2>
                         <div id="livePlayerRole" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); padding: 0.4rem 1.2rem; border-radius: 20px; font-size: 0.8rem; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -145,7 +134,7 @@
                 </div>
                 
                 <!-- Bidding Controls Panel -->
-                <div id="biddingControlsPanel" style="display: flex; gap: 1.5rem; transition: opacity 0.3s;">
+                <div style="display: flex; gap: 1.5rem;">
                     <!-- Left: Manual Entry & Quick Team Select -->
                     <div style="flex: 1.5; background: #11131a; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -193,28 +182,8 @@
                         <button id="manualBidBtn" class="btn" style="background: #fbbf24; color: #000; font-size: 1.5rem; padding: 1rem; border-radius: 8px; font-weight: 900; box-shadow: 0 4px 15px rgba(251,191,36,0.3); border: none; cursor: pointer; transition: transform 0.1s;">🔨 BID</button>
                     </div>
                 </div>
-                
-                <!-- Operator Action Panel (Hidden by default, shown when timer reaches 0) -->
-                <div id="operatorActionPanel" style="display: none; background: #161821; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 2.5rem; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; box-shadow: inset 0 2px 20px rgba(0,0,0,0.5);">
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; text-align: center;">
-                        <span style="font-size: 2.5rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">⚖️</span>
-                        <h3 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 1.5px;">AWAITING OPERATOR ACTION</h3>
-                        <p style="color: rgba(255,255,255,0.5); font-size: 0.95rem; margin: 0; font-weight: 500;">Time expired. Confirm sale or mark unsold.</p>
-                    </div>
-                    
-                    <div style="display: flex; gap: 1.5rem; width: 100%; max-width: 600px; margin-top: 1rem;">
-                        <button class="btn" style="flex: 1; background: #2f855a; color: #fff; padding: 1.5rem; border-radius: 10px; font-weight: 900; font-size: 1.25rem; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(47, 133, 90, 0.4); transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'" onclick="document.getElementById('endAuctionBtn').click()">
-                            <span style="font-size: 1.25rem; font-weight: 400;">✔️</span> CONFIRM SOLD
-                        </button>
-                        <button class="btn" style="flex: 1; background: #9b2c2c; color: #fff; padding: 1.5rem; border-radius: 10px; font-weight: 900; font-size: 1.25rem; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(155, 44, 44, 0.4); transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'" onclick="document.getElementById('unsoldBtn').click()">
-                            <span style="font-size: 1.25rem; font-weight: 400;">✖️</span> MARK UNSOLD
-                        </button>
-                    </div>
-                    
-                    <button class="btn" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.1); padding: 0.75rem 2rem; border-radius: 8px; font-size: 0.85rem; font-weight: 800; cursor: pointer; transition: background 0.2s; margin-top: 1rem;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'" onclick="document.getElementById('timerResetBtn').click()">
-                        ⏱ EXTEND TIMER
-                    </button>
-                </div>
+            </div>
+            
             <!-- RIGHT SIDEBAR -->
             <div style="width: 340px; border-left: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; background: #0b0d12;">
                 
@@ -316,57 +285,9 @@
             liveBg.src = livePhoto.src;
         }
     });
-    
-    // New observer to toggle the operator action panel when timer reaches 0
-    const timerObserver = new MutationObserver((mutations) => {
-        const liveTimer = document.getElementById('liveTimer');
-        const biddingPanel = document.getElementById('biddingControlsPanel');
-        const operatorPanel = document.getElementById('operatorActionPanel');
-        
-        if (liveTimer && biddingPanel && operatorPanel) {
-            const timeStr = liveTimer.textContent.trim();
-            const timeVal = parseInt(timeStr, 10);
-            
-            // Only show operator panel if auction is actively going on (name is not WAITING) 
-            // and time is 0.
-            const nameEl = document.getElementById('livePlayerName');
-            const nameText = nameEl ? nameEl.textContent.toUpperCase() : '';
-            const isActive = nameEl && !nameText.includes('WAITING') && !nameText.includes('ALL PLAYERS') && !nameText.includes('NO PLAYERS');
-            
-            // Allow 00:00 format as well
-            if ((timeVal === 0 || timeStr === '00:00') && isActive) {
-                biddingPanel.style.display = 'none';
-                operatorPanel.style.display = 'flex';
-            } else {
-                biddingPanel.style.display = 'flex';
-                operatorPanel.style.display = 'none';
-            }
-        }
-    });
-
     window.addEventListener('load', () => {
         const livePhoto = document.getElementById('livePlayerPhoto');
         if(livePhoto) origObserver.observe(livePhoto, { attributes: true, attributeFilter: ['src'] });
-        
-        const liveTimer = document.getElementById('liveTimer');
-        if (liveTimer) {
-            timerObserver.observe(liveTimer, { childList: true, characterData: true, subtree: true });
-            
-            // Force initial check
-            const nameEl = document.getElementById('livePlayerName');
-            const nameText = nameEl ? nameEl.textContent.toUpperCase() : '';
-            const isActive = nameEl && !nameText.includes('WAITING') && !nameText.includes('ALL PLAYERS') && !nameText.includes('NO PLAYERS');
-            if(parseInt(liveTimer.textContent.trim(), 10) === 0 && isActive) {
-                document.getElementById('biddingControlsPanel').style.display = 'none';
-                document.getElementById('operatorActionPanel').style.display = 'flex';
-            }
-        }
-        
-        // Also observe livePlayerName so if a player is loaded while timer is already 0, it updates!
-        const livePlayerName = document.getElementById('livePlayerName');
-        if (livePlayerName) {
-            timerObserver.observe(livePlayerName, { childList: true, characterData: true, subtree: true });
-        }
     });
     </script>
 \n         <!-- DATA MANAGEMENT MODAL -->
