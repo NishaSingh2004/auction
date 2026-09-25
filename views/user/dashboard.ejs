@@ -28,9 +28,9 @@
                     <% } else { %>
                         <div style="font-size: 1.5rem;">🏆</div>
                     <% } %>
-                    <div style="display: flex; flex-direction: column;">
-                        <h1 style="font-size: 1.1rem; margin: 0; font-weight: 900; color: #fbbf24; font-family: 'Plus Jakarta Sans', sans-serif; text-transform: uppercase; letter-spacing: -0.5px;"><%= data.auctionDetails ? data.auctionDetails.name : 'ELITE PREMIER LEAGUE' %></h1>
-                        <div style="font-size: 0.9rem; font-weight: 800; color: #fbbf24;"><%= data.auctionDetails && data.auctionDetails.season ? data.auctionDetails.season : '2026' %></div>
+                    <div style="display: flex; flex-direction: column; max-width: 280px;">
+                        <h1 style="font-size: 1.1rem; margin: 0; font-weight: 900; color: #fbbf24; font-family: 'Plus Jakarta Sans', sans-serif; text-transform: uppercase; letter-spacing: -0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= data.auctionDetails ? data.auctionDetails.name : 'ELITE PREMIER LEAGUE' %>"><%= data.auctionDetails ? data.auctionDetails.name : 'ELITE PREMIER LEAGUE' %></h1>
+                        <div style="font-size: 0.9rem; font-weight: 800; color: #fbbf24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><%= data.auctionDetails && data.auctionDetails.season ? data.auctionDetails.season : '2026' %></div>
                     </div>
                 </div>
                 
@@ -193,34 +193,34 @@
                     </div>
                     
                     <!-- Stats Grid Section (Bottom Half) -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: min-content; gap: 0.4rem; flex: 1;">
-                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 0.4rem; flex: 1;">
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 0.75rem; display: flex; flex-direction: column; justify-content: center;">
                             <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">MATCHES</div>
-                            <div style="font-size: 1.3rem; color: #fff; font-weight: 800;">234</div>
+                            <div style="font-size: 1.1rem; color: #fff; font-weight: 800;">234</div>
                         </div>
-                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 0.75rem; display: flex; flex-direction: column; justify-content: center;">
                             <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">RUNS</div>
-                            <div style="font-size: 1.3rem; color: #fff; font-weight: 800;">7263</div>
+                            <div style="font-size: 1.1rem; color: #fff; font-weight: 800;">7263</div>
                         </div>
-                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 0.75rem; display: flex; flex-direction: column; justify-content: center;">
                             <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">SR</div>
-                            <div style="font-size: 1.3rem; color: #fff; font-weight: 800;">130.4</div>
+                            <div style="font-size: 1.1rem; color: #fff; font-weight: 800;">130.4</div>
                         </div>
-                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 0.75rem; display: flex; flex-direction: column; justify-content: center;">
                             <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">AVG</div>
-                            <div style="font-size: 1.3rem; color: #fff; font-weight: 800;">37.2</div>
+                            <div style="font-size: 1.1rem; color: #fff; font-weight: 800;">37.2</div>
                         </div>
-                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 0.75rem; display: flex; flex-direction: column; justify-content: center;">
                             <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">AGE</div>
-                            <div id="livePlayerAge" style="font-size: 1.3rem; color: #fff; font-weight: 800;">--</div>
+                            <div id="livePlayerAge" style="font-size: 1.1rem; color: #fff; font-weight: 800;">--</div>
                         </div>
-                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem;">
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 0.75rem; display: flex; flex-direction: column; justify-content: center;">
                             <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">CATEGORY</div>
-                            <div id="liveCategoryDisplay" style="font-size: 1.1rem; color: #fff; font-weight: 800;">--</div>
+                            <div id="liveCategoryDisplay" style="font-size: 1rem; color: #fff; font-weight: 800;">--</div>
                         </div>
-                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 1rem; grid-column: span 2;">
+                        <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.03); border-radius: 4px; padding: 0.75rem; grid-column: span 2; display: flex; flex-direction: column; justify-content: center;">
                             <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.2rem;">BASE PRICE</div>
-                            <div id="liveBasePriceDisplay" style="font-size: 1.3rem; color: #fff; font-weight: 800;">--</div>
+                            <div id="liveBasePriceDisplay" style="font-size: 1.1rem; color: #fff; font-weight: 800;">--</div>
                         </div>
                     </div>
                 </div>
@@ -230,7 +230,7 @@
                     <!-- Current Bid Block -->
                     <div style="background: #14151a; border-top: 4px solid #fbbf24; border-radius: 4px 4px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; margin-bottom: 0.4rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.02);">
                         <div style="font-size: 0.75rem; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; margin-bottom: 0.75rem;">CURRENT BID</div>
-                        <div id="liveBidAmount" style="font-size: 3.5rem; color: #fbbf24; font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif; line-height: 1; letter-spacing: -1px; margin-bottom: 2rem;"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></div>
+                        <div id="liveBidAmount" style="font-size: clamp(2rem, 3.5vw, 2.8rem); color: #fbbf24; font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif; line-height: 1.1; letter-spacing: -1px; margin-bottom: 2rem; word-break: break-word;"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></div>
                         
                         <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.05); margin-bottom: 1.5rem;"></div>
                         

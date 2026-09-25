@@ -147,7 +147,11 @@ function updateUI(state) {
         }
         
         const navPlayerId = document.getElementById('navPlayerId');
-        if (navPlayerId) navPlayerId.textContent = state.currentPlayer.id || '--';
+        if (navPlayerId) {
+            let pId = String(state.currentPlayer.id || '--');
+            if (pId.length > 8) pId = '..' + pId.slice(-5);
+            navPlayerId.textContent = pId;
+        }
         
         const navRound = document.getElementById('navRound');
         if (navRound) navRound.textContent = state.activeCategoryName || window.auctionState.activeCategoryName || '1';
@@ -471,13 +475,13 @@ socket.on('dataUpdate', ({ teams, players, categories }) => {
                 `).join('');
 
             return `
-                <div class="team-card" data-teamname="${team.name}" style="display: flex; flex-direction: column; gap: 0.6rem;">
+                <div class="team-card" data-teamname="${team.name}" style="display: flex; flex-direction: column; gap: 0.6rem; background: #1a1c23; padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                             ${team.logo ? `<img src="${team.logo}" style="width: 28px; height: 28px; background: #cbd5e1; padding: 2px; border-radius: 50%; object-fit: contain;">` : `<div style="width: 28px; height: 28px; background: #cbd5e1; color: #000; font-size: 0.5rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border-radius: 50%;">IMG</div>`}
                             <div style="font-size: 1rem; color: #fff; font-weight: 800; text-transform: uppercase;">${team.shortName || team.name}</div>
                         </div>
-                        <div style="font-size: 1.5rem; font-weight: 900; color: #fff;">${formatCurrency(team.budget)}</div>
+                        <div style="font-size: clamp(1rem, 2vw, 1.3rem); font-weight: 900; color: #fff; text-align: right; line-height: 1.1; word-break: break-word;">${formatCurrency(team.budget)}</div>
                     </div>
                     
                     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
