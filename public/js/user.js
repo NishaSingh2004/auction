@@ -173,10 +173,27 @@ function updateUI(state) {
         const playerStatusStamp = document.getElementById('playerStatusStamp');
         const bidHistoryUnsoldOverlay = document.getElementById('bidHistoryUnsoldOverlay');
         
+        // Nav indicators
+        const navIndSold = document.getElementById('navIndicatorSold');
+        const navIndUnsold = document.getElementById('navIndicatorUnsold');
+        const navIndLive = document.getElementById('navIndicatorLive');
+        const navIndLiveDot = document.getElementById('navIndicatorLiveDot');
+        
+        // Reset nav indicators
+        if (navIndSold) { navIndSold.style.background = 'rgba(255,255,255,0.05)'; navIndSold.style.borderColor = 'rgba(255,255,255,0.1)'; }
+        if (navIndUnsold) { navIndUnsold.style.background = 'rgba(255,255,255,0.05)'; navIndUnsold.style.borderColor = 'rgba(255,255,255,0.1)'; }
+        if (navIndLive) { navIndLive.style.background = 'rgba(255,255,255,0.05)'; navIndLive.style.borderColor = 'rgba(255,255,255,0.1)'; }
+        if (navIndLiveDot) { navIndLiveDot.style.background = 'rgba(255,255,255,0.3)'; navIndLiveDot.style.boxShadow = 'none'; navIndLiveDot.style.animation = 'none'; }
+        
         if (state.status === 'sold') {
             statusText.textContent = 'SOLD';
             statusText.className = 'status-text text-sold';
             statusOverlay.classList.add('active');
+            
+            if (navIndSold) {
+                navIndSold.style.background = 'rgba(16, 185, 129, 0.15)';
+                navIndSold.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            }
             
             // New UI
             if (playerStatusStamp) {
@@ -196,6 +213,11 @@ function updateUI(state) {
             statusText.className = 'status-text text-unsold';
             statusOverlay.classList.add('active');
             
+            if (navIndUnsold) {
+                navIndUnsold.style.background = 'rgba(220, 38, 38, 0.15)';
+                navIndUnsold.style.borderColor = 'rgba(220, 38, 38, 0.4)';
+            }
+            
             // New UI
             if (playerStatusStamp) {
                 playerStatusStamp.textContent = 'UNSOLD';
@@ -211,6 +233,16 @@ function updateUI(state) {
             if (bidHistoryUnsoldOverlay) bidHistoryUnsoldOverlay.style.opacity = '1';
         } else {
             statusOverlay.classList.remove('active');
+            
+            if (navIndLive) {
+                navIndLive.style.background = 'rgba(220, 38, 38, 0.15)';
+                navIndLive.style.borderColor = 'rgba(220, 38, 38, 0.4)';
+            }
+            if (navIndLiveDot) {
+                navIndLiveDot.style.background = '#ef4444';
+                navIndLiveDot.style.boxShadow = '0 0 5px #ef4444';
+                navIndLiveDot.style.animation = 'tvPulse 1.5s infinite';
+            }
             
             // New UI clear
             if (playerStatusStamp) {
