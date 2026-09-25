@@ -355,7 +355,7 @@
             
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button id="unsoldBtn" class="btn" style="background: #ef4444; color: #fff; padding: 0.6rem 3rem; font-size: 1rem; font-weight: 900; border-radius: 6px; border: none; letter-spacing: 1px; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); cursor: pointer;"><span style="font-size: 1.2rem;">✖</span> UNSOLD</button>
-                <button id="endAuctionBtn" class="btn" style="background: #22c55e; color: #fff; padding: 0.6rem 3rem; font-size: 1rem; font-weight: 900; border-radius: 6px; border: none; letter-spacing: 1px; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3); cursor: pointer;"><span style="font-size: 1.2rem;">🔨</span> SOLD</button>
+                <button id="endAuctionBtn" onclick="openSoldConfirmationModal(event)" class="btn" style="background: #22c55e; color: #fff; padding: 0.6rem 3rem; font-size: 1rem; font-weight: 900; border-radius: 6px; border: none; letter-spacing: 1px; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3); cursor: pointer;"><span style="font-size: 1.2rem;">🔨</span> SOLD</button>
             </div>
             
             <button class="btn" style="background: transparent; color: #fff; padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 800; border: none; display: flex; align-items: center; gap: 1rem; cursor: pointer;" onclick="triggerNextPlayer()">
@@ -1651,5 +1651,101 @@
  </script>
  <script src="/js/media-controller.js?v=<%= Date.now() %>"></script>
  <script src="/js/admin.js?v=<%= Date.now() %>"></script>
- </body>
+ 
+<script>
+window.openSoldConfirmationModal = function(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    const livePlayerName = document.getElementById('livePlayerName');
+    if (livePlayerName && livePlayerName.textContent.includes('Waiting')) {
+        if (typeof showToast !== 'undefined') showToast('⚠️ No player is currently loaded!', 'error');
+        return;
+    }
+    
+    // Fallback to checking the UI for selected team since selectedTeamName is a let in admin.js and might not be exposed globally.
+    // Wait, in admin.js, selectedTeamName is local to the module!
+    // We can extract it by checking the quickTeamSelect dropdown value, OR by checking the currently highlighted team card!
+    let activeTeamName = null;
+    const qSelect = document.getElementById('quickTeamSelect');
+    if (qSelect && qSelect.value) {
+        activeTeamName = qSelect.value;
+    } else {
+        // Find the active team card that has border-color var(--primary)
+        const teamCards = document.querySelectorAll('.team-card');
+        for (let c of teamCards) {
+            if (c.style.borderColor === 'var(--primary)') {
+                activeTeamName = c.getAttribute('data-teamname');
+                break;
+            }
+        }
+    }
+
+    if (!activeTeamName) {
+        if (typeof showToast !== 'undefined') showToast('⚠️ Please select a team to sell the player!', 'error');
+        return;
+    }
+
+    const player = window.auctionState ? window.auctionState.currentPlayer : null;
+    const bidPrice = window.auctionState ? (window.auctionState.currentBid || 0) : 0;
+    const teamObj = window.currentTeamsCache ? window.currentTeamsCache.find(t => t.name === activeTeamName) : null;
+    
+    const txIdEl = document.getElementById('scmTxId');
+    if(txIdEl) txIdEl.textContent = '#' + Math.floor(1000 + Math.random() * 9000) + 'A';
+    
+    const photoEl = document.getElementById('scmPlayerPhoto');
+    if(photoEl) photoEl.src = (player && player.photo) ? player.photo : '/uploads/default-player.svg';
+    
+    const nameEl = document.getElementById('scmPlayerName');
+    if(nameEl) nameEl.textContent = player ? player.name : 'Unknown Player';
+    
+    const roleEl = document.getElementById('scmPlayerRole');
+    if(roleEl) roleEl.innerHTML = '🏏 ' + (player && player.role ? player.role : 'Player');
+    
+    const finalBidEl = document.getElementById('scmFinalBid');
+    if(finalBidEl) finalBidEl.textContent = window.formatCurrencyLocal ? window.formatCurrencyLocal(bidPrice) : '₹' + bidPrice;
+    
+    const winTeamEl = document.getElementById('scmWinningTeam');
+    if(winTeamEl) winTeamEl.textContent = activeTeamName;
+    
+    if (teamObj) {
+        const teamPlayers = (window.currentPlayersDataCache || []).filter(p => p.soldTo === teamObj.name && p.status === 'sold');
+        const totalSpent = teamPlayers.reduce((sum, p) => sum + (parseInt(p.soldPrice) || 0), 0);
+        const remainingBeforeThisBid = teamObj.budget - totalSpent;
+        const remainingAfterThisBid = remainingBeforeThisBid - bidPrice;
+        
+        const remainingPurseEl = document.getElementById('scmRemainingPurse');
+        if(remainingPurseEl) remainingPurseEl.textContent = window.formatCurrencyLocal ? window.formatCurrencyLocal(remainingAfterThisBid) : '₹' + remainingAfterThisBid;
+        
+        const maxPlayers = window.auctionMaxPlayers || 15;
+        const squadStatusEl = document.getElementById('scmSquadStatus');
+        if(squadStatusEl) squadStatusEl.textContent = (teamPlayers.length + 1) + ' / ' + maxPlayers;
+    } else {
+        console.warn("Could not find teamObj for finances");
+    }
+    
+    const modal = document.getElementById('soldConfirmationModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+    
+    const confirmBtn = document.getElementById('scmConfirmBtn');
+    if (confirmBtn) {
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        newConfirmBtn.addEventListener('click', () => {
+            if (typeof socket !== 'undefined') {
+                socket.emit('endAuction', { selectedTeamName: activeTeamName });
+            }
+            modal.style.display = 'none';
+            if (typeof showToast !== 'undefined') showToast('🎉 Player SOLD to ' + activeTeamName + '!', 'success');
+        });
+    }
+};
+</script>
+
+</body>
  </html>

@@ -466,83 +466,10 @@ document.addEventListener('click', (e) => {
 });
 
 if (endAuctionBtn) {
-    endAuctionBtn.addEventListener('click', () => {
-        if (livePlayerName && livePlayerName.textContent.includes('Waiting')) {
-            showToast('⚠️ No player is currently loaded!', 'error');
-            return;
-        }
-        if (!selectedTeamName) {
-            showToast('⚠️ Please select a team to sell the player!', 'error');
-            return;
-        }
-
-        // --- NEW: SOLD CONFIRMATION MODAL LOGIC ---
-        const player = window.auctionState.currentPlayer;
-        const bidPrice = window.auctionState.currentBid || 0;
-        const teamObj = window.currentTeamsCache ? window.currentTeamsCache.find(t => t.name === selectedTeamName) : null;
-        
-        if (!player || !teamObj) {
-            socket.emit('endAuction', { selectedTeamName });
-            showToast('🔨 Player SOLD!', 'success');
-            return;
-        }
-
-        // Populate Modal Fields
-        const txIdEl = document.getElementById('scmTxId');
-        if(txIdEl) txIdEl.textContent = '#' + Math.floor(1000 + Math.random() * 9000) + 'A';
-        
-        const photoEl = document.getElementById('scmPlayerPhoto');
-        if(photoEl) photoEl.src = player.photo || '/uploads/default-player.svg';
-        
-        const nameEl = document.getElementById('scmPlayerName');
-        if(nameEl) nameEl.textContent = player.name;
-        
-        const roleEl = document.getElementById('scmPlayerRole');
-        if(roleEl) roleEl.innerHTML = '🏏 ' + (player.role || 'Player');
-        
-        // Final Bid and Team Info
-        const finalBidEl = document.getElementById('scmFinalBid');
-        if(finalBidEl) finalBidEl.textContent = window.formatCurrencyLocal ? window.formatCurrencyLocal(bidPrice) : '₹' + bidPrice;
-        
-        const winTeamEl = document.getElementById('scmWinningTeam');
-        if(winTeamEl) winTeamEl.textContent = teamObj.name;
-        
-        // Finances calculation
-        const teamPlayers = window.currentPlayersDataCache ? window.currentPlayersDataCache.filter(p => p.soldTo === teamObj.name && p.status === 'sold') : [];
-        const totalSpent = teamPlayers.reduce((sum, p) => sum + (parseInt(p.soldPrice) || 0), 0);
-        const remainingBeforeThisBid = teamObj.budget - totalSpent;
-        const remainingAfterThisBid = remainingBeforeThisBid - bidPrice;
-        
-        const remainingPurseEl = document.getElementById('scmRemainingPurse');
-        if(remainingPurseEl) remainingPurseEl.textContent = window.formatCurrencyLocal ? window.formatCurrencyLocal(remainingAfterThisBid) : '₹' + remainingAfterThisBid;
-        
-        const maxPlayers = window.auctionMaxPlayers || 15;
-        const squadStatusEl = document.getElementById('scmSquadStatus');
-        if(squadStatusEl) squadStatusEl.textContent = (teamPlayers.length + 1) + ' / ' + maxPlayers;
-
-        // Show Modal
-        const modal = document.getElementById('soldConfirmationModal');
-        if (modal) modal.style.display = 'flex';
-        
-        // Bind Confirm Button
-        const confirmBtn = document.getElementById('scmConfirmBtn');
-        if (confirmBtn) {
-            // Remove previous listeners to prevent multiple emits
-            const newConfirmBtn = confirmBtn.cloneNode(true);
-            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-            
-            newConfirmBtn.addEventListener('click', () => {
-                socket.emit('endAuction', { selectedTeamName });
-                if (modal) modal.style.display = 'none';
-                showToast('🎉 Player SOLD to ' + selectedTeamName + '!', 'success');
-            });
-        } else {
-            // Fallback
-            socket.emit('endAuction', { selectedTeamName });
-        }
+    endAuctionBtn.addEventListener('click', (e) => {
+        if (window.openSoldConfirmationModal) window.openSoldConfirmationModal(e);
     });
 }
-
 if(unsoldBtn) {
     unsoldBtn.addEventListener('click', () => {
         if (livePlayerName && livePlayerName.textContent.includes('Waiting')) {
@@ -2816,3 +2743,13 @@ window.executeBulkAssignment = async () => {
         spinner.style.display = 'none';
     }
 };
+document.addEventListener('DOMContentLoaded', () => {
+    const qSelect = document.getElementById('quickTeamSelect');
+    if (qSelect) {
+        qSelect.addEventListener('change', (e) => {
+            if (window.selectTeamForBid) {
+                window.selectTeamForBid(e.target.value);
+            }
+        });
+    }
+});
