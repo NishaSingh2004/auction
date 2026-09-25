@@ -456,6 +456,10 @@ socket.on('dataUpdate', ({ teams, players, categories }) => {
         renderPlayerListTable();
     }
     
+    if (typeof renderTeamViewGrid === 'function') {
+        renderTeamViewGrid();
+    }
+    
     const teamList = document.getElementById('teamList');
     if (teamList) {
         teamList.innerHTML = teams.sort((a, b) => a.name.localeCompare(b.name)).map((team) => {
@@ -735,5 +739,76 @@ function renderPlayerListTable() {
     tbody.innerHTML = html;
 }
 
+function renderTeamViewGrid() {
+    const grid = document.getElementById('teamViewGrid');
+    if (!grid || !window.teamsCache || !window.playersCache) return;
+    
+    let html = '';
+    const teams = window.teamsCache;
+    const players = window.playersCache;
+    const maxPlayers = window.auctionMaxPlayers || 25;
+    const baseBid = window.auctionBaseBid || 100000;
+    
+    // Calculate total spent across all teams
+    const totalSpent = players.filter(p => p.status === 'sold').reduce((sum, p) => sum + (p.soldPrice || 0), 0);
+    const elTotalSpent = document.getElementById('teamViewTotalSpent');
+    if (elTotalSpent) elTotalSpent.textContent = formatCurrency(totalSpent);
+    
+    const elSubtitle = document.getElementById('teamViewSubtitle');
+    if (elSubtitle) elSubtitle.textContent = `Live roster and purse status for all ${teams.length} participating teams.`;
+    
+    teams.forEach((team, index) => {
+        const teamPlayers = players.filter(p => p.soldTo === team.name);
+        const rosterCount = teamPlayers.length;
+        const reserve = Math.max(0, (maxPlayers - rosterCount) * baseBid);
+        const maxBid = Math.max(0, team.budget - reserve);
+        
+        let logoHtml = team.logo ? `<img src="${team.logo}" style="width: 32px; height: 32px; object-fit: contain;">` : `<div style="width:32px; height:32px; background:rgba(255,255,255,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:#fff; font-weight:800;">IMG</div>`;
+        
+        html += `
+        <div style="background: #101115; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem;">
+            <!-- Top row -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                ${logoHtml}
+                <div style="background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; color: rgba(255,255,255,0.7); font-weight: 800; font-family: monospace;">#${index + 1}</div>
+            </div>
+            
+            <!-- Title -->
+            <div style="font-size: 1rem; font-weight: 800; color: #fff; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${team.name}">${team.name}</div>
+            
+            <!-- Stats -->
+            <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.8rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: rgba(255,255,255,0.6);">Purse</span>
+                    <span style="color: #fbbf24; font-weight: 800; font-size: 0.9rem;">${formatCurrency(team.budget)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: rgba(255,255,255,0.6);">Reserve</span>
+                    <span style="color: #fff; font-weight: 800;">${formatCurrency(reserve)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: rgba(255,255,255,0.6);">Roster</span>
+                    <span style="color: #fff; font-weight: 800;">${rosterCount}/${maxPlayers}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: rgba(255,255,255,0.6);">Max Bid</span>
+                    <span style="color: #fff; font-weight: 800;">${formatCurrency(maxBid)}</span>
+                </div>
+            </div>
+            
+            <!-- Progress Line -->
+            <div style="height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: auto;">
+                <div style="background: ${team.color || '#e11d48'}; height: 100%; width: ${Math.min(100, (rosterCount/maxPlayers)*100)}%;"></div>
+            </div>
+        </div>`;
+    });
+    
+    grid.innerHTML = html;
+}
+
 // Ensure it renders if we click it later
+if (typeof window !== 'undefined' && window.playersCache && window.teamsCache) {
+    renderPlayerListTable();
+    renderTeamViewGrid();
+}
 
