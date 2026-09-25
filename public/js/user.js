@@ -67,17 +67,84 @@ function updateUI(state) {
             window.lastPlayerId = state.currentPlayer.id;
             const historyList = document.getElementById('bidHistoryList');
             if (historyList) {
-                historyList.innerHTML = '<div id="bidHistoryEmptyMsg" style="padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; font-style: italic; text-align: center;">Awaiting bids...</div>';
+                historyList.innerHTML = ''; // clear it
+                
+                let hasBids = false;
+                
+                // Helper to create a bid item
+                const createBidItem = (teamName, amount, isCurrent) => {
+                    let teamLogoHtml = '<span style="width: 20px; height: 20px; background: rgba(255,255,255,0.1); border-radius: 2px; display: inline-block;"></span>';
+                    if (teamsCache && teamName) {
+                        const bidderTeam = teamsCache.find(t => t.name === teamName);
+                        if (bidderTeam) {
+                            if (bidderTeam.logo) {
+                                teamLogoHtml = `<img src="${bidderTeam.logo}" style="width: 20px; height: 20px; border-radius: 2px; object-fit: cover;">`;
+                            } else {
+                                teamLogoHtml = `<span style="width: 20px; height: 20px; background: ${bidderTeam.color}; border-radius: 2px; display: inline-block;"></span>`;
+                            }
+                        }
+                    }
+                    const opacity = isCurrent ? '1' : '0.4';
+                    return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.15rem; border-bottom: 1px solid rgba(255,255,255,0.05); opacity: ${opacity};">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            ${teamLogoHtml}
+                            <div>
+                                <div style="font-weight: 800; font-size: 1.1rem; color: #fff; text-transform: uppercase;">${teamName}</div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted);">${isCurrent ? 'Latest' : 'Past bid'}</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary);">${formatCurrency(amount)}</div>
+                    </div>`;
+                };
+                
+                // 1. Current Bid
+                if (state.highestBidder) {
+                    historyList.innerHTML += createBidItem(state.highestBidder, state.currentBid, true);
+                    hasBids = true;
+                }
+                
+                // 2. Past Bids (reverse so newest past bid is next)
+                if (state.bidHistory && state.bidHistory.length > 0) {
+                    const revHistory = [...state.bidHistory].reverse();
+                    revHistory.forEach(b => {
+                        if (b.teamName) {
+                            historyList.innerHTML += createBidItem(b.teamName, b.amount, false);
+                            hasBids = true;
+                        }
+                    });
+                }
+                
+                if (!hasBids) {
+                    historyList.innerHTML = '<div id="bidHistoryEmptyMsg" style="padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; font-style: italic; text-align: center;">Awaiting bids...</div>';
+                }
             }
         }
         livePlayerName.textContent = state.currentPlayer.name;
         livePlayerRole.textContent = state.currentPlayer.role;
         liveBidAmount.textContent = formatCurrency(state.currentBid);
-        liveHighestBidder.textContent = state.highestBidder ? state.highestBidder : 'None';
+        liveHighestBidder.textContent = state.highestBidder ? state.highestBidder : 'NO BIDS YET';
         liveTimer.textContent = state.timer;
         liveTimer.style.display = state.timerOff ? 'none' : 'flex';
         currentBid = state.currentBid;
         auctionActive = state.status === 'active';
+        
+        // Update large logo box on page load or update
+        const currentBidderLogoBox = document.getElementById('currentBidderLogoBox');
+        if (currentBidderLogoBox) {
+            if (state.highestBidder && teamsCache) {
+                const bidderTeam = teamsCache.find(t => t.name === state.highestBidder);
+                if (bidderTeam && bidderTeam.logo) {
+                    currentBidderLogoBox.innerHTML = `<img src="${bidderTeam.logo}" style="width: 45px; height: 45px; border-radius: 6px; object-fit: cover;">`;
+                } else if (bidderTeam) {
+                    currentBidderLogoBox.innerHTML = `<span style="width: 45px; height: 45px; background: ${bidderTeam.color}; border-radius: 6px; display: inline-block;"></span>`;
+                } else {
+                    currentBidderLogoBox.innerHTML = '🏆';
+                }
+            } else {
+                currentBidderLogoBox.innerHTML = '🏆';
+            }
+        }
         
         const navPlayerId = document.getElementById('navPlayerId');
         if (navPlayerId) navPlayerId.textContent = state.currentPlayer.id || '--';
@@ -367,26 +434,29 @@ socket.on('dataUpdate', ({ teams, players, categories }) => {
                 `).join('');
 
             return `
-                <div class="team-card" data-teamname="${team.name}" onclick="toggleRoster('${team.name}')" style="padding: 1rem; background: #0f172a; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                <div class="team-card" data-teamname="${team.name}" style="display: flex; flex-direction: column; gap: 0.6rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="font-weight: bold; color: #f8fafc; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-                            ${team.logo ? `<img src="${team.logo}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);">` : `<span class="color-dot" style="background-color: ${team.color}; width: 24px; height: 24px; display: inline-block; border-radius: 4px;"></span>`}
-                            <div>
-                                <div>${team.name}</div>
-                                <div style="font-size: 0.7rem; color: #64748b; font-weight: normal; margin-top: 0.2rem;">PURSE: ${formatCurrency(team.budget)}</div>
-                            </div>
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            ${team.logo ? `<img src="${team.logo}" style="width: 28px; height: 28px; background: #cbd5e1; padding: 2px; border-radius: 50%; object-fit: contain;">` : `<div style="width: 28px; height: 28px; background: #cbd5e1; color: #000; font-size: 0.5rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border-radius: 50%;">IMG</div>`}
+                            <div style="font-size: 1rem; color: #fff; font-weight: 800; text-transform: uppercase;">${team.shortName || team.name}</div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #94a3b8;">${teamPlayers.length}<span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">/18</span></div>
-                            <span class="toggle-arrow" style="font-size: 0.9rem; color: #64748b;">${isExpanded ? '▴' : '▾'}</span>
+                        <div style="font-size: 1.5rem; font-weight: 900; color: #fff;">${formatCurrency(team.budget)}</div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div>
+                            <div style="font-size: 0.55rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.1rem;">MAX BID</div>
+                            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.8); font-weight: 700;">${formatCurrency(team.budget * 0.8)}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.55rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 800; margin-bottom: 0.1rem;">PLAYERS</div>
+                            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.8); font-weight: 700;">${teamPlayers.length}/25</div>
                         </div>
                     </div>
-                    <div style="margin-top: 0.8rem; background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; overflow: hidden;">
-                        <div style="background: #10b981; height: 100%; width: ${(teamPlayers.length / 18) * 100}%;"></div>
-                    </div>
-                    <!-- Collapsible Roster Tray -->
-                    <div class="team-roster-list" style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem; display: ${isExpanded ? 'flex' : 'none'}; flex-direction: column; gap: 0.4rem; max-height: 200px; overflow-y: auto;">
-                        ${rosterHTML}
+                    
+                    <!-- Progress Bar Line -->
+                    <div style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 0.2rem;">
+                        <div style="background: ${team.color || '#fff'}; height: 100%; width: ${Math.min(100, ((teamPlayers.length / 25) * 100))}%;"></div>
                     </div>
                 </div>
             `;
