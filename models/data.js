@@ -110,6 +110,7 @@ const data = {
                     detail TEXT,
                     category_id TEXT
                 );
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT;
                 CREATE TABLE IF NOT EXISTS users (
                     username TEXT PRIMARY KEY,
                     password TEXT,
@@ -132,6 +133,12 @@ const data = {
                 );
             `);
 
+            
+            // Seed Superadmin
+            const saCheck = await this.db.query("SELECT * FROM users WHERE username = 'superadmin'");
+            if (saCheck.rows.length === 0) {
+                await this.db.query("INSERT INTO users (username, password, role) VALUES ('superadmin', 'superadmin', 'superadmin')");
+            }
             // Seed Admin
             const adminCheck = await this.db.query("SELECT * FROM users WHERE username = 'admin'");
             if (adminCheck.rows.length === 0) {

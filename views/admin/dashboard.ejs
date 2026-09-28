@@ -71,16 +71,22 @@
             </div>
             
             <div style="display: flex; align-items: center; gap: 1.5rem; font-size: 0.85rem; font-weight: 800; color: rgba(255,255,255,0.6);">
-                <div id="tabLiveBid" onclick="switchAdminTab('live')" style="color: #fff; border-bottom: 2px solid #fff; padding-bottom: 0.3rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: color 0.2s;">
+                <% if (user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('live')))) { %>
+                  <div id="tabLiveBid" onclick="switchAdminTab('live')" style="color: #fff; border-bottom: 2px solid #fff; padding-bottom: 0.3rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: color 0.2s;">
                     <span style="font-size: 1.1rem;">🔨</span> Live Bid
                 </div>
-                <div id="tabPlayerList" onclick="switchAdminTab('players')" style="cursor: pointer; padding-bottom: 0.3rem; display: flex; align-items: center; gap: 0.4rem; transition: color 0.2s;" onmouseover="if(this.style.color !== 'rgb(255, 255, 255)') this.style.color='#fff'" onmouseout="if(this.style.color !== 'rgb(255, 255, 255)') this.style.color='rgba(255,255,255,0.6)'">
+                <% if (user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('players')))) { %>
+                  <div id="tabPlayerList" onclick="switchAdminTab('players')" style="cursor: pointer; padding-bottom: 0.3rem; display: flex; align-items: center; gap: 0.4rem; transition: color 0.2s;" onmouseover="if(this.style.color !== 'rgb(255, 255, 255)') this.style.color='#fff'" onmouseout="if(this.style.color !== 'rgb(255, 255, 255)') this.style.color='rgba(255,255,255,0.6)'">
                     <span style="font-size: 1.1rem;">📋</span> Player List
                 </div>
-                <div id="tabTeamView" onclick="switchAdminTab('teams')" style="cursor: pointer; padding-bottom: 0.3rem; display: flex; align-items: center; gap: 0.4rem; transition: color 0.2s;" onmouseover="if(this.style.color !== 'rgb(255, 255, 255)') this.style.color='#fff'" onmouseout="if(this.style.color !== 'rgb(255, 255, 255)') this.style.color='rgba(255,255,255,0.6)'">
+                <% if (user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('teams')))) { %>
+                  <div id="tabTeamView" onclick="switchAdminTab('teams')" style="cursor: pointer; padding-bottom: 0.3rem; display: flex; align-items: center; gap: 0.4rem; transition: color 0.2s;" onmouseover="if(this.style.color !== 'rgb(255, 255, 255)') this.style.color='#fff'" onmouseout="if(this.style.color !== 'rgb(255, 255, 255)') this.style.color='rgba(255,255,255,0.6)'">
                     <span style="font-size: 1.1rem;">👥</span> Team View
                 </div>
-                <div style="cursor: pointer; transition: color 0.2s;" onclick="document.getElementById('dataModal').style.display='flex'" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">SETTINGS</div>
+                <% if (user && user.role === 'superadmin') { %>
+                  <div style="cursor: pointer; transition: color 0.2s;" onclick="document.getElementById('dataModal').style.display='flex'" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">SETTINGS</div>
+                  <a href="/superadmin" style="text-decoration: none; color: #fbbf24; font-weight: 800; cursor: pointer;">SUPERADMIN</a>
+                  <% } %>
                 <div style="font-size: 1.1rem; cursor: pointer;">🔔</div>
             </div>
         </header>

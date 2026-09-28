@@ -6,6 +6,31 @@ const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 
+
+const authMiddleware = async (req, res, next) => {
+    const cookies = req.headers.cookie;
+    let username = null;
+    if (cookies) {
+        const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
+        if (sessionCookie) {
+            username = decodeURIComponent(sessionCookie.split('=')[1]);
+        }
+    }
+    if (username) {
+        const result = await data.db.query("SELECT * FROM users WHERE username = $1", [username]);
+        req.user = result.rows[0];
+        if (req.user && req.user.permissions) {
+            try { req.user.permissions = JSON.parse(req.user.permissions); } catch(e) { req.user.permissions = []; }
+        }
+    }
+    
+    if (!req.user) {
+        return res.redirect('/');
+    }
+    next();
+};
+router.use(authMiddleware);
+
 const broadcastUpdates = () => {
     if (global.io) {
         global.io.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories });
@@ -39,7 +64,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 router.get('/dashboard', (req, res) => {
-    res.render('admin/dashboard', { data });
+    res.render('admin/dashboard', { data, user: req.user });
 });
 
 router.get('/teams', (req, res) => {

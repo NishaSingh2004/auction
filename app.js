@@ -29,11 +29,13 @@ app.use((req, res, next) => {
 
 const indexRouter = require('./routes/index');
 const adminRouter = require('./routes/admin');
+const superadminRouter = require('./routes/superadmin');
 const userRouter = require('./routes/user');
 const mediaRouter = require('./routes/media');
 
 app.use('/', indexRouter);
 app.use('/admin', adminRouter);
+app.use('/superadmin', superadminRouter);
 app.use('/admin/media', mediaRouter);
 app.use('/api/spreadsheet', mediaRouter);
 app.use('/api/import', mediaRouter);

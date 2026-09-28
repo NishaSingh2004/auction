@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superadmin Dashboard - Elite Auction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #070b14;
+            --bg-panel: #11131a;
+            --primary: #fbbf24;
+            --text: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.6);
+            --border: rgba(255, 255, 255, 0.05);
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-base);
+            color: var(--text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 250px;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1rem;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin: 0 0 2rem 0;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .btn {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: #fff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h1>dY"" SUPERADMIN</h1>
+        <a href="#admins" style="color: #fff; text-decoration: none; padding: 0.75rem; border-radius: 6px; background: rgba(255,255,255,0.05); margin-bottom: 0.5rem;">dY` Admin Management</a>
+        <a href="#settings" style="color: var(--text-dim); text-decoration: none; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem;">sT,? Global Settings</a>
+        <a href="/admin/dashboard" style="color: var(--primary); text-decoration: none; padding: 0.75rem; border-radius: 6px; margin-top: auto; font-weight: 800;"> Go to Live Bidding</a>
+        <a href="/logout" style="color: #ef4444; text-decoration: none; padding: 0.75rem; border-radius: 6px; font-weight: 800; margin-top: 0.5rem;">dYa Logout</a>
+    </div>
+
+    <div class="main-content">
+        <div id="admins" class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0; font-size: 1.25rem;">Admin Access Control (RBAC)</h2>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Permissions</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% admins.forEach(a => { %>
+                        <tr>
+                            <td style="font-weight: 700;"><%= a.username %></td>
+                            <td><span style="background: rgba(59,130,246,0.1); color: #3b82f6; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;"><%= a.role %></span></td>
+                            <td>
+                                <form action="/superadmin/update-permissions" method="POST" style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <input type="hidden" name="username" value="<%= a.username %>">
+                                    <% 
+                                        let perms = [];
+                                        try { perms = JSON.parse(a.permissions || '[]'); } catch(e){} 
+                                    %>
+                                    <label><input type="checkbox" name="permissions" value="live" <%= perms.includes('live') ? 'checked' : '' %>> Live Bidding</label>
+                                    <label><input type="checkbox" name="permissions" value="teams" <%= perms.includes('teams') ? 'checked' : '' %>> Team View</label>
+                                    <label><input type="checkbox" name="permissions" value="players" <%= perms.includes('players') ? 'checked' : '' %>> Player Mgmt</label>
+                                    <button type="submit" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Save</button>
+                                </form>
+                            </td>
+                            <td>
+                                <form action="/superadmin/delete-admin" method="POST" onsubmit="return confirm('Revoke all access for this admin?');">
+                                    <input type="hidden" name="username" value="<%= a.username %>">
+                                    <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Revoke Access</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">Grant New Access</h3>
+                <form action="/superadmin/create-admin" method="POST" style="display: flex; gap: 1rem; max-width: 500px;">
+                    <input type="text" name="username" placeholder="New Admin Username" required>
+                    <input type="password" name="password" placeholder="Password" required>
+                    <button type="submit" class="btn">Create Admin</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="settings" class="card">
+            <h2 style="margin: 0 0 1.5rem 0; font-size: 1.25rem;">Global Data Settings</h2>
+            <p style="color: var(--text-dim); line-height: 1.6;">
+                As the Superadmin, you have full control over the database, including importing players and defining the active auction context. 
+                <br><br>
+                To edit the current database settings, go to the <a href="/admin/dashboard" style="color: var(--primary);">Live Bidding Dashboard</a> and click <strong>SETTINGS</strong> in the top right. 
+                (Only Superadmins can see the Settings panel).
+            </p>
+        </div>
+    </div>
+</body>
+</html>
