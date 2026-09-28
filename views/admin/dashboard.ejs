@@ -1842,5 +1842,47 @@ window.openSoldConfirmationModal = function(e) {
 };
 </script>
 
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Automatically switch to the first allowed tab based on permissions
+        const allowedTabs = [];
+        <% if (user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('live')))) { %> allowedTabs.push('live'); <% } %>
+        <% if (user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('players')))) { %> allowedTabs.push('players'); <% } %>
+        <% if (user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('teams')))) { %> allowedTabs.push('teams'); <% } %>
+        
+        // Hide all grids first
+        const liveGrid = document.getElementById('mainLiveGrid');
+        const playerList = document.getElementById('playerListView');
+        const teamGrid = document.getElementById('teamGridView');
+        
+        if (liveGrid) liveGrid.style.display = 'none';
+        if (playerList) playerList.style.display = 'none';
+        if (teamGrid) teamGrid.style.display = 'none';
+        
+        // Ensure no settings are accidentally shown via URL trick if no perm
+        <% if (!(user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('settings'))))) { %>
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('openSettings') || typeof showSettingsInline !== 'undefined') {
+                document.body.innerHTML = "<h2 style='color:white;text-align:center;margin-top:20vh;'>Access Denied to Settings</h2>";
+                return;
+            }
+        <% } %>
+
+        if (allowedTabs.length > 0) {
+            switchAdminTab(allowedTabs[0]);
+        } else {
+            // Show a friendly message if no permissions
+            const mainWrapper = document.getElementById('mainWrapper');
+            if (mainWrapper) {
+                const msg = document.createElement('div');
+                msg.style.cssText = 'color: rgba(255,255,255,0.5); text-align: center; margin-top: 20vh; font-size: 1.2rem; font-weight: 800;';
+                msg.innerHTML = '🚫 NO SECTIONS ASSIGNED.<br><span style="font-size:0.9rem;font-weight:400;">Please ask the Superadmin to grant you access.</span>';
+                mainWrapper.appendChild(msg);
+            }
+        }
+    });
+</script>
 </body>
+
  </html>
