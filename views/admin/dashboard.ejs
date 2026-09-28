@@ -6,6 +6,45 @@
     <title>Admin Dashboard - Live Auction</title>
     <link rel="stylesheet" href="/css/style.css">
     <script src="/socket.io/socket.io.js"></script>
+<% if (typeof showSettingsInline !== 'undefined' && showSettingsInline) { %>
+    <style>
+        body > div:not(#dataModal):not(script) {
+            display: none !important;
+        }
+        #dataModal {
+            display: flex !important;
+            position: relative !important;
+            width: 100% !important;
+            height: 100vh !important;
+            z-index: 1 !important;
+            background: #0b0d12 !important;
+        }
+        #dataModal > .panel {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            border-radius: 0 !important;
+            border: none !important;
+        }
+        /* Hide the close button since it's now a full page */
+        #dataModal .close-btn {
+            display: none !important;
+        }
+    </style>
+    <!-- Add a back to superadmin button in the header -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const header = document.querySelector("#dataModal h2");
+            if (header) {
+                const backBtn = document.createElement("a");
+                backBtn.href = "/superadmin";
+                backBtn.innerHTML = "← Back to Superadmin";
+                backBtn.style.cssText = "display: inline-block; margin-right: 2rem; color: #fbbf24; text-decoration: none; font-size: 1rem; font-weight: 800;";
+                header.parentNode.insertBefore(backBtn, header);
+            }
+        });
+    </script>
+<% } %>
 </head>
 <body style="overflow: hidden; height: 100vh; margin: 0; padding: 0; background-color: var(--bg-dark);">
     <div class="glow-orb orb-1"></div>
@@ -87,7 +126,7 @@
                 </div>
                   <% } %>
                 <% if (user && user.role === 'superadmin') { %>
-                  <div style="cursor: pointer; transition: color 0.2s;" onclick="document.getElementById('dataModal').style.display='flex'" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">SETTINGS</div>
+                  <a href="/superadmin/settings" style="text-decoration: none; color: rgba(255,255,255,0.7); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">SETTINGS</a>
                   <a href="/superadmin" style="text-decoration: none; color: #fbbf24; font-weight: 800; cursor: pointer;">SUPERADMIN</a>
                   <% } %>
                 <div style="font-size: 1.1rem; cursor: pointer;">🔔</div>

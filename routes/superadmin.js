@@ -88,4 +88,14 @@ router.post('/update-permissions', async (req, res) => {
     }
 });
 
+
+router.get('/settings', async (req, res) => {
+    try {
+        res.render('admin/dashboard', { data, user: req.user, showSettingsInline: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).send("Error loading settings");
+    }
+});
+
 module.exports = router;
