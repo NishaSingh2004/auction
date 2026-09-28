@@ -3,16 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Superadmin Dashboard - Elite Auction</title>
+    <title>Superadmin Control Center - Elite Auction</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-base: #070b14;
             --bg-panel: #11131a;
             --primary: #fbbf24;
+            --primary-hover: #f59e0b;
+            --accent: #3b82f6;
+            --danger: #ef4444;
             --text: #ffffff;
             --text-dim: rgba(255, 255, 255, 0.6);
             --border: rgba(255, 255, 255, 0.05);
+            --glass: rgba(17, 19, 26, 0.8);
         }
         body {
             margin: 0;
@@ -23,151 +27,283 @@
             display: flex;
             height: 100vh;
             overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(251, 191, 36, 0.03), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.03), transparent 25%);
         }
         .sidebar {
-            width: 250px;
-            background: var(--bg-panel);
+            width: 280px;
+            background: var(--glass);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            padding: 2rem 1rem;
+            padding: 2.5rem 1.5rem;
+            backdrop-filter: blur(10px);
+            z-index: 10;
         }
         .main-content {
             flex: 1;
-            padding: 2rem;
+            padding: 3rem;
             overflow-y: auto;
+            position: relative;
         }
         h1 {
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             font-weight: 900;
-            margin: 0 0 2rem 0;
-            color: var(--primary);
+            margin: 0 0 2.5rem 0;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             text-transform: uppercase;
             letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nav-item {
+            color: var(--text-dim);
+            text-decoration: none;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .nav-item:hover, .nav-item.active {
+            color: #fff;
+            background: rgba(255,255,255,0.05);
         }
         .card {
-            background: rgba(255,255,255,0.02);
+            background: var(--bg-panel);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
+            border-radius: 16px;
+            padding: 2rem;
             margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+            opacity: 0.5;
         }
         .btn {
             background: var(--primary);
             color: #000;
             border: none;
-            padding: 0.5rem 1rem;
-            font-weight: 700;
-            border-radius: 6px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 800;
+            border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
         }
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+            background: var(--primary-hover);
         }
         .btn-danger {
-            background: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .btn-danger:hover {
+            background: var(--danger);
             color: #fff;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
         table {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 1rem;
         }
         th, td {
-            padding: 1rem;
+            padding: 1.25rem 1rem;
             text-align: left;
             border-bottom: 1px solid var(--border);
         }
         th {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             color: var(--text-dim);
+            letter-spacing: 1px;
+            font-weight: 800;
         }
-        .form-group {
-            margin-bottom: 1rem;
+        td {
+            font-size: 0.9rem;
         }
-        input, select {
+        .checkbox-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: color 0.2s;
+            background: rgba(0,0,0,0.3);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .checkbox-label:hover {
+            color: #fff;
+            border-color: rgba(255,255,255,0.2);
+        }
+        input[type="checkbox"] {
+            accent-color: var(--primary);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        .form-input {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.85rem 1rem;
             background: rgba(0,0,0,0.5);
             border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 8px;
             color: #fff;
             font-family: inherit;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .role-badge {
+            background: rgba(59,130,246,0.1);
+            color: var(--accent);
+            padding: 0.3rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(59,130,246,0.2);
         }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <h1>dY"" SUPERADMIN</h1>
-        <a href="#admins" style="color: #fff; text-decoration: none; padding: 0.75rem; border-radius: 6px; background: rgba(255,255,255,0.05); margin-bottom: 0.5rem;">dY` Admin Management</a>
-        <a href="#settings" style="color: var(--text-dim); text-decoration: none; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem;">sT,? Global Settings</a>
-        <a href="/admin/dashboard" style="color: var(--primary); text-decoration: none; padding: 0.75rem; border-radius: 6px; margin-top: auto; font-weight: 800;"> Go to Live Bidding</a>
-        <a href="/logout" style="color: #ef4444; text-decoration: none; padding: 0.75rem; border-radius: 6px; font-weight: 800; margin-top: 0.5rem;">dYa Logout</a>
+        <h1><span>👑</span> SUPERADMIN</h1>
+        
+        <div style="margin-bottom: 2rem;">
+            <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-dim); font-weight: 800; letter-spacing: 1px; margin-bottom: 1rem; padding-left: 1rem;">Navigation</div>
+            <a href="#admins" class="nav-item active"><span>🛡️</span> Access Control</a>
+            <a href="/superadmin/settings" class="nav-item"><span>⚙️</span> Global Settings</a>
+        </div>
+
+        <div style="margin-bottom: 2rem;">
+            <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-dim); font-weight: 800; letter-spacing: 1px; margin-bottom: 1rem; padding-left: 1rem;">System Actions</div>
+            <a href="/admin/dashboard" class="nav-item" style="color: var(--primary);"><span>⚡</span> Enter Live Console</a>
+        </div>
+
+        <a href="/logout" class="nav-item" style="color: var(--danger); margin-top: auto;"><span>🚪</span> Secure Logout</a>
     </div>
 
-    <div class="main-content">
-        <div id="admins" class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 style="margin: 0; font-size: 1.25rem;">Admin Access Control (RBAC)</h2>
+    <div class="main-content sleek-scroll">
+        <div id="admins" class="card animate-fade-in">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <div>
+                    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 800;">Role-Based Access Control (RBAC)</h2>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem;">Manage subordinate admin accounts and delegate specific sections of the dashboard.</p>
+                </div>
             </div>
             
-            <table>
-                <thead>
-                    <tr>
-                        <th>Username</th>
-                        <th>Role</th>
-                        <th>Permissions</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% admins.forEach(a => { %>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
                         <tr>
-                            <td style="font-weight: 700;"><%= a.username %></td>
-                            <td><span style="background: rgba(59,130,246,0.1); color: #3b82f6; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;"><%= a.role %></span></td>
-                            <td>
-                                <form action="/superadmin/update-permissions" method="POST" style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <input type="hidden" name="username" value="<%= a.username %>">
-                                    <% 
-                                        let perms = [];
-                                        try { perms = JSON.parse(a.permissions || '[]'); } catch(e){} 
-                                    %>
-                                    <label><input type="checkbox" name="permissions" value="live" <%= perms.includes('live') ? 'checked' : '' %>> Live Bidding</label>
-                                    <label><input type="checkbox" name="permissions" value="teams" <%= perms.includes('teams') ? 'checked' : '' %>> Team View</label>
-                                    <label><input type="checkbox" name="permissions" value="players" <%= perms.includes('players') ? 'checked' : '' %>> Player Mgmt</label>
-                                    <button type="submit" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Save</button>
-                                </form>
-                            </td>
-                            <td>
-                                <form action="/superadmin/delete-admin" method="POST" onsubmit="return confirm('Revoke all access for this admin?');">
-                                    <input type="hidden" name="username" value="<%= a.username %>">
-                                    <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Revoke Access</button>
-                                </form>
-                            </td>
+                            <th>Admin Username</th>
+                            <th>Role Level</th>
+                            <th>Delegated Permissions</th>
+                            <th style="text-align: right;">Security Action</th>
                         </tr>
-                    <% }) %>
-                </tbody>
-            </table>
-
-            <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
-                <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">Grant New Access</h3>
-                <form action="/superadmin/create-admin" method="POST" style="display: flex; gap: 1rem; max-width: 500px;">
-                    <input type="text" name="username" placeholder="New Admin Username" required>
-                    <input type="password" name="password" placeholder="Password" required>
-                    <button type="submit" class="btn">Create Admin</button>
-                </form>
+                    </thead>
+                    <tbody>
+                        <% if (admins && admins.length > 0) { %>
+                            <% admins.forEach(a => { %>
+                                <tr>
+                                    <td style="font-weight: 800; font-size: 1.1rem;"><%= a.username %></td>
+                                    <td><span class="role-badge"><%= a.role %></span></td>
+                                    <td>
+                                        <form action="/superadmin/update-permissions" method="POST" style="display: flex; gap: 1rem; align-items: center;">
+                                            <input type="hidden" name="username" value="<%= a.username %>">
+                                            <% 
+                                                let perms = [];
+                                                try { perms = JSON.parse(a.permissions || '[]'); } catch(e){} 
+                                            %>
+                                            <div class="checkbox-group">
+                                                <label class="checkbox-label" style="<%= perms.includes('live') ? 'color: #fff; border-color: rgba(255,255,255,0.2);' : '' %>">
+                                                    <input type="checkbox" name="permissions" value="live" <%= perms.includes('live') ? 'checked' : '' %>> Live Bidding
+                                                </label>
+                                                <label class="checkbox-label" style="<%= perms.includes('teams') ? 'color: #fff; border-color: rgba(255,255,255,0.2);' : '' %>">
+                                                    <input type="checkbox" name="permissions" value="teams" <%= perms.includes('teams') ? 'checked' : '' %>> Team View
+                                                </label>
+                                                <label class="checkbox-label" style="<%= perms.includes('players') ? 'color: #fff; border-color: rgba(255,255,255,0.2);' : '' %>">
+                                                    <input type="checkbox" name="permissions" value="players" <%= perms.includes('players') ? 'checked' : '' %>> Players
+                                                </label>
+                                                <label class="checkbox-label" style="<%= perms.includes('settings') ? 'color: #fff; border-color: rgba(255,255,255,0.2);' : '' %>">
+                                                    <input type="checkbox" name="permissions" value="settings" <%= perms.includes('settings') ? 'checked' : '' %>> Settings
+                                                </label>
+                                            </div>
+                                            <button type="submit" class="btn" style="padding: 0.5rem 1rem; font-size: 0.75rem; margin-left: auto;">Update</button>
+                                        </form>
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <form action="/superadmin/delete-admin" method="POST" onsubmit="return confirm('Are you sure you want to permanently revoke all access for <%= a.username %>?');">
+                                            <input type="hidden" name="username" value="<%= a.username %>">
+                                            <button type="submit" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.75rem;">Revoke</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 3rem;">
+                                    No subordinate admins exist. Create one below.
+                                </td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div id="settings" class="card">
-            <h2 style="margin: 0 0 1.5rem 0; font-size: 1.25rem;">Global Data Settings</h2>
-            <p style="color: var(--text-dim); line-height: 1.6;">
-                As the Superadmin, you have full control over the database, including importing players, editing teams, and defining the active auction context. 
-            </p>
-            <a href="/superadmin/settings" class="btn" style="display: inline-block; text-decoration: none; margin-top: 1rem;">Open Settings Panel</a>
-
+        <div class="card animate-fade-in" style="animation-delay: 0.1s;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(59,130,246,0.1); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.2rem;">
+                    ➕
+                </div>
+                <div>
+                    <h3 style="margin: 0 0 0.25rem 0; font-size: 1.1rem; font-weight: 800;">Provision New Admin</h3>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.85rem;">Create a new restricted account. Permissions must be assigned after creation.</p>
+                </div>
+            </div>
+            
+            <form action="/superadmin/create-admin" method="POST" style="display: flex; gap: 1rem; align-items: center;">
+                <div style="flex: 1;">
+                    <input type="text" name="username" placeholder="Enter Admin Username" class="form-input" required autocomplete="off">
+                </div>
+                <div style="flex: 1;">
+                    <input type="password" name="password" placeholder="Enter Password" class="form-input" required autocomplete="new-password">
+                </div>
+                <button type="submit" class="btn" style="min-width: 150px;">Create Admin</button>
+            </form>
         </div>
     </div>
 </body>
