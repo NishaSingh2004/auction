@@ -1141,7 +1141,7 @@
                                  <!-- CSV / Excel Upload Card -->
                                  <div class="panel" style="background: rgba(15, 23, 42, 0.3); padding: 1.25rem; border-radius: 12px;">
                                      <h3 style="margin: 0 0 0.85rem 0; font-size: 0.95rem; color: var(--primary); font-weight: 800; text-transform: uppercase;">📥 CSV / Excel Bulk Import</h3>
-                                     <form id="uploadCsvForm" class="stacked-form">
+                                     <form id="uploadCsvForm" class="stacked-form" onsubmit="event.preventDefault();">
                                          <label style="color: var(--text-muted); font-size: 0.75rem; line-height: 1.4;">Upload a spreadsheet CSV or Excel (.xlsx, .xls) file. Columns: <strong>Name, BasePrice, Role</strong></label>
                                          <div style="display: flex; gap: 0.4rem; align-items: center; margin-top: 0.4rem;">
                                              <input type="file" name="csvFile" accept=".csv, .xlsx, .xls" required class="form-control" style="font-size: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border-color); padding: 0.35rem !important; border-radius: 8px !important;">

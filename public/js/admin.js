@@ -248,10 +248,14 @@ if(uploadCsvForm) {
                               `Successful count: ${result.successful}\n` +
                               `Failed rows count: ${result.failed}`);
                     } else {
-                        if (typeof showToast === 'function') {
-                            showToast(result.message || 'Error parsing file', 'error');
+                        let errorMsg = result.message || 'Error uploading file';
+                        if (result.errors && result.errors.length > 0) {
+                            errorMsg += '\n\n' + result.errors.join('\n');
                         }
-                        alert(result.message || 'Error uploading file');
+                        if (typeof showToast === 'function') {
+                            showToast(errorMsg, 'error');
+                        }
+                        alert(errorMsg);
                     }
                 } catch (err) {
                     if (typeof showToast === 'function') {

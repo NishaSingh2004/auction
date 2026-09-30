@@ -375,9 +375,9 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
         }
 
         // Check if headers contain a Player Name column (the only strictly required column)
-        const hasNameHeader = headers.some(h => ['name', 'playername', 'player', 'fullname', 'playernames', 'cricketername'].includes(h));
-        const hasRoleHeader = headers.some(h => ['role', 'category', 'playerrole', 'type', 'specialization', 'playingstyle', 'style', 'position', 'playingrole'].includes(h));
-        const hasPriceHeader = headers.some(h => ['baseprice', 'price', 'startingprice', 'bidprice', 'auctionprice', 'basebid', 'basevalue', 'cost', 'value', 'amount', 'bid', 'startprice'].includes(h));
+        const hasNameHeader = headers.some(h => h.includes('name') || h.includes('player') || h.includes('first') || h.includes('cricketer'));
+        const hasRoleHeader = headers.some(h => h.includes('role') || h.includes('category') || h.includes('type') || h.includes('style') || h.includes('position') || h.includes('skill'));
+        const hasPriceHeader = headers.some(h => h.includes('price') || h.includes('bid') || h.includes('base') || h.includes('cost') || h.includes('value') || h.includes('amount'));
 
         // Debugging logs for detected headers
         console.log(`[DEBUG] detected headers:`, originalHeaders);
