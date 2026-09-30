@@ -27,7 +27,7 @@ router.post('/login', async (req, res) => {
         }
         if (cleanUser === 'superadmin' && cleanPass === 'superadmin') {
             res.setHeader('Set-Cookie', `session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
-            return res.redirect('/admin/dashboard');
+            return res.redirect('/superadmin');
         }
         
         const result = await data.db.query("SELECT * FROM users WHERE username = $1 AND password = $2", [cleanUser, cleanPass]);
@@ -35,7 +35,11 @@ router.post('/login', async (req, res) => {
         
         if (user) {
             res.setHeader('Set-Cookie', `session=${encodeURIComponent(user.username)}; Path=/; HttpOnly`);
-            res.redirect('/admin/dashboard');
+            if (user.role === 'superadmin') {
+                return res.redirect('/superadmin');
+            } else {
+                return res.redirect('/admin/dashboard');
+            }
         } else {
             res.send("<script>alert('Invalid Credentials!'); window.location.href='/';</script>");
         }
