@@ -11,7 +11,12 @@ const authMiddleware = async (req, res, next) => {
     const cookies = req.headers.cookie;
     let username = null;
     if (cookies) {
-        const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
+        const adCookie = cookies.split(';').find(c => c.trim().startsWith('admin_session='));
+        const saCookie = cookies.split(';').find(c => c.trim().startsWith('superadmin_session='));
+        const legacyCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
+        
+        // Prioritize admin session if testing side-by-side, otherwise fallback to superadmin or legacy
+        const sessionCookie = adCookie || saCookie || legacyCookie;
         if (sessionCookie) {
             username = decodeURIComponent(sessionCookie.split('=')[1]);
         }

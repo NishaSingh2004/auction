@@ -22,11 +22,11 @@ router.post('/login', async (req, res) => {
     try {
         // Fallback for hardcoded admin/superadmin if DB somehow fails
         if (cleanUser === 'admin' && cleanPass === 'admin') {
-            res.setHeader('Set-Cookie', `session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
+            res.setHeader('Set-Cookie', `admin_session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
             return res.redirect('/admin/dashboard');
         }
         if (cleanUser === 'superadmin' && cleanPass === 'superadmin') {
-            res.setHeader('Set-Cookie', `session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
+            res.setHeader('Set-Cookie', `superadmin_session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
             return res.redirect('/superadmin');
         }
         
@@ -34,10 +34,11 @@ router.post('/login', async (req, res) => {
         const user = result.rows[0];
         
         if (user) {
-            res.setHeader('Set-Cookie', `session=${encodeURIComponent(user.username)}; Path=/; HttpOnly`);
             if (user.role === 'superadmin') {
+                res.setHeader('Set-Cookie', `superadmin_session=${encodeURIComponent(user.username)}; Path=/; HttpOnly`);
                 return res.redirect('/superadmin');
             } else {
+                res.setHeader('Set-Cookie', `admin_session=${encodeURIComponent(user.username)}; Path=/; HttpOnly`);
                 return res.redirect('/admin/dashboard');
             }
         } else {
@@ -50,7 +51,11 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/logout', (req, res) => {
-    res.setHeader('Set-Cookie', `session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`);
+    res.setHeader('Set-Cookie', [
+        'session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+        'superadmin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+        'admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    ]);
     res.redirect('/');
 });
 

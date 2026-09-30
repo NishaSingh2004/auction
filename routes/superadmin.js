@@ -7,7 +7,11 @@ const authMiddleware = async (req, res, next) => {
     const cookies = req.headers.cookie;
     let username = null;
     if (cookies) {
-        const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
+        const saCookie = cookies.split(';').find(c => c.trim().startsWith('superadmin_session='));
+        // Legacy fallback
+        const legacyCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
+        
+        const sessionCookie = saCookie || legacyCookie;
         if (sessionCookie) {
             username = decodeURIComponent(sessionCookie.split('=')[1]);
         }
