@@ -419,10 +419,14 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
                 }
             }
 
-            // Extract values dynamically using possible mappings
-            const name = normalizedRow['name'] || normalizedRow['playername'] || normalizedRow['player'] || normalizedRow['fullname'] || normalizedRow['playernames'] || normalizedRow['cricketername'] || '';
-            const rawRole = normalizedRow['role'] || normalizedRow['category'] || normalizedRow['playerrole'] || normalizedRow['type'] || normalizedRow['specialization'] || normalizedRow['playingstyle'] || normalizedRow['style'] || normalizedRow['position'] || normalizedRow['playingrole'] || '';
-            const rawPrice = normalizedRow['baseprice'] || normalizedRow['price'] || normalizedRow['startingprice'] || normalizedRow['bidprice'] || normalizedRow['auctionprice'] || normalizedRow['basebid'] || normalizedRow['basevalue'] || normalizedRow['cost'] || normalizedRow['value'] || normalizedRow['amount'] || normalizedRow['bid'] || normalizedRow['startprice'] || '';
+            // Dynamically find the exact key in the row that matched our relaxed criteria
+            let nameKey = Object.keys(normalizedRow).find(k => k.includes('name') || k.includes('player') || k.includes('first') || k.includes('cricketer'));
+            let roleKey = Object.keys(normalizedRow).find(k => k.includes('role') || k.includes('category') || k.includes('type') || k.includes('style') || k.includes('position') || k.includes('skill'));
+            let priceKey = Object.keys(normalizedRow).find(k => k.includes('price') || k.includes('bid') || k.includes('base') || k.includes('cost') || k.includes('value') || k.includes('amount'));
+
+            const name = nameKey ? (normalizedRow[nameKey] || '') : '';
+            const rawRole = roleKey ? (normalizedRow[roleKey] || '') : '';
+            const rawPrice = priceKey ? (normalizedRow[priceKey] || '') : '';
 
             // Validation: Skip rows if player name is missing / empty
             if (!name.trim()) {
