@@ -8,10 +8,12 @@ const authMiddleware = async (req, res, next) => {
     let username = null;
     if (cookies) {
         const saCookie = cookies.split(';').find(c => c.trim().startsWith('superadmin_session='));
+        const adCookie = cookies.split(';').find(c => c.trim().startsWith('admin_session='));
         // Legacy fallback
         const legacyCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
         
-        const sessionCookie = saCookie || legacyCookie;
+        // Prioritize superadmin session, but allow admin session (for admins with settings perm)
+        const sessionCookie = saCookie || adCookie || legacyCookie;
         if (sessionCookie) {
             username = decodeURIComponent(sessionCookie.split('=')[1]);
         }

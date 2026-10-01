@@ -3,30 +3,31 @@ import io
 with io.open('routes/superadmin.js', 'r', encoding='utf-8') as f:
     content = f.read()
 
-middleware_str = """
-const authMiddleware = async (req, res, next) => {
-    const cookies = req.headers.cookie;
-    let username = null;
-    if (cookies) {
-        const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
+old_auth = """    if (cookies) {
+        const saCookie = cookies.split(';').find(c => c.trim().startsWith('superadmin_session='));
+        // Legacy fallback
+        const legacyCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
+        
+        const sessionCookie = saCookie || legacyCookie;
         if (sessionCookie) {
             username = decodeURIComponent(sessionCookie.split('=')[1]);
         }
-    }
-    if (username) {
-        const result = await data.db.query("SELECT * FROM users WHERE username = $1", [username]);
-        req.user = result.rows[0];
-    }
-    next();
-};
-router.use(authMiddleware);
-"""
+    }"""
 
-if 'authMiddleware =' not in content:
-    content = content.replace(
-        "// Superadmin middleware",
-        middleware_str + "\n// Superadmin middleware"
-    )
+new_auth = """    if (cookies) {
+        const saCookie = cookies.split(';').find(c => c.trim().startsWith('superadmin_session='));
+        const adCookie = cookies.split(';').find(c => c.trim().startsWith('admin_session='));
+        // Legacy fallback
+        const legacyCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
+        
+        // Prioritize superadmin session, but allow admin session (for admins with settings perm)
+        const sessionCookie = saCookie || adCookie || legacyCookie;
+        if (sessionCookie) {
+            username = decodeURIComponent(sessionCookie.split('=')[1]);
+        }
+    }"""
 
-with io.open('routes/superadmin.js', 'w', encoding='utf-8') as f:
-    f.write(content)
+if "const adCookie" not in content:
+    content = content.replace(old_auth, new_auth)
+    with io.open('routes/superadmin.js', 'w', encoding='utf-8') as f:
+        f.write(content)
