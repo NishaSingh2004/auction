@@ -328,16 +328,22 @@
     function displayImportSummary(summary) {
         document.getElementById('bulkSummaryReport').style.display = 'flex';
         
-        document.getElementById('sumTotal').textContent = summary.total || 0;
-        document.getElementById('sumAssigned').textContent = summary.matched || 0;
-        document.getElementById('sumSkipped').textContent = summary.skipped || 0;
-        document.getElementById('sumFailed').textContent = summary.failed || 0;
+        const safeSetText = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+
+        safeSetText('sumTotal', summary.total || 0);
+        safeSetText('sumAssigned', summary.matched || 0);
+        safeSetText('sumSkipped', summary.skipped || 0);
+        safeSetText('sumFailed', summary.failed || 0);
         
-        document.getElementById('sumById').textContent = summary.matchedById || 0;
-        document.getElementById('sumByForm').textContent = summary.matchedByFormNo || 0;
-        document.getElementById('sumByNumber').textContent = summary.matchedByPlayerNo || 0;
-        document.getElementById('sumByName').textContent = summary.matchedByName || 0;
-        document.getElementById('sumUnmatched').textContent = summary.unmatched || 0;
+        // Group ID/Form/Number if the UI only has one field
+        safeSetText('sumById', (summary.matchedById || 0) + (summary.matchedByFormNo || 0) + (summary.matchedByPlayerNo || 0));
+        safeSetText('sumByForm', summary.matchedByFormNo || 0);
+        safeSetText('sumByNumber', summary.matchedByPlayerNo || 0);
+        safeSetText('sumByName', summary.matchedByName || 0);
+        safeSetText('sumUnmatched', summary.unmatched || 0);
 
         const unmatchedListContainer = document.getElementById('unmatchedListContainer');
         const unmatchedListEl = document.getElementById('unmatchedList');
