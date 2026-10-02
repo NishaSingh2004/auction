@@ -85,6 +85,15 @@ router.get('/dashboard', (req, res) => {
     res.render('admin/dashboard', { data, user: req.user });
 });
 
+router.get('/settings', (req, res) => {
+    // Only allow if admin has settings permissions
+    if (req.user && req.user.permissions && req.user.permissions.includes('settings')) {
+        res.render('admin/dashboard', { data, user: req.user, showSettingsInline: true });
+    } else {
+        res.status(403).send("<script>alert('Access Denied'); window.location.href='/admin/dashboard';</script>");
+    }
+});
+
 router.get('/teams', (req, res) => {
     res.render('admin/teams', { teams: data.teams });
 });
@@ -456,28 +465,10 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
                 basePrice = defaultBasePrice;
             }
 
-            // Prevent exact duplicate name + auctionId if already in database or current upload
+            // Duplicate checks removed by user request. Unconditional upload allowed.
             const cleanName = name.trim();
-            const duplicateNameInDB = data.players.find(p => (p.name || '').trim().toLowerCase() === cleanName.toLowerCase() && p.auction_id === activeAuctionId);
-            const duplicateNameInCSV = results.find(r => (r.name || '').trim().toLowerCase() === cleanName.toLowerCase());
-            if (duplicateNameInDB || duplicateNameInCSV) {
-                console.log(`[CSV/Excel Parser] Row ${i} skipped: duplicate player name "${cleanName}"`);
-                failedReg++;
-                continue;
-            }
-
-            // FormNo duplicate check
             const formNo = normalizedRow['formno'] || normalizedRow['formnumber'] || normalizedRow['form'] || normalizedRow['playerid'] || normalizedRow['srno'] || normalizedRow['slno'] || normalizedRow['serialnumber'] || normalizedRow['no'] || normalizedRow['number'] || normalizedRow['serialno'] || '';
             const cleanFormNo = formNo.trim();
-            if (cleanFormNo) {
-                const duplicateFormInDB = data.players.find(p => (p.formNo || '').trim() === cleanFormNo && p.auction_id === activeAuctionId);
-                const duplicateFormInCSV = results.find(r => (r.formNo || '').trim() === cleanFormNo);
-                if (duplicateFormInDB || duplicateFormInCSV) {
-                    console.log(`[CSV/Excel Parser] Row ${i} skipped: duplicate formNo "${cleanFormNo}"`);
-                    failedReg++;
-                    continue;
-                }
-            }
 
             // Determine category_id if Category is specified
             let categoryId = null;

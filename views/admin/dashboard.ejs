@@ -132,7 +132,8 @@
                 </div>
                   <% } %>
                 <% if (user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('settings')))) { %>
-                  <a href="/superadmin/settings" style="text-decoration: none; color: rgba(255,255,255,0.7); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">SETTINGS</a>
+                  <% const settingsUrl = user.role === 'superadmin' ? '/superadmin/settings' : '/admin/settings'; %>
+                  <a href="<%= settingsUrl %>" style="text-decoration: none; color: rgba(255,255,255,0.7); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">SETTINGS</a>
                   <% } %>
                   <% if (user && user.role === 'superadmin') { %>
                   <a href="/superadmin" style="text-decoration: none; color: #fbbf24; font-weight: 800; cursor: pointer;">SUPERADMIN</a>
