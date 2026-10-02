@@ -243,10 +243,14 @@ if(uploadCsvForm) {
                             showToast('Players Registered Successfully', 'success');
                         }
                         
-                        alert(`Players Registered Successfully\n\n` +
-                              `Total uploaded players: ${result.total}\n` +
-                              `Successful count: ${result.successful}\n` +
-                              `Failed rows count: ${result.failed}`);
+                        let alertMsg = `Import Process Completed\n\n` +
+                                       `Total rows found: ${result.total}\n` +
+                                       `Successfully added: ${result.successful}\n`;
+                        if (result.failed > 0) {
+                            alertMsg += `Skipped (Duplicates/Missing Data): ${result.failed}\n\n` +
+                                        `Note: If all rows were skipped, it usually means those players are already in your database.`;
+                        }
+                        alert(alertMsg);
                     } else {
                         let errorMsg = result.message || 'Error uploading file';
                         if (result.errors && result.errors.length > 0) {

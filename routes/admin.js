@@ -419,10 +419,17 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
                 }
             }
 
-            // Dynamically find the exact key in the row that matched our relaxed criteria
-            let nameKey = Object.keys(normalizedRow).find(k => k.includes('name') || k.includes('player') || k.includes('first') || k.includes('cricketer'));
-            let roleKey = Object.keys(normalizedRow).find(k => k.includes('role') || k.includes('category') || k.includes('type') || k.includes('style') || k.includes('position') || k.includes('skill'));
-            let priceKey = Object.keys(normalizedRow).find(k => k.includes('price') || k.includes('bid') || k.includes('base') || k.includes('cost') || k.includes('value') || k.includes('amount'));
+            // Smart header matching: prioritize exact matches, then exclude false positives like 'fathername'
+            const keys = Object.keys(normalizedRow);
+            
+            let nameKey = keys.find(k => ['playername', 'name', 'fullname', 'cricketername', 'player'].includes(k)) || 
+                          keys.find(k => (k.includes('name') || k.includes('player')) && !k.includes('father') && !k.includes('mother') && !k.includes('jersey') && !k.includes('team'));
+                          
+            let roleKey = keys.find(k => ['role', 'category', 'playerrole', 'type', 'playingrole'].includes(k)) || 
+                          keys.find(k => k.includes('role') || k.includes('category') || k.includes('type') || k.includes('style') || k.includes('skill'));
+                          
+            let priceKey = keys.find(k => ['baseprice', 'price', 'basevalue', 'startprice'].includes(k)) || 
+                           keys.find(k => k.includes('price') || k.includes('bid') || k.includes('base') || k.includes('cost') || k.includes('amount'));
 
             const name = nameKey ? (normalizedRow[nameKey] || '') : '';
             const rawRole = roleKey ? (normalizedRow[roleKey] || '') : '';
