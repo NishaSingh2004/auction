@@ -11,6 +11,7 @@ const pool = new Pool({
     port: process.env.PGPORT || 5432,
     connectionString: process.env.DATABASE_URL
 });
+pool.on('error', (err) => console.error('[PostgreSQL] Pool Error:', err));
 
 // Redis Client
 const redisClient = createClient({
