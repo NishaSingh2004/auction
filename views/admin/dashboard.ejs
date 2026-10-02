@@ -31,15 +31,21 @@
             display: none !important;
         }
     </style>
-    <!-- Add a back to superadmin button in the header -->
+    <!-- Add a dynamic back button based on role -->
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const header = document.querySelector("#dataModal h2");
             if (header) {
                 const backBtn = document.createElement("a");
+                <% if (user && user.role === 'superadmin') { %>
                 backBtn.href = "/superadmin";
                 backBtn.innerHTML = "← Back to Superadmin";
                 backBtn.style.cssText = "display: inline-block; margin-right: 2rem; color: #fbbf24; text-decoration: none; font-size: 1rem; font-weight: 800;";
+                <% } else { %>
+                backBtn.href = "/admin/dashboard";
+                backBtn.innerHTML = "← Back to Dashboard";
+                backBtn.style.cssText = "display: inline-block; margin-right: 2rem; color: #38bdf8; text-decoration: none; font-size: 1rem; font-weight: 800;";
+                <% } %>
                 header.parentNode.insertBefore(backBtn, header);
             }
         });
