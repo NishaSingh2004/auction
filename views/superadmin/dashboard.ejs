@@ -449,7 +449,7 @@
                     <span>🏆</span>
                 </div>
                 <div class="sa-kpi-value"><%= (data.auctionDetails && data.auctionDetails.name) ? data.auctionDetails.name : 'Premier League' %></div>
-                <div class="sa-kpi-sub">Season <%= (data.auctionDetails && data.auctionDetails.season) ? data.auctionDetails.season : '2026' %> • Status: <%= data.auctionState.status.toUpperCase() %></div>
+                <div class="sa-kpi-sub">Season <%= (data.auctionDetails && data.auctionDetails.season) ? data.auctionDetails.season : '2026' %> • Status: <%= (data.auctionState && data.auctionState.status) ? data.auctionState.status.toUpperCase() : 'WAITING' %></div>
             </div>
 
             <div class="sa-kpi-card" style="border-left: 3px solid #3b82f6;">

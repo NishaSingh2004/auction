@@ -89,11 +89,17 @@ router.use(superAdminMiddleware);
 
 router.get('/', async (req, res) => {
     try {
-        const usersRes = await data.db.query("SELECT username, role, permissions FROM users WHERE role != 'superadmin'");
+        let admins = [];
+        try {
+            const usersRes = await data.db.query("SELECT username, role, permissions FROM users WHERE role != 'superadmin'");
+            admins = usersRes ? usersRes.rows : [];
+        } catch (dbErr) {
+            console.error('[Superadmin Route] DB Error fetching admins:', dbErr.message);
+        }
         res.render('superadmin/dashboard', { 
             data, 
             user: req.user,
-            admins: usersRes.rows 
+            admins 
         });
     } catch (e) {
         console.error(e);
