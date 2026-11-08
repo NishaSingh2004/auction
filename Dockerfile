@@ -1,5 +1,8 @@
-# Use Node 18 Alpine as base image for a small footprint
+# Use Node 20 Alpine as base image for a small footprint
 FROM node:20-alpine
+
+# Build tools required to compile native modules (sqlite3) when no prebuilt binary is available
+RUN apk add --no-cache python3 make g++
 
 # Create app directory
 WORKDIR /usr/src/app
