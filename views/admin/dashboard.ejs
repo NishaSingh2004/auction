@@ -108,10 +108,10 @@
             <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
                 <div id="auctionStatusBadgeContainer" style="<%= (data.auctionState && data.auctionState.status === 'active') ? 'background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #10b981;' : 'background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); color: #ef4444;' %> font-size: 0.6rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 20px; display: flex; align-items: center; gap: 0.4rem;">
                     <div id="auctionStatusBadgeDot" style="width: 6px; height: 6px; background: <%= (data.auctionState && data.auctionState.status === 'active') ? '#10b981' : '#ef4444' %>; border-radius: 50%;"></div>
-                    <span id="auctionStatusBadge"><%= data.auctionState.status.toUpperCase() %></span>
+                    <span id="auctionStatusBadge"><%= (data.auctionState && data.auctionState.status) ? data.auctionState.status.toUpperCase() : 'WAITING' %></span>
                 </div>
                 <div style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
-                    <%= data.auctionState.activeCategoryName || 'NO CATEGORY' %> • LOT <%= data.players.length %>
+                    <%= (data.auctionState && data.auctionState.activeCategoryName) ? data.auctionState.activeCategoryName : 'NO CATEGORY' %> • LOT <%= (data.players && data.players.length) ? data.players.length : 0 %>
                 </div>
             </div>
             
@@ -292,9 +292,9 @@
                     <!-- Current Bid Box -->
                     <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); background: linear-gradient(180deg, #2a2500 0%, #1a1800 100%); border: 1px solid rgba(251, 191, 36, 0.4); border-bottom: none; padding: 1.5rem 3rem 1rem; border-radius: 16px 16px 0 0; box-shadow: 0 -10px 40px rgba(251, 191, 36, 0.15); text-align: center; min-width: 380px; width: 80%; max-width: 600px; z-index: 20;">
                         <div style="color: #fbbf24; font-size: 0.75rem; font-weight: 800; letter-spacing: 2px; margin-bottom: 0.2rem;">CURRENT BID</div>
-                        <div id="liveBidAmount" style="color: #fff; font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 900; line-height: 1.1; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></div>
+                        <div id="liveBidAmount" style="color: #fff; font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 900; line-height: 1.1; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><%= formatCurrencyLocal((data.auctionState && data.auctionState.currentBid) ? data.auctionState.currentBid : 0) %></div>
                         <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.85rem; color: rgba(255,255,255,0.5); font-weight: 700;">
-                            With: <span id="liveHighestBidder" style="background: rgba(255,255,255,0.1); padding: 0.2rem 0.8rem; border-radius: 4px; color: #fff; font-weight: 800; text-transform: uppercase;"><%= data.auctionState.highestBidder ? data.auctionState.highestBidder : 'NO BIDS YET' %></span>
+                            With: <span id="liveHighestBidder" style="background: rgba(255,255,255,0.1); padding: 0.2rem 0.8rem; border-radius: 4px; color: #fff; font-weight: 800; text-transform: uppercase;"><%= (data.auctionState && data.auctionState.highestBidder) ? data.auctionState.highestBidder : 'NO BIDS YET' %></span>
                         </div>
                     </div>
                 </div>
@@ -328,7 +328,7 @@
                                     <button class="btn btn-secondary" style="border: 1px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.6); padding: 0.5rem 1rem; font-weight: 800; font-size: 1rem; border-radius: 6px;">L</button>
                                 </div>
                             </div>
-                            <div id="manualBidWarningContainer" style="color: #ef4444; font-size: 0.75rem; font-weight: 700; margin-top: 0.75rem; display: none; align-items: center; gap: 0.4rem;"><span style="font-size: 1rem;">⚠️</span> Bid must be at least <span id="minBidWarning"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></span></div>
+                            <div id="manualBidWarningContainer" style="color: #ef4444; font-size: 0.75rem; font-weight: 700; margin-top: 0.75rem; display: none; align-items: center; gap: 0.4rem;"><span style="font-size: 1rem;">⚠️</span> Bid must be at least <span id="minBidWarning"><%= formatCurrencyLocal((data.auctionState && data.auctionState.currentBid) ? data.auctionState.currentBid : 0) %></span></div>
                         </div>
                         
                         <!-- Timer Section (Integrated) -->

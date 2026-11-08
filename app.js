@@ -47,6 +47,42 @@ app.use(async (req, res, next) => {
     next();
 });
 
+app.use((req, res, next) => {
+    // Ensure data object and its properties are always guaranteed non-null for all views
+    if (!data.auctionState) {
+        data.auctionState = {
+            currentPlayer: null,
+            currentBid: 0,
+            highestBidder: null,
+            highestBidderTeamId: null,
+            timer: 30,
+            status: 'waiting',
+            round: 1,
+            isPaused: false,
+            timerOff: false,
+            bidHistory: [],
+            activeCategory: 'all',
+            activeCategoryName: 'ALL'
+        };
+    }
+    if (!data.auctionDetails) {
+        data.auctionDetails = {
+            id: 'active_auction',
+            name: 'THE RISING STAR AND GODAVARI VOX LEGIS U-23 LEAGUE 2026',
+            season: '2026',
+            baseBid: 1000,
+            bidIncreaseBy: 500,
+            playersPerTeamMax: 16,
+            units: 'Rs'
+        };
+    }
+    if (!data.teams) data.teams = [];
+    if (!data.players) data.players = [];
+    if (!data.categories) data.categories = [];
+    if (!data.auctionsList) data.auctionsList = [];
+    next();
+});
+
 const indexRouter = require('./routes/index');
 const adminRouter = require('./routes/admin');
 const superadminRouter = require('./routes/superadmin');

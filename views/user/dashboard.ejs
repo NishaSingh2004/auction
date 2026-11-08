@@ -39,7 +39,7 @@
                 <div id="navRoundTimerWrapper" class="live-round-timer" style="display: flex; align-items: center; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 1.25rem;">
                     <div style="display: flex; flex-direction: column; justify-content: center;">
                         <div style="color: rgba(255,255,255,0.5); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">ROUND</div>
-                        <div id="navRound" style="color: #fff; font-size: 1.1rem; font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif;"><%= data.auctionState.round || 1 %></div>
+                        <div id="navRound" style="color: #fff; font-size: 1.1rem; font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif;"><%= (data.auctionState && data.auctionState.round) ? data.auctionState.round : 1 %></div>
                     </div>
                     
                     <div style="display: flex; flex-direction: column; justify-content: center; margin-left: 1rem;">
@@ -85,7 +85,7 @@
                 <!-- Player ID -->
                 <div class="live-nav-player-id" style="display: flex; flex-direction: column; text-align: right; margin-left: 0.25rem; min-width: 48px;">
                     <div style="color: rgba(255,255,255,0.5); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">PLAYER</div>
-                    <div style="color: #fff; font-size: 1.1rem; font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif;">#<span id="navPlayerId"><%= data.auctionState.currentPlayer ? (data.auctionState.currentPlayer.formNo || (String(data.auctionState.currentPlayer.id).length > 6 ? '..' + String(data.auctionState.currentPlayer.id).slice(-5) : data.auctionState.currentPlayer.id)) : '--' %></span></div>
+                    <div style="color: #fff; font-size: 1.1rem; font-weight: 900; font-family: 'Plus Jakarta Sans', sans-serif;">#<span id="navPlayerId"><%= (data.auctionState && data.auctionState.currentPlayer) ? (data.auctionState.currentPlayer.formNo || (String(data.auctionState.currentPlayer.id).length > 6 ? '..' + String(data.auctionState.currentPlayer.id).slice(-5) : data.auctionState.currentPlayer.id)) : '--' %></span></div>
                 </div>
 
                 <!-- Responsive Three Lines Hamburger Menu Button -->
