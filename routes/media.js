@@ -1,6 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const data = require('../models/data');
+
+function convertToDirectLink(url) {
+    if (!url) return url;
+    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+    if (driveMatch) {
+        return `https://drive.google.com/uc?export=download&confirm=t&id=${driveMatch[1]}`;
+    }
+    const idMatch = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+    if (idMatch) {
+        return `https://drive.google.com/uc?export=download&confirm=t&id=${idMatch[1]}`;
+    }
+    return url;
+}
+
 const multer = require('multer');
 const XLSX = require('xlsx');
 const fs = require('fs');
@@ -37,37 +51,72 @@ const broadcastUpdates = () => {
     }
 };
 
-// Helper to download files from URLs (including Google Drive conversion and timeout)
+// Helper to download files from URLs (with multi-endpoint Google Drive fallback, User-Agent, and 15s timeout)
 async function downloadUrlToFile(urlStr, destPath) {
     if (!urlStr || typeof urlStr !== 'string' || (!urlStr.trim().startsWith('http://') && !urlStr.trim().startsWith('https://'))) {
         throw new Error('Invalid URL format (must start with http:// or https://)');
     }
-    let finalUrl = urlStr.trim();
-    const fileIdMatch = finalUrl.match(/(?:\/d\/|folders\/|id=)([a-zA-Z0-9_-]{10,})/);
-    if (finalUrl.includes('drive.google.com') && fileIdMatch) {
+    const cleanUrl = urlStr.trim();
+    const candidateUrls = [];
+
+    // Extract fileId if Google Drive link
+    const fileIdMatch = cleanUrl.match(/(?:\/d\/|folders\/|id=)([a-zA-Z0-9_-]{15,})/);
+    if ((cleanUrl.includes('drive.google.com') || cleanUrl.includes('docs.google.com') || cleanUrl.includes('googleusercontent.com')) && fileIdMatch) {
         const fileId = fileIdMatch[1];
-        finalUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        // 1. Google's direct CDN image endpoint (fastest, direct image bytes, no virus scan redirect)
+        candidateUrls.push(`https://lh3.googleusercontent.com/d/${fileId}`);
+        // 2. High-resolution thumbnail endpoint (bypasses export warnings for public files)
+        candidateUrls.push(`https://drive.google.com/thumbnail?id=${fileId}&sz=w2048`);
+        // 3. Direct UC export download endpoint
+        candidateUrls.push(`https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`);
+    } else {
+        candidateUrls.push(cleanUrl);
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 seconds timeout per download
+    let lastError = null;
+    for (const targetUrl of candidateUrls) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+        try {
+            const response = await fetch(targetUrl, {
+                signal: controller.signal,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                }
+            });
+            clearTimeout(timeoutId);
 
-    try {
-        const response = await fetch(finalUrl, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (!response.ok) {
-            throw new Error(`Failed to download from URL: ${urlStr}. Status: ${response.status}`);
+            if (!response.ok) {
+                if (response.status === 403 || response.status === 401) {
+                    throw new Error('Google Drive link is restricted/private. Set sharing to "Anyone with the link".');
+                }
+                throw new Error(`Server returned HTTP ${response.status}`);
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('text/html')) {
+                throw new Error('Google Drive link is restricted/private. Set sharing to "Anyone with the link".');
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            if (buffer.length < 100) {
+                throw new Error('Downloaded file is empty or corrupted');
+            }
+
+            fs.writeFileSync(destPath, buffer);
+            return; // Download succeeded!
+        } catch (err) {
+            clearTimeout(timeoutId);
+            lastError = err;
+            if (err.name === 'AbortError') {
+                lastError = new Error('Download timed out (exceeded 15 seconds)');
+            }
         }
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        fs.writeFileSync(destPath, buffer);
-    } catch (err) {
-        clearTimeout(timeoutId);
-        if (err.name === 'AbortError') {
-            throw new Error('Request timed out (exceeded 6 seconds)');
-        }
-        throw err;
     }
+
+    throw lastError || new Error(`Failed to download from ${urlStr}`);
 }
 
 // Audit Log Helpers
@@ -126,41 +175,158 @@ function updateAssetMetadata(filename, source, originalName) {
     saveMetadata(meta);
 }
 
-// Player Matching Logic
+function normalizeText(str) {
+    if (!str) return '';
+    return String(str)
+        .toLowerCase()
+        .replace(/[_\.\-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function stripNonAlphanumeric(str) {
+    if (!str) return '';
+    return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Player Matching Logic (Matches by Player ID or Player Name reliably)
 function findMatchedPlayerByPriority(identifier, players) {
-    if (!identifier) return null;
-    const cleanId = String(identifier).trim();
-    const cleanIdLower = cleanId.toLowerCase();
-    const cleanIdInt = parseInt(cleanId, 10);
+    if (!identifier || !players || !players.length) return null;
     
-    // Priority 1: Player ID
-    let player = players.find(p => p.id && String(p.id).trim() === cleanId);
-    if (player) return { player, matchedBy: 'Player ID' };
+    const rawStr = String(identifier).trim();
+    const norm = (str) => {
+        if (!str) return '';
+        return String(str).toLowerCase()
+            .replace(/[_.\-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
+    const strip = (str) => {
+        if (!str) return '';
+        return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+    };
+    const stripTitles = (str) => {
+        return norm(str).replace(/^(?:dr|mr|mrs|ms|prof|shri|adv|capt)\.?\s+/i, '').trim();
+    };
+
+    const normStr = norm(rawStr);
+    const strippedStr = strip(rawStr);
+    const titleFreeStr = stripTitles(rawStr);
     
-    // Priority 2: Form Number
-    player = players.find(p => {
+    // Check if identifier contains a pure integer or prefix + integer
+    let extractedNumber = null;
+    const pureInt = parseInt(rawStr, 10);
+    if (!isNaN(pureInt) && /^\d+$/.test(rawStr)) {
+        extractedNumber = pureInt;
+    } else {
+        const prefixMatch = rawStr.match(/^(?:id|player|p|form|f|no|img|image|photo|pic|picture|sr|srno|slno|sl)[\s_\-#]*(\d+)$/i);
+        if (prefixMatch) {
+            extractedNumber = parseInt(prefixMatch[1], 10);
+        }
+    }
+
+    // Priority 1: Match by Form Number (high priority for auction player lists)
+    let player = players.find(p => {
         if (!p.formNo) return false;
         const dbFormStr = String(p.formNo).trim();
-        if (dbFormStr === cleanId) return true;
-        const dbFormInt = parseInt(dbFormStr, 10);
-        return (!isNaN(dbFormInt) && !isNaN(cleanIdInt) && dbFormInt === cleanIdInt);
+        if (dbFormStr.toLowerCase() === rawStr.toLowerCase()) return true;
+        if (extractedNumber !== null) {
+            const dbFormInt = parseInt(dbFormStr, 10);
+            if (!isNaN(dbFormInt) && dbFormInt === extractedNumber) return true;
+        }
+        return false;
     });
     if (player) return { player, matchedBy: 'Form Number' };
-    
-    // Priority 3, 4, 5: Player Number / Registration Number / Jersey Number (maps to jerseyNumber)
+
+    // Priority 2: Match by Player ID (exact string or integer comparison)
+    player = players.find(p => {
+        if (p.id === undefined || p.id === null) return false;
+        const pIdStr = String(p.id).trim();
+        if (pIdStr.toLowerCase() === rawStr.toLowerCase()) return true;
+        if (extractedNumber !== null) {
+            const pIdInt = parseInt(pIdStr, 10);
+            if (!isNaN(pIdInt) && pIdInt === extractedNumber) return true;
+        }
+        return false;
+    });
+    if (player) return { player, matchedBy: 'Player ID' };
+
+    // Priority 3: Match by Player Name (normalized: "Virat_Kohli", "Dr. Mayur" -> "dr mayur")
+    player = players.find(p => {
+        if (!p.name) return false;
+        return norm(p.name) === normStr;
+    });
+    if (player) return { player, matchedBy: 'Player Name' };
+
+    // Priority 4: Match by Player Name (stripped alphanumeric: "ViratKohli" -> "viratkohli")
+    player = players.find(p => {
+        if (!p.name) return false;
+        return strip(p.name) === strippedStr;
+    });
+    if (player) return { player, matchedBy: 'Player Name' };
+
+    // Priority 5: Match by Player Name (Title-free: "Dr. Mayur" vs "Mayur")
+    if (titleFreeStr) {
+        player = players.find(p => {
+            if (!p.name) return false;
+            return stripTitles(p.name) === titleFreeStr;
+        });
+        if (player) return { player, matchedBy: 'Player Name' };
+    }
+
+    // Priority 6: Match by Jersey Number / Player Number
     player = players.find(p => {
         if (!p.jerseyNumber) return false;
         const dbJerseyStr = String(p.jerseyNumber).trim();
-        if (dbJerseyStr === cleanId) return true;
-        const dbJerseyInt = parseInt(dbJerseyStr, 10);
-        return (!isNaN(dbJerseyInt) && !isNaN(cleanIdInt) && dbJerseyInt === cleanIdInt);
+        if (dbJerseyStr.toLowerCase() === rawStr.toLowerCase()) return true;
+        if (extractedNumber !== null) {
+            const dbJerseyInt = parseInt(dbJerseyStr, 10);
+            if (!isNaN(dbJerseyInt) && dbJerseyInt === extractedNumber) return true;
+        }
+        return false;
     });
     if (player) return { player, matchedBy: 'Player Number' };
-    
-    // Priority 6: Player Name (case-insensitive)
-    player = players.find(p => p.name && p.name.trim().toLowerCase() === cleanIdLower);
-    if (player) return { player, matchedBy: 'Player Name' };
-    
+
+    // Priority 7: Compound pattern - leading number ("1 - Virat Kohli", "144_Dr_Mayur", "144-Dr. Mayur")
+    const leadingNumMatch = rawStr.match(/^(\d+)[\s_\-]+(.+)$/);
+    if (leadingNumMatch) {
+        const numPart = parseInt(leadingNumMatch[1], 10);
+        const namePart = norm(leadingNumMatch[2]);
+        player = players.find(p => p.name && norm(p.name) === namePart);
+        if (player) return { player, matchedBy: 'Player Name' };
+        player = players.find(p => p.formNo && parseInt(p.formNo, 10) === numPart);
+        if (player) return { player, matchedBy: 'Form Number' };
+        player = players.find(p => parseInt(p.id, 10) === numPart);
+        if (player) return { player, matchedBy: 'Player ID' };
+    }
+
+    // Priority 8: Compound pattern - trailing number ("Virat Kohli_1", "Dr Mayur (144)", "Dr. Mayur_144")
+    const trailingNumMatch = rawStr.match(/^(.+?)[\s_\-]+(\d+)$/) || rawStr.match(/^(.+?)\s*\((.+?)\)$/);
+    if (trailingNumMatch) {
+        const namePart = norm(trailingNumMatch[1]);
+        const numPart = parseInt(trailingNumMatch[2], 10);
+        player = players.find(p => p.name && norm(p.name) === namePart);
+        if (player) return { player, matchedBy: 'Player Name' };
+        if (!isNaN(numPart)) {
+            player = players.find(p => p.formNo && parseInt(p.formNo, 10) === numPart);
+            if (player) return { player, matchedBy: 'Form Number' };
+            player = players.find(p => parseInt(p.id, 10) === numPart);
+            if (player) return { player, matchedBy: 'Player ID' };
+        }
+    }
+
+    // Priority 9: Smart partial name match
+    if (normStr.length >= 4) {
+        const partialMatches = players.filter(p => {
+            if (!p.name) return false;
+            const pNorm = norm(p.name);
+            return (pNorm.length >= 4 && (pNorm.includes(normStr) || normStr.includes(pNorm)));
+        });
+        if (partialMatches.length === 1) {
+            return { player: partialMatches[0], matchedBy: 'Player Name' };
+        }
+    }
+
     return null;
 }
 
@@ -846,8 +1012,8 @@ router.post('/preview-excel', upload.single('excelFile'), async (req, res) => {
         
         // Aliases lookup
         const formAliases = ['formno', 'formnumber', 'form', 'playerid', 'srno', 'slno', 'serialnumber', 'no', 'number', 'serialno', 'registrationnumber'];
-        const nameAliases = ['name', 'playername', 'player', 'fullname', 'playernames', 'cricketername'];
-        const urlAliases = ['photo', 'photourl', 'imageurl', 'image', 'url', 'photolink', 'imagelink', 'playerphoto'];
+        const nameAliases = ['name', 'playername', 'player', 'fullname', 'playernames', 'cricketername', 'firstname', 'first'];
+        const urlAliases = ['photo', 'photourl', 'imageurl', 'image', 'url', 'photolink', 'imagelink', 'playerphoto', 'playerphotos', 'photos', 'picture', 'pic'];
         
         const normalizeKey = (key) => {
             return String(key).replace(/^\uFEFF/i, '')
@@ -1008,7 +1174,8 @@ const confirmExcelImportHandler = async (req, res) => {
         const processRow = async ({ index, row }) => {
             const formVal = formIndex !== -1 && row[formIndex] !== undefined ? String(row[formIndex]).trim() : '';
             const nameVal = nameIndex !== -1 && row[nameIndex] !== undefined ? String(row[nameIndex]).trim() : '';
-            const urlVal = row[urlIndex] !== undefined ? String(row[urlIndex]).trim() : '';
+            let urlVal = row[urlIndex] !== undefined ? String(row[urlIndex]).trim() : '';
+            urlVal = convertToDirectLink(urlVal);
             
             if (!urlVal) {
                 failedCount++;
@@ -1202,7 +1369,7 @@ router.post('/gdrive-folder', async (req, res) => {
 
             if (player) {
                 try {
-                    await downloadUrlToFile(`https://drive.google.com/uc?export=download&id=${file.id}`, targetPath);
+                    await downloadUrlToFile(`https://drive.google.com/uc?export=download&confirm=t&id=${file.id}`, targetPath);
                     updateAssetMetadata(targetFilename, 'gdrive', originalName);
                     
                     const photoUrl = '/uploads/' + targetFilename;
@@ -1309,16 +1476,30 @@ router.post('/bulk-excel-import', upload.single('excelFile'), async (req, res) =
             });
         }
 
-        const rawHeaders = parsedRows[0].map(h => String(h).trim());
+        // Scan first 5 rows to locate header row
+        let headerRowIndex = 0;
         const normalizeHeader = (h) => String(h).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        
+        for (let r = 0; r < Math.min(5, parsedRows.length - 1); r++) {
+            const rowCandidates = parsedRows[r].map(h => normalizeHeader(h));
+            const hasPhotoOrName = rowCandidates.some(h => h.includes('photo') || h.includes('url') || h.includes('image') || h.includes('name') || h.includes('player'));
+            if (hasPhotoOrName) {
+                headerRowIndex = r;
+                break;
+            }
+        }
+
+        const rawHeaders = parsedRows[headerRowIndex].map(h => String(h).trim());
         const normalizedHeaders = rawHeaders.map(h => normalizeHeader(h));
 
         // Column Aliases
         const playerIDAliases = ['playerid', 'id'];
-        const formNumberAliases = ['formnumber', 'formno', 'form', 'formnumberorplayername'];
+        const formNumberAliases = ['formnumber', 'formno', 'form', 'formnumberorplayername', 'srno', 'slno', 'no', 'serialnumber', 'serialno'];
         const playerNumberAliases = ['playernumber', 'number', 'registrationnumber', 'regnumber', 'jerseynumber'];
-        const playerNameAliases = ['playername', 'name', 'formnumberorplayername'];
-        const photoUrlAliases = ['photourl', 'imageurl', 'photolink', 'imagelink', 'photo', 'url'];
+        const playerNameAliases = ['playername', 'name', 'formnumberorplayername', 'fullname', 'player', 'cricketername'];
+        const photoUrlAliases = ['photourl', 'imageurl', 'photolink', 'imagelink', 'photo', 'url', 'playerphoto', 'playerphotos', 'picture', 'photos', 'pic'];
+        const firstNameAliases = ['firstname', 'first', 'fname'];
+        const lastNameAliases = ['lastname', 'last', 'surname', 'lname'];
 
         let playerIdIdx = -1;
         let formNoIdx = -1;
@@ -1376,7 +1557,8 @@ router.post('/bulk-excel-import', upload.single('excelFile'), async (req, res) =
         total = rowsToProcess.length;
 
         const processRow = async (row) => {
-            const urlVal = row[photoUrlIdx] !== undefined ? String(row[photoUrlIdx]).trim() : '';
+            let urlVal = row[photoUrlIdx] !== undefined ? String(row[photoUrlIdx]).trim() : '';
+            urlVal = convertToDirectLink(urlVal);
             if (!urlVal) {
                 skipped++;
                 return;
@@ -1449,12 +1631,7 @@ router.post('/bulk-excel-import', upload.single('excelFile'), async (req, res) =
                 return;
             }
 
-            // CHECK IF PHOTO IS ALREADY UPLOADED
-            if (player.photo) {
-                skipped++;
-                unmatchedList.push(`${player.name} (Photo already uploaded)`);
-                return;
-            }
+            // Assign or update player photo (do not skip if already has photo)
 
             // Download and assign
             try {
@@ -1479,6 +1656,7 @@ router.post('/bulk-excel-import', upload.single('excelFile'), async (req, res) =
             } catch (err) {
                 console.error(`[Bulk Excel Sync Error] Row processing failed:`, err.message);
                 failed++;
+                unmatchedList.push(`${player ? player.name : 'Unknown'} (#${player ? (player.formNo || player.id) : ''}): ${err.message}`);
             }
         };
 
@@ -1601,19 +1779,14 @@ router.post('/bulk-gdrive-import', async (req, res) => {
 
             const { player, matchedBy } = match;
 
-            // CHECK IF PHOTO IS ALREADY UPLOADED
-            if (player.photo) {
-                skipped++;
-                unmatchedList.push(`${originalName} (Photo already uploaded for ${player.name})`);
-                return;
-            }
+            // Assign or update player photo (do not skip if already has photo)
 
             const cleanOriginalName = originalName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const targetFilename = `gdrive-${file.id}-${Date.now()}-${cleanOriginalName}`;
             const targetPath = path.join(uploadDir, targetFilename);
 
             try {
-                await downloadUrlToFile(`https://drive.google.com/uc?export=download&id=${file.id}`, targetPath);
+                await downloadUrlToFile(`https://drive.google.com/uc?export=download&confirm=t&id=${file.id}`, targetPath);
                 updateAssetMetadata(targetFilename, 'gdrive', originalName);
                 
                 const photoUrl = '/uploads/' + targetFilename;

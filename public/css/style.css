@@ -478,6 +478,30 @@ body {
 }
 
 /* Forms & inputs */
+select, 
+select.form-control, 
+#quickTeamSelect, 
+#visiblePlayerDropdown, 
+#adjustBudgetTeamSelect, 
+select option, 
+option {
+    background-color: #1a1c26 !important;
+    color: #ffffff !important;
+}
+
+select option, 
+option {
+    background-color: #181a24 !important;
+    color: #ffffff !important;
+    padding: 8px 12px !important;
+}
+
+select option:checked, 
+select option:hover {
+    background-color: #242938 !important;
+    color: #fbbf24 !important;
+}
+
 .form-control, select.form-control {
     width: 100%;
     background: var(--bg-dark) !important;
@@ -765,4 +789,1653 @@ body {
 .grid {
     display: grid;
     gap: 1rem;
+}
+
+
+/* =========================================================================
+   Live Bid Theme: Vibrant Emerald Green (#10b981)
+   ========================================================================= */
+#liveBidAmount,
+.current-bid-amount {
+    color: #10b981 !important;
+    text-shadow: 0 0 25px rgba(16, 185, 129, 0.45) !important;
+    font-weight: 900 !important;
+}
+
+.bid-panel-green-top {
+    border-top: 4px solid #10b981 !important;
+}
+
+/* =========================================================================
+   Live Footer Scrolling Ticker & Sponsor Bar
+   ========================================================================= */
+.live-footer-ticker {
+    height: 42px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg, #090a0f 0%, #12141c 25%, #181a24 50%, #12141c 75%, #090a0f 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    z-index: 50;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.footer-sponsor-badge {
+    height: 100%;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.18), rgba(245, 158, 11, 0.08));
+    border-right: 1px solid rgba(251, 191, 36, 0.28);
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+    z-index: 3;
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.5);
+}
+
+.footer-sponsor-label {
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #fbbf24;
+    text-transform: uppercase;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.footer-sponsor-logo-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.footer-sponsor-img {
+    max-height: 28px;
+    max-width: 120px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+    border-radius: 3px;
+}
+
+.footer-sponsor-text {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.footer-ticker-track {
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    position: relative;
+    mask-image: linear-gradient(to right, transparent, black 25px, black calc(100% - 25px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 25px, black calc(100% - 25px), transparent);
+}
+
+.footer-ticker-content {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+    animation: tickerMarquee 40s linear infinite;
+    gap: 1.5rem;
+    padding-left: 1.5rem;
+}
+
+.live-footer-ticker:hover .footer-ticker-content {
+    animation-play-state: paused;
+}
+
+@keyframes tickerMarquee {
+    0% {
+        transform: translate3d(0, 0, 0);
+    }
+    100% {
+        transform: translate3d(-100%, 0, 0);
+    }
+}
+
+.ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 600;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: 0.2px;
+}
+
+.ticker-item strong {
+    color: #fff;
+    font-weight: 800;
+}
+
+.ticker-divider {
+    color: #fbbf24;
+    font-size: 0.65rem;
+    opacity: 0.6;
+}
+
+.ticker-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.ticker-dot.live-pulse {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981, 0 0 14px rgba(16, 185, 129, 0.5);
+    animation: liveGreenPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes liveGreenPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 8px #10b981, 0 0 14px rgba(16, 185, 129, 0.5);
+    }
+    50% {
+        opacity: 0.4;
+        transform: scale(0.85);
+        box-shadow: 0 0 3px #10b981;
+    }
+}
+
+@keyframes pulseRed {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.ticker-bid-green {
+    color: #10b981 !important;
+    font-weight: 900 !important;
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.gold-text {
+    color: #fbbf24 !important;
+}
+
+/* =========================================================================
+   Mobile Hamburger Menu ("Three Lines") & Navigation Drawer
+   ========================================================================= */
+.mobile-menu-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 38px;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    border-radius: 8px;
+    padding: 8px 7px;
+    cursor: pointer;
+    z-index: 101;
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-menu-btn:hover,
+.mobile-menu-btn:active {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: #fbbf24;
+    transform: scale(1.05);
+}
+
+.hamburger-bar {
+    width: 100%;
+    height: 2.5px;
+    background-color: #fbbf24;
+    border-radius: 2px;
+    transition: all 0.25s ease;
+}
+
+.mobile-menu-btn.open .hamburger-bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.mobile-menu-btn.open .hamburger-bar:nth-child(2) {
+    opacity: 0;
+}
+
+.mobile-menu-btn.open .hamburger-bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+/* Mobile Navigation Backdrop & Drawer */
+.mobile-nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 99990;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.mobile-nav-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mobile-nav-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 320px;
+    max-width: 86vw;
+    background: #111318;
+    border-left: 1px solid rgba(251, 191, 36, 0.25);
+    box-shadow: -12px 0 35px rgba(0, 0, 0, 0.85);
+    z-index: 99991;
+    transform: translateX(105%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s ease;
+    visibility: hidden;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1.25rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.mobile-nav-drawer.open {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.mobile-nav-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 1.25rem;
+}
+
+.mobile-nav-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 900;
+    color: #fff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: 0.5px;
+}
+
+.mobile-nav-close {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: all 0.2s;
+    touch-action: manipulation;
+}
+
+.mobile-nav-close:hover,
+.mobile-nav-close:active {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.mobile-nav-menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    flex: 1;
+}
+
+.mobile-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    background: #171922;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 0.95rem 1rem;
+    color: #fff;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+    user-select: none;
+    width: 100%;
+}
+
+.mobile-nav-item:hover,
+.mobile-nav-item:active {
+    background: #1e2230;
+    border-color: rgba(251, 191, 36, 0.35);
+}
+
+.mobile-nav-item.active {
+    background: rgba(251, 191, 36, 0.12);
+    border-color: #fbbf24;
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.18);
+}
+
+.mobile-nav-item .nav-icon {
+    font-size: 1.35rem;
+    width: 30px;
+    text-align: center;
+}
+
+.mobile-nav-item .nav-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.mobile-nav-item .nav-title {
+    font-weight: 900;
+    font-size: 0.95rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.mobile-nav-item.active .nav-title {
+    color: #fbbf24;
+}
+
+.mobile-nav-item .nav-desc {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.2;
+}
+
+.mobile-nav-item .nav-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.2rem 0.55rem;
+    border-radius: 12px;
+}
+
+.mobile-nav-item .nav-badge.live-badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.mobile-nav-item .nav-badge.count-badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.mobile-nav-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* =========================================================================
+   Clickable Player Rows & Team Card Interactive Styles
+   ========================================================================= */
+.clickable-player-row {
+    cursor: pointer !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(251, 191, 36, 0.2);
+}
+
+.clickable-player-row:hover,
+.clickable-player-row:active {
+    background: rgba(251, 191, 36, 0.08) !important;
+}
+
+.team-card {
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.team-card:hover {
+    border-color: rgba(251, 191, 36, 0.3) !important;
+}
+
+.team-card.team-card-expanded {
+    border-color: rgba(251, 191, 36, 0.5) !important;
+    background: #141722 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.team-card-toggle-bar {
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+}
+
+.team-card-toggle-bar:hover,
+.team-card-toggle-bar:active {
+    background: rgba(251, 191, 36, 0.15) !important;
+    border-color: rgba(251, 191, 36, 0.4) !important;
+}
+
+.team-roster-player-item {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(251, 191, 36, 0.2);
+}
+
+.team-roster-player-item:hover,
+.team-roster-player-item:active {
+    background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* =========================================================================
+   Live Player Details Modal Dialog
+   ========================================================================= */
+.live-player-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(6px);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: fadeInModal 0.2s ease forwards;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.live-player-modal-dialog {
+    background: #14161f;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    padding: 1.5rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.live-player-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s;
+    z-index: 2;
+}
+
+.live-player-modal-close:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.live-player-modal-header {
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+}
+
+.modal-photo-wrapper {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #1f222e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-player-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+}
+
+.modal-player-role-badge {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fbbf24;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0.15rem 0.25rem;
+    text-transform: uppercase;
+}
+
+.modal-header-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.modal-id-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.modal-player-formno {
+    color: #fbbf24;
+    font-weight: 900;
+    font-size: 1.15rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.modal-player-uid {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.72rem;
+    font-family: monospace;
+}
+
+.modal-player-name {
+    font-size: 1.4rem;
+    margin: 0;
+    font-weight: 900;
+    color: #fff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+}
+
+.modal-player-status-wrap {
+    margin-top: 0.25rem;
+}
+
+.modal-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.modal-stat-box {
+    background: #1a1d27;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.modal-stat-box .stat-label {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    font-weight: 800;
+    margin-bottom: 0.2rem;
+    letter-spacing: 0.5px;
+}
+
+.modal-stat-box .stat-value {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #fff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.modal-footer-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+}
+
+.btn-modal-close-action {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    padding: 0.6rem 1.25rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-modal-close-action:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* =========================================================================
+   Live Spectator Broadcast Visual Enhancements
+   ========================================================================= */
+.league-title-broadcast {
+    background: linear-gradient(135deg, #ffffff 0%, #fbbf24 60%, #f59e0b 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    filter: drop-shadow(0 2px 8px rgba(251, 191, 36, 0.3));
+}
+
+.live-glass-panel {
+    background: linear-gradient(145deg, rgba(20, 24, 35, 0.88) 0%, rgba(12, 14, 22, 0.94) 100%) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Floating Real ID Tag on Player Card */
+.live-player-form-badge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 5;
+    background: rgba(15, 17, 24, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    color: #fbbf24;
+    font-size: 0.72rem;
+    font-weight: 900;
+    font-family: monospace;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    letter-spacing: 0.5px;
+}
+
+/* Floating Role Pill on Player Card */
+.live-player-floating-role {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 5;
+    background: rgba(15, 17, 24, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0.3rem 0.65rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    text-transform: uppercase;
+}
+
+/* Spotlight Shimmer Effect across Player Card */
+@keyframes spotlightSweep {
+    0% { transform: translateX(-150%) rotate(25deg); opacity: 0; }
+    50% { opacity: 0.15; }
+    100% { transform: translateX(250%) rotate(25deg); opacity: 0; }
+}
+
+.player-spotlight-sweep {
+    position: absolute;
+    inset: 0;
+    width: 50%;
+    height: 250%;
+    top: -75%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: rotate(25deg);
+    pointer-events: none;
+    z-index: 3;
+    animation: spotlightSweep 7s infinite ease-in-out;
+}
+
+/* Stat Box Micro-Interactions */
+.live-player-stats-grid > div {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s, box-shadow 0.2s !important;
+    background: linear-gradient(135deg, rgba(26, 28, 38, 0.9) 0%, rgba(18, 20, 28, 0.95) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.live-player-stats-grid > div:hover {
+    transform: translateY(-2px);
+    border-color: rgba(251, 191, 36, 0.25) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Current Bid Radiant Pulse Ring */
+.bid-pulse-ring {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    animation: liveBidRingPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes liveBidRingPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.4; }
+    50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.85; }
+}
+
+/* Leading Bidder VIP Box */
+.leading-bidder-vip-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.75rem 1.25rem;
+    border-radius: 10px;
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s ease;
+}
+
+.leading-bidder-vip-box:hover {
+    border-color: rgba(251, 191, 36, 0.3);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* KPI Summary Chips for Player Database */
+.player-kpi-chips {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.player-kpi-chip {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    transition: all 0.2s ease;
+}
+
+.player-kpi-chip:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+}
+
+.player-kpi-chip .kpi-label {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.player-kpi-chip .kpi-value {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #fff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* =========================================================================
+   Player Database Search, Status Filters & Table Scroll
+   ========================================================================= */
+.player-list-filters-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.player-search-box {
+    width: 100%;
+    background: #1a1c23;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 0.6rem 0.95rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.player-search-box:focus {
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
+}
+
+.player-status-pills {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.status-filter-pill {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.35rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+}
+
+.status-filter-pill:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.status-filter-pill.active {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: #fbbf24;
+    color: #fbbf24;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
+}
+
+.status-filter-pill[data-status="available"].active {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: #38bdf8;
+    color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+.status-filter-pill[data-status="sold"].active {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: #10b981;
+    color: #10b981;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.status-filter-pill[data-status="unsold"].active {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
+    color: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+/* Global Horizontal Overflow Guard for Live Spectator Experience */
+html,
+body.live-body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+#liveAppContainer,
+#liveMainWorkspace,
+#mainGrid,
+#playerListContainer,
+#teamViewContainer {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.player-list-table-scroll {
+    width: 100%;
+    overflow-x: hidden;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.player-list-table-scroll table thead th {
+    position: sticky;
+    top: 0;
+    background: #181a22 !important;
+    z-index: 5;
+}
+
+.bid-history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+}
+
+.live-indicator-text-desktop {
+    display: block;
+}
+
+.live-indicator-text-mobile {
+    display: none;
+}
+
+/* =========================================================================
+   Mobile & Tablet Responsiveness for Live Spectator Dashboard
+   (Strictly zero horizontal / side scrolling & smooth vertical flow)
+   ========================================================================= */
+@media (max-width: 1080px) {
+    /* 1. Remove 100vh locking to enable smooth vertical scrolling */
+    body.live-body,
+    body[style*="overflow: hidden"] {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .app-container,
+    #liveAppContainer {
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow-y: visible !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #liveMainWorkspace,
+    div[style*="calc(100vh - 60px)"],
+    div[style*="calc(100vh - 60px - 42px)"] {
+        height: auto !important;
+        overflow-y: visible !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding-bottom: 58px !important; /* Space so content isn't covered by fixed ticker */
+    }
+
+    /* 2. Responsive Topbar */
+    header.topbar,
+    header.topbar.live-topbar {
+        height: 56px !important;
+        min-height: 56px;
+        padding: 0 0.85rem !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.5rem !important;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+
+    .live-topbar-left {
+        width: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.6rem !important;
+        height: 100% !important;
+    }
+
+    .live-topbar-right {
+        width: auto !important;
+        margin-left: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 0.6rem !important;
+    }
+
+    /* Show mobile hamburger menu (three lines) and hide desktop tabs */
+    .mobile-menu-btn {
+        display: flex !important;
+    }
+
+    .live-nav-tabs,
+    #navCenterHome {
+        display: none !important;
+    }
+
+    .live-nav-divider {
+        display: none !important;
+    }
+
+    .live-league-name h1 {
+        font-size: 0.95rem !important;
+        max-width: 140px !important;
+    }
+
+    /* Hide redundant header sponsor and timer in topbar */
+    .live-header-sponsor {
+        display: none !important;
+    }
+
+    #navRoundTimerWrapper {
+        display: none !important;
+    }
+
+    /* 3. Convert 3-Column mainGrid into mobile stacked column */
+    #mainGrid,
+    .live-main-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
+        padding: 0.75rem !important;
+        gap: 1.25rem !important;
+        overflow-y: visible !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Column Ordering:
+       1. Active Player Card & Profile
+       2. Current Bid & Bid History
+       3. Team Purses / Franchises
+    */
+    #playerProfileColumn,
+    .live-player-col {
+        order: 1 !important;
+        height: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+
+    #playerProfileColumn .live-player-img-box {
+        height: 360px !important;
+        min-height: 320px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        position: relative !important;
+        background: radial-gradient(circle at 50% 30%, #202430 0%, #0d0f14 100%) !important;
+    }
+
+    #playerProfileColumn .live-player-img-box img#livePlayerPhoto {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        object-position: center 15% !important;
+        display: block !important;
+    }
+
+    #bidHistoryColumn,
+    .live-bid-col {
+        order: 2 !important;
+        height: auto !important;
+        overflow: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #bidHistoryList {
+        max-height: 260px !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+    }
+
+    #teamPursesColumn,
+    .live-teams-col {
+        order: 3 !important;
+        height: auto !important;
+        max-height: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+
+    #teamPursesColumn #teamList {
+        max-height: none !important;
+        overflow: visible !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #livePlayerName {
+        font-size: clamp(1.6rem, 5vw, 2.3rem) !important;
+        word-break: break-word !important;
+    }
+
+    #liveBidAmount {
+        font-size: clamp(2.2rem, 6vw, 2.8rem) !important;
+        margin-bottom: 1.25rem !important;
+        word-break: break-word !important;
+    }
+
+    /* 4. Fixed Bottom Scrolling Ticker for Mobile & Tablets */
+    .live-footer-ticker {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 9999 !important;
+        height: 40px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+
+    .footer-sponsor-badge {
+        padding: 0 0.6rem !important;
+    }
+
+    .footer-sponsor-label {
+        display: none !important;
+    }
+
+    .footer-sponsor-img {
+        max-height: 24px !important;
+        max-width: 80px !important;
+    }
+
+    .ticker-item {
+        font-size: 0.72rem !important;
+    }
+
+    /* 5. Player Database and Team View mobile styling */
+    #playerListContainer,
+    #teamViewContainer {
+        height: auto !important;
+        padding: 0.75rem !important;
+        padding-bottom: 60px !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #playerListContainer .panel {
+        padding: 0.75rem !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #teamViewGrid {
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important;
+        gap: 1rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .team-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+
+    .team-roster-player-item {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 0.65rem 0.85rem !important;
+        border-radius: 6px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+
+    .team-roster-player-item > div:first-child {
+        flex: 1 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .team-roster-player-item span {
+        text-overflow: ellipsis !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+    }
+}
+
+/* Tablet Optimizations (768px - 1080px) */
+@media (min-width: 768px) and (max-width: 1080px) {
+    #playerProfileColumn .live-player-img-box {
+        height: 340px !important;
+    }
+
+    .live-player-stats-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+    }
+
+    .live-stat-base-price {
+        grid-column: span 2 !important;
+    }
+
+    #teamViewGrid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+    }
+
+    #teamList {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+        gap: 0.85rem !important;
+    }
+}
+
+/* Mobile & Small Screen Optimizations (<= 768px):
+   Completely eliminate horizontal / side scrolling & convert table to native cards */
+@media (max-width: 768px) {
+    /* Slide 2: Player Database - No Sideways Scroll (Card Format) */
+    .player-list-table-scroll {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border: none !important;
+        background: transparent !important;
+    }
+
+    #playerListContainer .panel {
+        padding: 0.65rem !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #playerListContainer table,
+    .player-list-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
+        border-collapse: separate !important;
+    }
+
+    #playerListContainer thead {
+        display: none !important; /* Hide wide table header on mobile */
+    }
+
+    #playerListContainer tbody {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #playerListContainer tr.clickable-player-row {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.45rem 0.5rem !important;
+        background: #14161f !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 10px !important;
+        padding: 0.85rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+        transition: transform 0.15s ease, border-color 0.15s ease !important;
+    }
+
+    #playerListContainer tr.clickable-player-row:active {
+        transform: scale(0.985);
+        border-color: rgba(251, 191, 36, 0.4) !important;
+    }
+
+    /* Row 1 Top Bar: Real ID (left), UID (left), Status (right) */
+    #playerListContainer tr.clickable-player-row > td.col-real-id,
+    #playerListContainer tr.clickable-player-row > td:nth-child(1) {
+        order: 1 !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        border-bottom: none !important;
+    }
+
+    #playerListContainer tr.clickable-player-row > td.col-uid,
+    #playerListContainer tr.clickable-player-row > td:nth-child(2) {
+        order: 2 !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        margin-right: auto !important;
+        margin-left: 0.35rem !important;
+        border-bottom: none !important;
+    }
+
+    #playerListContainer tr.clickable-player-row > td.col-status,
+    #playerListContainer tr.clickable-player-row > td:nth-child(6) {
+        order: 3 !important;
+        padding: 0.2rem 0.65rem !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        border-radius: 14px !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        font-size: 0.72rem !important;
+        letter-spacing: 0.5px !important;
+        text-align: right !important;
+        border-bottom: none !important;
+    }
+
+    /* Row 2: Player Info (Photo + Name) taking full width with separator */
+    #playerListContainer tr.clickable-player-row > td.col-player-info,
+    #playerListContainer tr.clickable-player-row > td:nth-child(3) {
+        order: 4 !important;
+        width: 100% !important;
+        padding: 0.45rem 0 !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        margin: 0.15rem 0 !important;
+    }
+
+    /* Row 3 Bottom Bar: Role (left), Base Price (center), Sold Price/Team (right) */
+    #playerListContainer tr.clickable-player-row > td.col-role,
+    #playerListContainer tr.clickable-player-row > td:nth-child(4) {
+        order: 5 !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        border-bottom: none !important;
+    }
+
+    #playerListContainer tr.clickable-player-row > td.col-base-price,
+    #playerListContainer tr.clickable-player-row > td:nth-child(5) {
+        order: 6 !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        font-size: 0.78rem !important;
+        color: rgba(255, 255, 255, 0.75) !important;
+        border-bottom: none !important;
+    }
+    #playerListContainer tr.clickable-player-row > td.col-base-price::before,
+    #playerListContainer tr.clickable-player-row > td:nth-child(5)::before {
+        content: "Base: ";
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 0.7rem;
+        margin-right: 2px;
+    }
+
+    #playerListContainer tr.clickable-player-row > td.col-sold,
+    #playerListContainer tr.clickable-player-row > td:nth-child(7) {
+        order: 7 !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        margin-left: auto !important;
+        text-align: right !important;
+        border-bottom: none !important;
+    }
+
+    /* Search & Filter Bar responsiveness */
+    .player-list-filters-bar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.65rem !important;
+        width: 100% !important;
+    }
+
+    .player-search-box {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .player-status-pills {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 0.35rem !important;
+        width: 100% !important;
+        justify-content: flex-start !important;
+    }
+
+    .status-filter-pill {
+        flex: 1 1 auto !important;
+        text-align: center !important;
+        padding: 0.35rem 0.6rem !important;
+        font-size: 0.7rem !important;
+    }
+
+    /* KPI chips 2x2 grid */
+    .player-kpi-chips {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
+    }
+
+    /* Slide 1: Live Bidding adjustments */
+    #playerProfileColumn .live-player-img-box {
+        height: 350px !important;
+        min-height: 310px !important;
+    }
+
+    .live-player-stats-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.4rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .live-stat-base-price {
+        grid-column: span 2 !important;
+    }
+
+    #livePlayerName {
+        font-size: clamp(1.4rem, 5.5vw, 2rem) !important;
+        word-break: break-word !important;
+    }
+
+    #liveBidAmount {
+        font-size: clamp(2rem, 6.5vw, 2.6rem) !important;
+        margin-bottom: 1rem !important;
+        word-break: break-word !important;
+    }
+
+    .bid-panel-green-top {
+        padding: 1.25rem 1rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .leading-bidder-vip-box {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        justify-content: center !important;
+    }
+
+    #liveHighestBidder {
+        max-width: 180px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+
+    /* Slide 3: Team View 1-Column */
+    #teamViewGrid {
+        grid-template-columns: 1fr !important;
+        gap: 0.85rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+/* Small Screen Phones (<= 480px) */
+@media (max-width: 480px) {
+    header.topbar,
+    header.topbar.live-topbar {
+        height: 52px !important;
+        min-height: 52px;
+        padding: 0 0.5rem !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.35rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .live-league-name h1 {
+        font-size: 0.8rem !important;
+        max-width: 110px !important;
+    }
+
+    .live-indicator-text-desktop {
+        display: none !important;
+    }
+
+    .live-indicator-text-mobile {
+        display: block !important;
+    }
+
+    #navIndicatorLive {
+        padding: 0.2rem 0.55rem !important;
+        font-size: 0.65rem !important;
+        border-radius: 12px !important;
+    }
+
+    .live-nav-player-id #navPlayerId {
+        font-size: 0.95rem !important;
+    }
+
+    #playerProfileColumn .live-player-img-box {
+        height: 340px !important;
+        min-height: 300px !important;
+    }
+
+    #livePlayerName {
+        font-size: clamp(1.3rem, 5.2vw, 1.75rem) !important;
+    }
+
+    #liveBidAmount {
+        font-size: clamp(1.85rem, 6.2vw, 2.35rem) !important;
+    }
+
+    .leading-bidder-vip-box {
+        padding: 0.5rem 0.75rem !important;
+        gap: 0.6rem !important;
+    }
+
+    #currentBidderLogoBox {
+        width: 38px !important;
+        height: 38px !important;
+    }
+
+    #liveHighestBidder {
+        font-size: 1.1rem !important;
+        max-width: 140px !important;
+    }
+
+    .footer-sponsor-label {
+        display: none !important;
+    }
+
+    .footer-sponsor-img {
+        max-height: 20px !important;
+        max-width: 70px !important;
+    }
+
+    .live-player-modal-dialog {
+        padding: 1rem !important;
+        width: 95vw !important;
+        max-width: 95vw !important;
+        box-sizing: border-box !important;
+    }
+
+    .modal-player-photo {
+        width: 70px !important;
+        height: 70px !important;
+    }
+
+    .modal-stats-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.5rem !important;
+    }
+
+    .modal-stat-box {
+        padding: 0.5rem !important;
+    }
+
+    .modal-stat-box .stat-value {
+        font-size: 0.95rem !important;
+    }
+}
+
+@media (max-width: 600px) {
+    /* Dashboard Layout & Sidebar Mobile Adaptation for Admin */
+    .dashboard-layout {
+        flex-direction: column !important;
+        height: auto !important;
+        overflow-y: auto !important;
+    }
+    .sidebar {
+        width: 100% !important;
+        height: auto !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: space-between !important;
+        padding: 0.5rem 0.75rem !important;
+    }
+    .sidebar-header {
+        border-bottom: none !important;
+        padding: 0.2rem 0 !important;
+    }
+    .nav-links {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 0.4rem !important;
+        margin: 0 !important;
+    }
+    .nav-links li a {
+        padding: 0.35rem 0.65rem !important;
+        font-size: 0.75rem !important;
+    }
+    .main-content {
+        padding: 1rem 0.5rem !important;
+        width: 100% !important;
+    }
 }

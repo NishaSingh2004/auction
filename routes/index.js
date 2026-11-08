@@ -14,6 +14,51 @@ router.get('/live', async (req, res) => {
     });
 });
 
+// Dedicated Live Auction Only route (clean, fully responsive, auction only without tabs)
+router.get('/live-auction', async (req, res) => {
+    res.render('live-auction', { 
+        data, 
+        username: 'Spectator'
+    });
+});
+router.get('/auction-live', (req, res) => res.redirect('/live-auction'));
+
+// Dedicated YouTube / OBS Stream Overlay route (transparent broadcast graphics)
+router.get('/overlay', async (req, res) => {
+    res.render('overlay', { 
+        data, 
+        theme: req.query.theme || (req.query.preview ? 'dark' : 'transparent')
+    });
+});
+router.get('/youtube-overlay', (req, res) => res.redirect('/overlay'));
+
+router.post('/api/remove-player-from-team', async (req, res) => {
+    try {
+        const { playerId } = req.body;
+        if (!playerId) {
+            return res.status(400).json({ success: false, error: 'Player ID is required' });
+        }
+        console.log(`[API] /api/remove-player-from-team called for player ${playerId}`);
+        await data.resetPlayer(playerId);
+        await data.syncWithDB();
+        
+        if (global.io) {
+            global.io.emit('dataUpdate', { 
+                teams: data.teams, 
+                players: data.players, 
+                categories: data.categories, 
+                auctionDetails: data.auctionDetails, 
+                auctionsList: data.auctionsList 
+            });
+            global.io.emit('auctionUpdate', data.auctionState);
+        }
+        res.json({ success: true, message: 'Player removed from team and purse refunded successfully' });
+    } catch (err) {
+        console.error('[API] Error in /api/remove-player-from-team:', err);
+        res.status(500).json({ success: false, error: err.message || 'Internal error' });
+    }
+});
+
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const cleanUser = (username || '').trim();

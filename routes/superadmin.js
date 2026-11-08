@@ -1,3 +1,34 @@
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const dir = path.join(__dirname, '../public/uploads');
+        if (!fs.existsSync(dir)){
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
+const broadcastUpdates = () => {
+    if (global.io) {
+        global.io.emit('dataUpdate', { 
+            teams: data.teams, 
+            players: data.players, 
+            categories: data.categories,
+            auctionDetails: data.auctionDetails,
+            auctionsList: data.auctionsList
+        });
+        global.io.emit('auctionUpdate', data.auctionState);
+    }
+};
+
 const express = require('express');
 const router = express.Router();
 const data = require('../models/data');
@@ -114,6 +145,35 @@ router.post('/update-permissions', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.redirect('/superadmin');
+    }
+});
+
+
+router.post('/update-sponsor', upload.single('sponsorLogo'), async (req, res) => {
+    try {
+        const { sponsorName, removeLogo, auctionId } = req.body;
+        const targetId = auctionId || (data.auctionDetails ? data.auctionDetails.id : 'active_auction');
+        
+        const updateFields = {
+            sponsorName: sponsorName !== undefined ? sponsorName.trim() : ''
+        };
+
+        if (req.file) {
+            updateFields.sponsorLogo = '/uploads/' + req.file.filename;
+        } else if (removeLogo === 'true' || removeLogo === true) {
+            updateFields.sponsorLogo = null;
+        }
+
+        await data.updateSponsorDetails(targetId, updateFields);
+        broadcastUpdates();
+        res.json({ 
+            success: true, 
+            message: 'Sponsor logo & details updated successfully!',
+            auctionDetails: data.auctionDetails 
+        });
+    } catch (err) {
+        console.error('[Superadmin Update Sponsor Error]', err);
+        res.json({ success: false, error: err.message });
     }
 });
 

@@ -1,24 +1,56 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const { createClient } = require('redis');
 const path = require('path');
 
+// Configure pg type parsers: BIGINT (OID 20) and NUMERIC (OID 1700) to return numbers, preventing string concatenation
+types.setTypeParser(20, (val) => val === null ? null : parseInt(val, 10));
+types.setTypeParser(1700, (val) => val === null ? null : parseFloat(val));
+
 // PostgreSQL Connection Pool
-const pool = new Pool({
+const isRemoteDb = Boolean(
+    process.env.DATABASE_URL &&
+    !process.env.DATABASE_URL.includes('localhost') &&
+    !process.env.DATABASE_URL.includes('127.0.0.1') &&
+    !process.env.DATABASE_URL.includes('@db:')
+);
+
+const poolConfig = {
     user: process.env.PGUSER || 'postgres',
     host: process.env.PGHOST || 'localhost',
     database: process.env.PGDATABASE || 'auction',
     password: process.env.PGPASSWORD || 'postgres',
     port: process.env.PGPORT || 5432,
-    connectionString: process.env.DATABASE_URL
-});
+};
+
+if (process.env.DATABASE_URL) {
+    poolConfig.connectionString = process.env.DATABASE_URL;
+}
+if (isRemoteDb) {
+    poolConfig.ssl = { rejectUnauthorized: false };
+}
+
+const pool = new Pool(poolConfig);
 pool.on('error', (err) => console.error('[PostgreSQL] Pool Error:', err));
 
-// Redis Client
-const redisClient = createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
-
-redisClient.on('error', (err) => console.error('[Redis] Error:', err));
+// Redis Client with in-memory fallback for cloud / serverless compatibility
+let redisClient = null;
+const redisUrl = process.env.REDIS_URL || (process.env.NODE_ENV === 'production' ? null : 'redis://localhost:6379');
+if (redisUrl) {
+    redisClient = createClient({
+        url: redisUrl
+    });
+    redisClient.on('error', (err) => console.warn('[Redis] Warning:', err.message));
+} else {
+    const memStore = new Map();
+    redisClient = {
+        isOpen: true,
+        connect: async () => {},
+        get: async (key) => memStore.get(key) || null,
+        set: async (key, val) => { memStore.set(key, val); return 'OK'; },
+        del: async (key) => { memStore.delete(key); return 1; },
+        on: () => {}
+    };
+}
 
 const data = {
     teams: [],
@@ -40,10 +72,21 @@ const data = {
     
     async init() {
         try {
-            // Connect Redis
-            if (!this.redis.isOpen) {
-                await this.redis.connect();
-                console.log('[Redis] Connected.');
+            // Connect Redis if available
+            try {
+                if (this.redis && !this.redis.isOpen) {
+                    await this.redis.connect();
+                    console.log('[Redis] Connected.');
+                }
+            } catch (rErr) {
+                console.warn('[Redis] Connection warning, using in-memory state fallback:', rErr.message);
+                const memStore = new Map();
+                this.redis = {
+                    isOpen: true,
+                    get: async (k) => memStore.get(k) || null,
+                    set: async (k, v) => { memStore.set(k, v); return 'OK'; },
+                    del: async (k) => { memStore.delete(k); return 1; }
+                };
             }
 
             // Initializing Tables for PostgreSQL
@@ -112,11 +155,16 @@ const data = {
                     category_id TEXT
                 );
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT;
+                ALTER TABLE players ALTER COLUMN "basePrice" TYPE BIGINT;
+                ALTER TABLE players ALTER COLUMN "soldPrice" TYPE BIGINT;
+                ALTER TABLE players ALTER COLUMN age TYPE BIGINT;
                 CREATE TABLE IF NOT EXISTS users (
                     username TEXT PRIMARY KEY,
                     password TEXT,
                     role TEXT
                 );
+                ALTER TABLE auction_details ADD COLUMN IF NOT EXISTS "sponsorLogo" TEXT;
+                ALTER TABLE auction_details ADD COLUMN IF NOT EXISTS "sponsorName" TEXT;
                 CREATE TABLE IF NOT EXISTS auction_details (
                     id TEXT PRIMARY KEY,
                     logo TEXT,
@@ -163,6 +211,20 @@ const data = {
             }
             this.auctionDetails = detailsRes.rows[0];
 
+            // Restore last active auction from Redis if available
+            try {
+                const savedAuctionId = await this.redis.get('last_active_auction_id');
+                if (savedAuctionId) {
+                    const savedRes = await this.db.query("SELECT * FROM auction_details WHERE id = $1", [savedAuctionId]);
+                    if (savedRes.rows.length > 0) {
+                        this.auctionDetails = savedRes.rows[0];
+                        console.log(`[Redis] Restored active tournament: ${this.auctionDetails.name} (${savedAuctionId})`);
+                    }
+                }
+            } catch (e) {
+                console.error('[Redis] Error restoring last_active_auction_id:', e.message);
+            }
+
             // Load initial teams and players
             const currentId = this.auctionDetails ? this.auctionDetails.id : 'active_auction';
             await this.syncWithDB();
@@ -190,6 +252,41 @@ const data = {
         
         const catRes = await this.db.query('SELECT * FROM categories WHERE auction_id = $1', [currentId]);
         this.categories = catRes.rows;
+
+        // Ensure numeric fields are explicitly parsed as numbers
+        if (this.players) {
+            this.players.forEach(p => {
+                p.basePrice = parseInt(p.basePrice, 10) || 0;
+                if (p.soldPrice !== null && p.soldPrice !== undefined) {
+                    p.soldPrice = parseInt(p.soldPrice, 10);
+                }
+                if (p.age !== null && p.age !== undefined) {
+                    p.age = parseInt(p.age, 10);
+                }
+            });
+        }
+        if (this.teams) {
+            this.teams.forEach(t => {
+                t.budget = parseInt(t.budget, 10) || 0;
+            });
+        }
+        if (this.auctionDetails) {
+            if (this.auctionDetails.baseBid !== null && this.auctionDetails.baseBid !== undefined) {
+                this.auctionDetails.baseBid = parseFloat(this.auctionDetails.baseBid) || 0;
+            }
+            if (this.auctionDetails.bidIncreaseBy !== null && this.auctionDetails.bidIncreaseBy !== undefined) {
+                this.auctionDetails.bidIncreaseBy = parseFloat(this.auctionDetails.bidIncreaseBy) || 500;
+            }
+        }
+        if (this.categories) {
+            this.categories.forEach(c => {
+                if (c.baseBid !== null && c.baseBid !== undefined) c.baseBid = parseInt(c.baseBid, 10) || 0;
+                if (c.increment !== null && c.increment !== undefined) c.increment = parseInt(c.increment, 10) || 0;
+                if (c.reserveBid !== null && c.reserveBid !== undefined) c.reserveBid = parseInt(c.reserveBid, 10) || 0;
+                if (c.highestBidPerPlayer !== null && c.highestBidPerPlayer !== undefined) c.highestBidPerPlayer = parseInt(c.highestBidPerPlayer, 10) || 0;
+                if (c.categoryHighestBidAll !== null && c.categoryHighestBidAll !== undefined) c.categoryHighestBidAll = parseInt(c.categoryHighestBidAll, 10) || 0;
+            });
+        }
         
         // Ensure "All" category exists and has correct auction details
         const allCatIndex = this.categories.findIndex(c => c.id.startsWith('cat_all_'));
@@ -265,6 +362,20 @@ const data = {
             const savedState = await this.redis.get('auction_state');
             if (savedState) {
                 this.auctionState = JSON.parse(savedState);
+                if (this.auctionState) {
+                    this.auctionState.currentBid = parseInt(this.auctionState.currentBid, 10) || 0;
+                    if (this.auctionState.currentBid > 1e11 || isNaN(this.auctionState.currentBid)) {
+                        console.warn('[Redis] Resetting corrupted currentBid to basePrice');
+                        let startingBid = (this.auctionState.currentPlayer && parseInt(this.auctionState.currentPlayer.basePrice, 10)) || 0;
+                        if (startingBid === 0 && this.auctionDetails && this.auctionDetails.baseBid) {
+                            startingBid = parseInt(this.auctionDetails.baseBid, 10) || 1000;
+                        }
+                        this.auctionState.currentBid = startingBid || 1000;
+                        this.auctionState.highestBidder = null;
+                        this.auctionState.bidHistory = [];
+                        await this.saveStateToRedis();
+                    }
+                }
                 console.log('[Redis] Auction state restored.');
             }
         } catch (err) {
@@ -276,6 +387,11 @@ const data = {
         const res = await this.db.query("SELECT * FROM auction_details WHERE id = $1", [id]);
         if (res.rows.length > 0) {
             this.auctionDetails = res.rows[0];
+            try {
+                await this.redis.set('last_active_auction_id', id);
+            } catch (e) {
+                console.error('[Redis] Failed to save last_active_auction_id:', e.message);
+            }
             await this.syncWithDB();
             
             this.auctionState.currentPlayer = null;
@@ -354,6 +470,7 @@ const data = {
         `;
         
         await this.db.query(sql, values);
+        await this.syncWithDB();
         this.updateCategoryCounts();
         await this.saveStateToRedis();
     },
@@ -412,33 +529,51 @@ const data = {
     },
 
     async updateTeamBudget(teamName, newBudget) {
-        await this.db.query('UPDATE teams SET budget = $1 WHERE name = $2', [newBudget, teamName]);
+        const team = this.teams.find(t => t.name === teamName || t.name.trim().toLowerCase() === String(teamName).trim().toLowerCase());
+        if (team && team.id) {
+            await this.db.query('UPDATE teams SET budget = $1 WHERE id = $2', [newBudget, team.id]);
+        } else {
+            await this.db.query('UPDATE teams SET budget = $1 WHERE name = $2', [newBudget, teamName]);
+        }
     },
 
     async resetPlayer(playerId) {
-        const player = this.players.find(p => p.id === playerId);
-        if (player) {
-            if (player.status === 'sold' && player.soldTo) {
-                const team = this.teams.find(t => t.name === player.soldTo);
-                if (team) {
-                    team.budget = parseInt(team.budget) + parseInt(player.soldPrice || 0);
-                    await this.updateTeamBudget(team.name, team.budget);
-                }
+        let player = this.players.find(p => String(p.id).trim() === String(playerId).trim() || (p.formNo && String(p.formNo).trim() === String(playerId).trim()));
+        
+        // Query database to get authoritative current status, soldTo, and soldPrice
+        const targetId = player ? String(player.id) : String(playerId).trim();
+        const dbRes = await this.db.query('SELECT * FROM players WHERE id = $1', [targetId]);
+        const dbPlayer = dbRes.rows[0];
+        
+        const effectiveStatus = (player && player.status === 'sold') ? player.status : (dbPlayer ? dbPlayer.status : null);
+        const effectiveSoldTo = (player && player.soldTo) ? player.soldTo : (dbPlayer ? dbPlayer.soldTo : null);
+        const effectiveSoldPrice = (player && player.soldPrice) ? player.soldPrice : (dbPlayer ? dbPlayer.soldPrice : 0);
+
+        if (effectiveStatus === 'sold' && effectiveSoldTo) {
+            const team = this.teams.find(t => t.name === effectiveSoldTo || t.name.trim().toLowerCase() === String(effectiveSoldTo).trim().toLowerCase());
+            if (team) {
+                team.budget = parseInt(team.budget) + parseInt(effectiveSoldPrice || 0);
+                await this.updateTeamBudget(team.name, team.budget);
             }
+        }
+
+        await this.db.query('UPDATE players SET status = $1, "soldTo" = $2, "soldPrice" = $3 WHERE id = $4', ['available', null, null, targetId]);
+
+        if (player) {
             player.status = 'available';
             player.soldTo = null;
             player.soldPrice = null;
-            await this.db.query('UPDATE players SET status = $1, "soldTo" = $2, "soldPrice" = $3 WHERE id = $4', ['available', null, null, playerId]);
-            this.updateCategoryCounts();
-
-            if (this.auctionState.currentPlayer && this.auctionState.currentPlayer.id === playerId) {
-                this.auctionState.currentPlayer = null;
-                this.auctionState.currentBid = 0;
-                this.auctionState.highestBidder = null;
-                this.auctionState.status = 'waiting';
-            }
-            await this.saveStateToRedis();
         }
+
+        this.updateCategoryCounts();
+
+        if (this.auctionState.currentPlayer && (String(this.auctionState.currentPlayer.id).trim() === targetId)) {
+            this.auctionState.currentPlayer = null;
+            this.auctionState.currentBid = 0;
+            this.auctionState.highestBidder = null;
+            this.auctionState.status = 'waiting';
+        }
+        await this.saveStateToRedis();
     },
 
     async adjustTeamBudget(teamName, adjustment) {
@@ -522,12 +657,14 @@ const data = {
         await this.db.query(`
             INSERT INTO auction_details (
                 id, logo, "sportsType", season, name, "auctionDate", "auctionTime",
-                "pointsPerTeam", units, "baseBid", "bidIncreaseBy", "playersPerTeamMax", "playersPerTeamMin"
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                "pointsPerTeam", units, "baseBid", "bidIncreaseBy", "playersPerTeamMax", "playersPerTeamMin",
+                "sponsorLogo", "sponsorName"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         `, [
             newId, fields.logo || null, fields.sportsType || 'Cricket', fields.season || '', fields.name || '',
             fields.auctionDate || '', fields.auctionTime || '', fields.pointsPerTeam || 100000, fields.units || 'CR/LAC',
-            fields.baseBid || 1000, fields.bidIncreaseBy || 500, fields.playersPerTeamMax || 16, fields.playersPerTeamMin || 0
+            fields.baseBid || 1000, fields.bidIncreaseBy || 500, fields.playersPerTeamMax || 16, fields.playersPerTeamMin || 0,
+            fields.sponsorLogo || null, fields.sponsorName || ''
         ]);
         await this.db.query(`
             UPDATE players 
@@ -544,16 +681,35 @@ const data = {
         await this.syncWithDB();
     },
 
+    async updateSponsorDetails(id, fields) {
+        const idToUpdate = id || (this.auctionDetails ? this.auctionDetails.id : 'active_auction');
+        if (fields.sponsorLogo !== undefined) {
+            await this.db.query('UPDATE auction_details SET "sponsorLogo" = $1, "sponsorName" = $2 WHERE id = $3', [
+                fields.sponsorLogo,
+                fields.sponsorName || '',
+                idToUpdate
+            ]);
+        } else {
+            await this.db.query('UPDATE auction_details SET "sponsorName" = $1 WHERE id = $2', [
+                fields.sponsorName || '',
+                idToUpdate
+            ]);
+        }
+        await this.syncWithDB();
+    },
+
     async updateAuctionDetails(updatedFields) {
         const idToUpdate = updatedFields.id || 'active_auction';
         await this.db.query(`
             UPDATE auction_details 
             SET logo = COALESCE($1, logo), "sportsType" = $2, season = $3, name = $4, "auctionDate" = $5, "auctionTime" = $6,
                 "pointsPerTeam" = $7, units = $8, "baseBid" = $9, "bidIncreaseBy" = $10, 
-                "playersPerTeamMax" = $11, "playersPerTeamMin" = $12
+                "playersPerTeamMax" = $11, "playersPerTeamMin" = $12,
+                "sponsorLogo" = COALESCE($14, "sponsorLogo"),
+                "sponsorName" = $15
             WHERE id = $13
         `, [
-            updatedFields.logo || null,
+            updatedFields.logo !== undefined ? updatedFields.logo : null,
             updatedFields.sportsType || 'Cricket',
             updatedFields.season || '',
             updatedFields.name || '',
@@ -565,7 +721,9 @@ const data = {
             updatedFields.bidIncreaseBy || 500,
             updatedFields.playersPerTeamMax || 16,
             updatedFields.playersPerTeamMin || 0,
-            idToUpdate
+            idToUpdate,
+            updatedFields.sponsorLogo !== undefined ? updatedFields.sponsorLogo : null,
+            updatedFields.sponsorName !== undefined ? updatedFields.sponsorName : ''
         ]);
         await this.db.query(`
             UPDATE players 

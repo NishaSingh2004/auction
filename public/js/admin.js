@@ -1,3 +1,72 @@
+
+window.calcNextMinBid = function() {
+    const state = window.auctionState;
+    if (!state || !state.currentPlayer) return 0;
+
+    let catInc = null;
+    if (typeof window.getActiveCategoryIncrement === 'function') {
+        catInc = window.getActiveCategoryIncrement();
+    }
+    const defaultInc = parseInt(window.auctionBidIncreaseBy, 10) || 500;
+    const increment = (catInc !== null && catInc !== undefined && catInc > 0) ? parseInt(catInc, 10) : defaultInc;
+
+    // Check if any team has bid yet
+    if (!state.highestBidder) {
+        let base = parseInt(state.currentPlayer.basePrice, 10) || 0;
+        if (base === 0 && window.auctionDetails && window.auctionDetails.baseBid) {
+            base = parseInt(window.auctionDetails.baseBid, 10) || 0;
+        }
+        const current = parseInt(state.currentBid, 10) || 0;
+        const startingBid = Math.max(current, base);
+        return startingBid > 0 ? startingBid : increment;
+    } else {
+        // Highest bidder exists: next bid MUST be currentBid + increment
+        const current = parseInt(state.currentBid, 10) || 0;
+        return current + increment;
+    }
+};
+
+window.syncManualBidInput = function() {
+    const manualBidInput = document.getElementById('manualBidAmount');
+    if (!manualBidInput) return;
+
+    const nextMin = window.calcNextMinBid();
+    
+    // Only auto-update if the user is not actively typing a custom number in the input
+    if (document.activeElement !== manualBidInput) {
+        manualBidInput.value = nextMin > 0 ? nextMin : '';
+    }
+
+    window.checkManualBidValidity();
+};
+
+window.checkManualBidValidity = function() {
+    const manualBidInput = document.getElementById('manualBidAmount');
+    const warningContainer = document.getElementById('manualBidWarningContainer');
+    const warningSpan = document.getElementById('minBidWarning');
+    if (!manualBidInput) return;
+
+    const state = window.auctionState;
+    if (!state || !state.currentPlayer || state.status !== 'active') {
+        if (warningContainer) warningContainer.style.display = 'none';
+        return;
+    }
+
+    const nextMin = window.calcNextMinBid();
+    const val = parseInt(manualBidInput.value) || 0;
+
+    if (warningSpan) {
+        warningSpan.textContent = window.formatCurrency(nextMin);
+    }
+
+    // Only show warning if user typed a value that is strictly less than nextMin
+    if (manualBidInput.value.trim() !== '' && val < nextMin) {
+        if (warningContainer) warningContainer.style.display = 'flex';
+    } else {
+        if (warningContainer) warningContainer.style.display = 'none';
+    }
+};
+
 window.socket = io({ transports: ['websocket', 'polling'] });
 const socket = window.socket;
 
@@ -175,6 +244,10 @@ if(uploadCsvForm) {
         }
 
         const formData = new FormData(form);
+        const activeAuctionId = window.activeAuctionId || '';
+        if (activeAuctionId) {
+            formData.append('activeAuctionId', activeAuctionId);
+        }
         const originalBtnText = submitBtn ? submitBtn.innerHTML : 'Upload File';
         
         if (submitBtn) {
@@ -238,6 +311,55 @@ if(uploadCsvForm) {
                     if (result.success) {
                         form.reset();
                         socket.emit('adminDataAdded');
+
+                        // Instantly update client cache and table
+                        if (result.players && Array.isArray(result.players)) {
+                            currentPlayersDataCache = result.players;
+                            window.currentPlayersDataCache = result.players;
+                            
+                            const playersTableBody = document.querySelector('#playersTable tbody');
+                            if (playersTableBody) {
+                                playersTableBody.innerHTML = result.players.sort((a, b) => a.name.localeCompare(b.name)).map(player => {
+                                    const cat = window.auctionCategoriesCache ? window.auctionCategoriesCache.find(c => c.id === player.category_id) : null;
+                                    const catName = cat ? cat.name : 'OPEN';
+                                    return `
+                                        <tr style="font-size: 0.85rem;">
+                                            <td style="text-align: center; vertical-align: top; padding: 0.65rem 0.5rem !important;">
+                                                ${player.status === 'sold' ? `
+                                                    <input type="checkbox" class="player-select-checkbox" data-id="${player.id}" onchange="updateBulkBtnState()">
+                                                ` : `
+                                                    <input type="checkbox" disabled style="opacity: 0.25;">
+                                                `}
+                                            </td>
+                                            <td style="font-family: monospace; font-weight: 900; vertical-align: top; color: #fbbf24; padding: 0.65rem 0.5rem !important; font-size: 0.95rem;">
+                                                #${player.formNo ? String(player.formNo).trim() : (String(player.id).length > 6 ? '..' + String(player.id).slice(-5) : player.id)}
+                                            </td>
+                                            <td style="font-family: monospace; font-size: 0.72rem; vertical-align: top; color: #94a3b8; padding: 0.65rem 0.5rem !important;">
+                                                <span style="background: rgba(255,255,255,0.06); padding: 0.2rem 0.45rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);" title="Database UID: ${player.id}">UID: ${String(player.id).length > 6 ? '..' + String(player.id).slice(-5) : player.id}</span>
+                                            </td>
+                                            <td style="font-weight: 700; vertical-align: top; text-align: left; padding: 0.65rem 0.5rem !important;">
+                                                ${player.name}
+                                                ${player.detail ? `
+                                                    <div style="font-size: 0.7rem; font-weight: normal; color: var(--text-muted); margin-top: 0.25rem; white-space: pre-wrap; line-height: 1.3; background: rgba(0,0,0,0.2); padding: 0.3rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); font-family: monospace; max-width: 400px; max-height: 70px; overflow-y: auto; text-align: left;">${player.detail}</div>
+                                                ` : ''}
+                                            </td>
+                                            <td style="color: var(--text-muted); vertical-align: top; text-align: left; padding: 0.65rem 0.5rem !important;">${catName}</td>
+                                            <td style="color: var(--text-muted); vertical-align: top; text-align: left; padding: 0.65rem 0.5rem !important;">${player.role}</td>
+                                            <td style="text-align: right; vertical-align: top; padding: 0.65rem 0.5rem !important;">
+                                                <span class="badge badge-${player.status}" style="font-size: 0.65rem !important; padding: 0.15rem 0.4rem !important;">${(player.status || '').toUpperCase()}</span>
+                                            </td>
+                                            <td style="text-align: right; vertical-align: top; padding: 0.65rem 0.5rem !important;" onclick="event.stopPropagation();">
+                                                ${player.status === 'sold' ? `
+                                                    <button onclick="markPlayerUnsold('${player.id}')" class="btn" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-right: 0.25rem;" title="Revert player to Unsold status">↩️ Unsold</button>
+                                                ` : ''}
+                                                <button class="btn edit-player-btn" data-id="${player.id}" data-name="${player.name}" data-role="${player.role}" data-baseprice="${player.basePrice}" data-phone="${player.phone || ''}" data-photo="${player.photo || ''}" data-formno="${player.formNo || ''}" data-age="${player.age || ''}" data-fathername="${player.fatherName || ''}" data-tagowner="${player.tagOwner || ''}" data-customtag="${player.customTag || ''}" data-specification1="${player.specification1 || ''}" data-specification2="${player.specification2 || ''}" data-specification3="${player.specification3 || ''}" data-tshirtsize="${player.tshirtSize || ''}" data-jerseyname="${player.jerseyName || ''}" data-jerseynumber="${player.jerseyNumber || ''}" data-trousersize="${player.trouserSize || ''}" data-detail="${player.detail || ''}" style="background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-right: 0.25rem;" title="Edit Player Details">✏️ Edit</button>
+                                                <button onclick="deletePlayer('${player.id}')" class="btn btn-danger" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; font-weight: 600; border-radius: 6px;" title="Delete Player Completely">🗑️ Delete</button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('');
+                            }
+                        }
                         
                         if (typeof showToast === 'function') {
                             showToast('Players Registered Successfully', 'success');
@@ -375,8 +497,9 @@ document.querySelectorAll('.team-card').forEach(card => {
 // Quick Bid Logic
 document.querySelectorAll('.quick-bid-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        const increment = parseInt(btn.getAttribute('data-increment'));
-        const newBid = currentBidState + increment;
+        const increment = parseInt(btn.getAttribute('data-increment'), 10) || 500;
+        const current = parseInt(currentBidState, 10) || 0;
+        const newBid = current + increment;
         socket.emit('placeBid', { teamName: selectedTeamName, bidAmount: newBid });
     });
 });
@@ -390,7 +513,7 @@ if (startBtn) {
             socket.emit('startAuction', { playerId });
             const opt = playerSelect.options[playerSelect.selectedIndex];
             const base = opt ? opt.getAttribute('data-base') : 0;
-            currentBidState = parseInt(base) || 0;
+            currentBidState = parseInt(base, 10) || 0;
             showToast('⏳ Loading player for bidding...', 'info');
         } else {
             showToast('⚠️ Please select a player!', 'warning');
@@ -404,27 +527,42 @@ if (manualBidBtn) {
     manualBidBtn.addEventListener('click', () => {
         const input = document.getElementById('manualBidAmount');
         const rawValue = input ? input.value.trim() : '';
+        const current = parseInt(currentBidState, 10) || 0;
+        const nextMin = typeof window.calcNextMinBid === 'function' ? window.calcNextMinBid() : current;
         
         let amt = 0;
-        if (rawValue.startsWith('+')) {
-            amt = currentBidState + parseInt(rawValue.substring(1));
+        if (!rawValue || rawValue === '0') {
+            amt = nextMin;
+        } else if (rawValue.startsWith('+')) {
+            amt = current + parseInt(rawValue.substring(1), 10);
         } else if (rawValue.startsWith('-')) {
-            amt = currentBidState - parseInt(rawValue.substring(1));
+            amt = current - parseInt(rawValue.substring(1), 10);
         } else {
-            amt = parseInt(rawValue); // Absolute number overrides entirely
+            amt = parseInt(rawValue, 10);
         }
         
-        if (isNaN(amt)) amt = 0;
+        if (isNaN(amt) || amt <= 0) amt = nextMin;
         
-        if (!currentPlayersDataCache.length) {
+        if (!currentPlayersDataCache || !currentPlayersDataCache.length) {
             showToast('⚠️ No active player.', 'warning');
+            return;
+        }
+
+        if (!selectedTeamName) {
+            showToast('⚠️ Please select a team first to place bid!', 'warning');
+            return;
+        }
+
+        if (window.auctionState && window.auctionState.highestBidder && amt < nextMin) {
+            showToast(`⚠️ Bid must be at least ${window.formatCurrency(nextMin)}!`, 'warning');
+            if (input) input.value = nextMin;
+            if (typeof window.checkManualBidValidity === 'function') window.checkManualBidValidity();
             return;
         }
 
         if (amt > 0) {
             socket.emit('placeBid', { teamName: selectedTeamName, bidAmount: amt });
-            showToast(`🚀 Bid placed: ${window.formatCurrency(amt)}`, 'success');
-            if (input) input.value = '';
+            showToast(`⚡ Bid placed: ${window.formatCurrency(amt)} for ${selectedTeamName}`, 'success');
         } else {
             showToast('❌ Invalid bid amount!', 'error');
         }
@@ -435,8 +573,9 @@ const manualBidUpBtn = document.getElementById('manualBidUpBtn');
 if (manualBidUpBtn) {
     manualBidUpBtn.addEventListener('click', () => {
         const catInc = window.getActiveCategoryIncrement();
-        const inc = catInc !== null ? catInc : (window.auctionBidIncreaseBy || 100);
-        const newBid = currentBidState + inc;
+        const inc = catInc !== null ? parseInt(catInc, 10) : (parseInt(window.auctionBidIncreaseBy, 10) || 100);
+        const current = parseInt(currentBidState, 10) || 0;
+        const newBid = current + inc;
         socket.emit('placeBid', { teamName: selectedTeamName, bidAmount: newBid });
     });
 }
@@ -445,8 +584,9 @@ const manualBidDownBtn = document.getElementById('manualBidDownBtn');
 if (manualBidDownBtn) {
     manualBidDownBtn.addEventListener('click', () => {
         const catInc = window.getActiveCategoryIncrement();
-        const inc = catInc !== null ? catInc : (window.auctionBidIncreaseBy || 100);
-        const newBid = Math.max(0, currentBidState - inc);
+        const inc = catInc !== null ? parseInt(catInc, 10) : (parseInt(window.auctionBidIncreaseBy, 10) || 100);
+        const current = parseInt(currentBidState, 10) || 0;
+        const newBid = Math.max(0, current - inc);
         socket.emit('placeBid', { teamName: selectedTeamName, bidAmount: newBid });
     });
 }
@@ -497,7 +637,32 @@ function updateUI(state) {
         window.updateIncrementButtons();
     }
     const statusBadgeEl = document.getElementById('auctionStatusBadge');
-    if(statusBadgeEl) statusBadgeEl.textContent = state.status.toUpperCase();
+    const statusBadgeContainer = document.getElementById('auctionStatusBadgeContainer');
+    const statusBadgeDot = document.getElementById('auctionStatusBadgeDot');
+    if (statusBadgeEl) {
+        statusBadgeEl.textContent = state.status.toUpperCase();
+        if (state.status === 'active') {
+            if (statusBadgeContainer) {
+                statusBadgeContainer.style.background = 'rgba(16, 185, 129, 0.15)';
+                statusBadgeContainer.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                statusBadgeContainer.style.color = '#10b981';
+            }
+            if (statusBadgeDot) {
+                statusBadgeDot.style.background = '#10b981';
+                statusBadgeDot.style.boxShadow = '0 0 6px #10b981';
+            }
+        } else {
+            if (statusBadgeContainer) {
+                statusBadgeContainer.style.background = 'rgba(220, 38, 38, 0.15)';
+                statusBadgeContainer.style.borderColor = 'rgba(220, 38, 38, 0.3)';
+                statusBadgeContainer.style.color = '#ef4444';
+            }
+            if (statusBadgeDot) {
+                statusBadgeDot.style.background = '#ef4444';
+                statusBadgeDot.style.boxShadow = 'none';
+            }
+        }
+    }
     
     const timerToggle = document.getElementById('timerOnOffToggle');
     if(timerToggle) {
@@ -600,11 +765,10 @@ function updateUI(state) {
             liveTimerEl.textContent = state.timer;
             liveTimerEl.style.display = state.timerOff ? 'none' : 'flex';
         }
-        currentBidState = state.currentBid;
+        currentBidState = parseInt(state.currentBid, 10) || 0;
         
-        const manualBidInput = document.getElementById('manualBidAmount');
-        if (manualBidInput && document.activeElement !== manualBidInput) {
-            manualBidInput.value = state.currentBid;
+        if (typeof window.syncManualBidInput === 'function') {
+            window.syncManualBidInput();
         }
         const tempPreview = document.getElementById('tempBidPreview');
         if (tempPreview) {
@@ -731,9 +895,9 @@ socket.on('timerUpdate', (timer) => {
 });
 
 socket.on('bidUpdate', (data) => {
-    currentBidState = data.currentBid;
+    currentBidState = parseInt(data.currentBid, 10) || 0;
     if (window.auctionState) {
-        window.auctionState.currentBid = data.currentBid;
+        window.auctionState.currentBid = currentBidState;
         window.auctionState.highestBidder = data.highestBidder;
     }
     const liveBidAmountEl = document.getElementById('liveBidAmount');
@@ -742,9 +906,8 @@ socket.on('bidUpdate', (data) => {
     if (liveHighestBidderEl) liveHighestBidderEl.textContent = data.highestBidder ? `🏆 Highest Bidder: ${data.highestBidder} (${window.formatCurrency(data.currentBid)})` : 'None';
     flashBid();
 
-    const manualBidInput = document.getElementById('manualBidAmount');
-    if (manualBidInput && document.activeElement !== manualBidInput) {
-        manualBidInput.value = data.currentBid;
+    if (typeof window.syncManualBidInput === 'function') {
+        window.syncManualBidInput();
     }
 
     if (typeof window.updateTeamSelectButtons === 'function') {
@@ -753,7 +916,14 @@ socket.on('bidUpdate', (data) => {
 });
 
 socket.on('bidError', (msg) => {
-    alert(msg);
+    if (typeof showToast === 'function') {
+        showToast(`❌ ${msg}`, 'error');
+    } else {
+        alert(msg);
+    }
+    if (typeof window.syncManualBidInput === 'function') {
+        window.syncManualBidInput();
+    }
 });
 
 socket.on('auctionEnd', (state) => {
@@ -953,6 +1123,9 @@ socket.on('dataUpdate', ({ teams, players, categories }) => {
     if (typeof window.updatePlayerSelectDropdown === 'function') {
         window.updatePlayerSelectDropdown();
     }
+    if (typeof window.refreshManualPlayerSelector === 'function') {
+        window.refreshManualPlayerSelector();
+    }
 
     // Update Left team list UI
     const teamList = document.getElementById('teamList');
@@ -1069,10 +1242,20 @@ socket.on('dataUpdate', ({ teams, players, categories }) => {
     const adjustBudgetSelect = document.getElementById('adjustBudgetTeamSelect');
     if (adjustBudgetSelect) {
         const currentVal = adjustBudgetSelect.value;
-        adjustBudgetSelect.innerHTML = `<option value="" disabled selected>Select Franchise</option>` + teams.sort((a, b) => a.name.localeCompare(b.name)).map(team => `
-            <option value="${team.name}">${team.name}</option>
+        adjustBudgetSelect.innerHTML = `<option value="" disabled selected style="background: #181a24; color: #94a3b8;">Select Franchise</option>` + teams.sort((a, b) => a.name.localeCompare(b.name)).map(team => `
+            <option value="${team.name}" style="background: #181a24; color: #ffffff;">${team.name}</option>
         `).join('');
         if (currentVal) adjustBudgetSelect.value = currentVal;
+    }
+
+    // Update quickTeamSelect dropdown options
+    const qSelect = document.getElementById('quickTeamSelect');
+    if (qSelect) {
+        const currentQVal = qSelect.value;
+        qSelect.innerHTML = `<option value="" style="background: #181a24; color: #94a3b8; font-weight: 700;">SELECT TEAM</option>` + teams.sort((a, b) => a.name.localeCompare(b.name)).map(team => `
+            <option value="${team.name}" style="background: #181a24; color: #ffffff; font-weight: 700;">${team.shortName || team.name}</option>
+        `).join('');
+        if (currentQVal) qSelect.value = currentQVal;
     }
 
     // Refresh Modal: Teams Table
@@ -1117,7 +1300,10 @@ socket.on('dataUpdate', ({ teams, players, categories }) => {
                                                     <span style="font-size: 0.7rem; color: #94a3b8;">${player.role}</span>
                                                 </div>
                                             </div>
-                                            <span style="font-size: 0.85rem; font-weight: bold; color: #10b981;">${formatCurrency(player.soldPrice)}</span>
+                                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                <span style="font-size: 0.85rem; font-weight: bold; color: #10b981;">${formatCurrency(player.soldPrice)}</span>
+                                                <button type="button" onclick="event.stopPropagation(); window.removePlayerFromTeam('${player.id}', '${player.name.replace(/'/g, "\\'")}', '${team.name.replace(/'/g, "\\'")}', '${player.soldPrice}')" class="btn" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 800; cursor: pointer; transition: all 0.2s;" title="Remove player from ${team.name}">✕ Remove</button>
+                                            </div>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -1144,8 +1330,11 @@ socket.on('dataUpdate', ({ teams, players, categories }) => {
                             <input type="checkbox" disabled style="opacity: 0.3;">
                         `}
                     </td>
-                    <td style="padding: 0.75rem 1rem; font-family: monospace; font-weight: bold; vertical-align: top;">
-                        #${player.formNo || 'N/A'}
+                    <td style="padding: 0.75rem 1rem; font-family: monospace; font-weight: 900; vertical-align: top; color: #fbbf24; font-size: 0.95rem;">
+                        #${player.formNo ? String(player.formNo).trim() : (String(player.id).length > 6 ? '..' + String(player.id).slice(-5) : player.id)}
+                    </td>
+                    <td style="padding: 0.75rem 1rem; font-family: monospace; font-size: 0.72rem; vertical-align: top; color: #94a3b8;">
+                        <span style="background: rgba(255,255,255,0.06); padding: 0.2rem 0.45rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);" title="Database UID: ${player.id}">UID: ${String(player.id).length > 6 ? '..' + String(player.id).slice(-5) : player.id}</span>
                     </td>
                     <td style="padding: 0.75rem 1rem; font-weight: 600; vertical-align: top;">
                         ${player.name}
@@ -2186,8 +2375,9 @@ window.toggleAutoBidMode = function() {
         updateAutoBidUI(true);
         autoBidInterval = setInterval(() => {
             if (window.auctionState && window.auctionState.status === 'active') {
-                const inc = window.getActiveCategoryIncrement() || window.auctionBidIncreaseBy || 500;
-                const newBid = currentBidState + inc;
+                const inc = parseInt(window.getActiveCategoryIncrement() || window.auctionBidIncreaseBy || 500, 10);
+                const current = parseInt(currentBidState, 10) || 0;
+                const newBid = current + inc;
                 socket.emit('placeBid', { teamName: selectedTeamName, bidAmount: newBid });
             } else {
                 window.toggleAutoBidMode();
@@ -2252,7 +2442,8 @@ document.addEventListener('keydown', (e) => {
     // 1. Key "1" -> Increase bid by 1,000 directly
     if (key === '1') {
         e.preventDefault();
-        const newBid = currentBidState + 1000;
+        const current = parseInt(currentBidState, 10) || 0;
+        const newBid = current + 1000;
         socket.emit('placeBid', { teamName: selectedTeamName, bidAmount: newBid });
         return;
     }
@@ -2260,7 +2451,8 @@ document.addEventListener('keydown', (e) => {
     // 2. Key "5" -> Increase bid by 5,000 directly
     if (key === '5') {
         e.preventDefault();
-        const newBid = currentBidState + 5000;
+        const current = parseInt(currentBidState, 10) || 0;
+        const newBid = current + 5000;
         socket.emit('placeBid', { teamName: selectedTeamName, bidAmount: newBid });
         return;
     }
@@ -2269,8 +2461,9 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowUp') {
         e.preventDefault();
         const catInc = window.getActiveCategoryIncrement();
-        const increment = catInc !== null ? catInc : (window.auctionBidIncreaseBy || 100);
-        const newBid = currentBidState + increment;
+        const increment = catInc !== null ? parseInt(catInc, 10) : (parseInt(window.auctionBidIncreaseBy, 10) || 100);
+        const current = parseInt(currentBidState, 10) || 0;
+        const newBid = current + increment;
         socket.emit('placeBid', { teamName: selectedTeamName, bidAmount: newBid });
         return;
     }
@@ -2279,8 +2472,9 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown') {
         e.preventDefault();
         const catInc = window.getActiveCategoryIncrement();
-        const decrement = catInc !== null ? catInc : (window.auctionBidIncreaseBy || 100);
-        const newBid = Math.max(0, currentBidState - decrement);
+        const decrement = catInc !== null ? parseInt(catInc, 10) : (parseInt(window.auctionBidIncreaseBy, 10) || 100);
+        const current = parseInt(currentBidState, 10) || 0;
+        const newBid = Math.max(0, current - decrement);
         socket.emit('placeBid', { teamName: selectedTeamName, bidAmount: newBid });
         return;
     }
@@ -2408,7 +2602,7 @@ window.updateTeamSelectButtons = function() {
                 if (!state.highestBidder) {
                     minRequiredBid = Math.max(currentPlayer.basePrice || 0, (cat && cat.baseBid) || 0);
                 } else {
-                    minRequiredBid = currentBidState + increment;
+                    minRequiredBid = (parseInt(currentBidState, 10) || 0) + increment;
                 }
 
                 // Min category reserve logic
@@ -2761,3 +2955,108 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+window.filterDirectoryTable = function() {
+    const input = document.getElementById('directorySearchInput');
+    if (!input) return;
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById('playersTable');
+    if (!table) return;
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const noCol = rows[i].getElementsByTagName('td')[1];
+        const nameCol = rows[i].getElementsByTagName('td')[2];
+        if (noCol && nameCol) {
+            const noText = noCol.textContent || noCol.innerText;
+            const nameText = nameCol.textContent || nameCol.innerText;
+            if (noText.toLowerCase().includes(filter) || nameText.toLowerCase().includes(filter)) {
+                rows[i].style.display = '';
+            } else {
+                rows[i].style.display = 'none';
+            }
+        }
+    }
+};
+
+// Hook input event on manualBidAmount for live validation
+const manualBidInputEl = document.getElementById('manualBidAmount');
+if (manualBidInputEl) {
+    manualBidInputEl.addEventListener('input', () => {
+        if (typeof window.checkManualBidValidity === 'function') {
+            window.checkManualBidValidity();
+        }
+    });
+}
+
+
+window.removePlayerFromTeam = async function(playerId, playerName, teamName, soldPrice) {
+    if (!playerId) return;
+    const priceFormatted = soldPrice ? (typeof formatCurrency === 'function' ? formatCurrency(soldPrice) : '₹' + Number(soldPrice).toLocaleString()) : 'the sold amount';
+    const confirmMsg = `Are you sure you want to remove ${playerName || 'this player'} from ${teamName || 'this team'}?\n\nThis will refund ${priceFormatted} back to ${teamName || 'the team'}'s purse and return the player to the available pool.`;
+    
+    if (!confirm(confirmMsg)) return;
+
+    // Optimistic local cache update for instant UI feedback
+    if (window.currentPlayersDataCache) {
+        const p = window.currentPlayersDataCache.find(x => String(x.id).trim() === String(playerId).trim() || (x.formNo && String(x.formNo).trim() === String(playerId).trim()));
+        if (p) {
+            p.status = 'available';
+            p.soldTo = null;
+            p.soldPrice = null;
+        }
+    }
+    if (window.currentTeamsCache) {
+        const t = window.currentTeamsCache.find(x => x.name === teamName);
+        if (t) {
+            t.budget = parseInt(t.budget || 0) + parseInt(soldPrice || 0);
+        }
+    }
+    if (typeof openTeamDetailsModal === 'function') {
+        const modal = document.getElementById('teamDetailsModalOverlay');
+        if (modal && modal.style.display !== 'none') {
+            openTeamDetailsModal(teamName);
+        }
+    }
+
+    try {
+        const res = await fetch('/admin/reset-player', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof socket !== 'undefined') {
+                socket.emit('adminDataAdded');
+                socket.emit('removePlayerFromTeam', { playerId });
+            }
+            if (typeof showToast === 'function') {
+                showToast(`Removed ${playerName || 'player'} from ${teamName}`, 'success');
+            }
+            const modal = document.getElementById('teamDetailsModalOverlay');
+            if (modal && modal.style.display !== 'none' && typeof openTeamDetailsModal === 'function') {
+                openTeamDetailsModal(teamName);
+            }
+            return;
+        }
+    } catch (err) {
+        console.warn('HTTP reset-player error, falling back to socket:', err);
+    }
+
+    if (typeof socket !== 'undefined') {
+        socket.emit('removePlayerFromTeam', { playerId });
+        if (typeof showToast === 'function') {
+            showToast(`Removed ${playerName || 'player'} from ${teamName}`, 'success');
+        }
+    }
+};
+
+window.handleRemovePlayerClick = function(btn) {
+    if (!btn) return;
+    const playerId = btn.getAttribute('data-player-id');
+    const playerName = btn.getAttribute('data-player-name') || 'player';
+    const teamName = btn.getAttribute('data-team-name') || 'team';
+    const soldPrice = btn.getAttribute('data-sold-price') || '0';
+    window.removePlayerFromTeam(playerId, playerName, teamName, soldPrice);
+};

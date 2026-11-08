@@ -51,20 +51,45 @@ router.use(authMiddleware);
 
 const broadcastUpdates = () => {
     if (global.io) {
-        global.io.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories });
+        global.io.emit('dataUpdate', { 
+            teams: data.teams, 
+            players: data.players, 
+            categories: data.categories,
+            auctionDetails: data.auctionDetails,
+            auctionsList: data.auctionsList
+        });
         global.io.emit('auctionUpdate', data.auctionState);
     }
 };
 
 async function downloadGDriveFile(fileId, destPath) {
-    const url = `https://drive.google.com/uc?export=download&id=${fileId}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch file from Google Drive. HTTP Status: ${response.status}`);
+    const candidateUrls = [
+        `https://lh3.googleusercontent.com/d/${fileId}`,
+        `https://drive.google.com/thumbnail?id=${fileId}&sz=w2048`,
+        `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`
+    ];
+    let lastError = null;
+    for (const url of candidateUrls) {
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                }
+            });
+            if (response.ok && !response.headers.get('content-type')?.includes('text/html')) {
+                const arrayBuffer = await response.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                if (buffer.length > 100) {
+                    fs.writeFileSync(destPath, buffer);
+                    return;
+                }
+            }
+        } catch (e) {
+            lastError = e;
+        }
     }
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    fs.writeFileSync(destPath, buffer);
+    throw lastError || new Error(`Failed to fetch file from Google Drive (${fileId}). File may be private or restricted.`);
 }
 
 const storage = multer.diskStorage({
@@ -86,8 +111,8 @@ router.get('/dashboard', (req, res) => {
 });
 
 router.get('/settings', (req, res) => {
-    // Only allow if admin has settings permissions
-    if (req.user && req.user.permissions && req.user.permissions.includes('settings')) {
+    // Allow if admin or superadmin or has explicit settings permissions
+    if (req.user && (req.user.role === 'superadmin' || req.user.username === 'admin' || (req.user.permissions && req.user.permissions.includes('settings')))) {
         res.render('admin/dashboard', { data, user: req.user, showSettingsInline: true });
     } else {
         res.status(403).send("<script>alert('Access Denied'); window.location.href='/admin/dashboard';</script>");
@@ -96,6 +121,20 @@ router.get('/settings', (req, res) => {
 
 router.get('/teams', (req, res) => {
     res.render('admin/teams', { teams: data.teams });
+});
+
+
+router.get('/api/players', (req, res) => {
+    const activeAuctionId = req.query.activeAuctionId || (data.auctionDetails ? data.auctionDetails.id : 'active_auction');
+    const filteredPlayers = data.players.filter(p => !p.auction_id || p.auction_id === activeAuctionId);
+    res.json({
+        success: true,
+        players: filteredPlayers,
+        allPlayers: data.players,
+        teams: data.teams,
+        categories: data.categories,
+        auctionDetails: data.auctionDetails
+    });
 });
 
 router.get('/players', (req, res) => {
@@ -302,54 +341,48 @@ const parseExcel = (filePath) => {
 };
 
 router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
-    if (!req.file) {
-        return res.json({
-            success: false,
-            message: 'Validation failed',
-            errors: ['No file uploaded']
-        });
-    }
-
-    const filePath = req.file.path;
-    const ext = path.extname(req.file.originalname).toLowerCase();
-    console.log(`[DEBUG] Detected file type: ${ext}`);
-
+    let filePath = null;
     try {
+        if (!req.file) {
+            return res.json({
+                success: false,
+                message: 'Validation failed',
+                errors: ['No spreadsheet file uploaded. Please upload a .csv, .xlsx, or .xls file.']
+            });
+        }
+
+        filePath = req.file.path;
+        const fileExt = path.extname(req.file.originalname).toLowerCase();
         let parsedRows = [];
 
-        if (ext === '.csv') {
-            const fileContent = fs.readFileSync(filePath, 'utf8');
-            const cleanContent = fileContent.replace(/^\uFEFF/, '').trim();
-            if (!cleanContent) {
-                fs.unlinkSync(filePath);
-                return res.json({
-                    success: false,
-                    message: 'Validation failed',
-                    errors: ['Uploaded CSV file is empty.']
-                });
-            }
+        console.log(`[DEBUG] Upload file extension: ${fileExt}`);
 
-            // Auto-detect separator: comma or semicolon based on the first line
-            let firstLine = '';
-            let inQuotes = false;
-            for (let i = 0; i < cleanContent.length; i++) {
-                const char = cleanContent[i];
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                } else if ((char === '\n' || char === '\r') && !inQuotes) {
-                    firstLine = cleanContent.substring(0, i);
-                    break;
+        if (fileExt === '.csv') {
+            const fileContent = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '').trim();
+            const lines = fileContent.split(/\r?\n/);
+            parsedRows = lines.map(line => {
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"' || char === "'") {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
                 }
-            }
-            if (!firstLine) firstLine = cleanContent;
-
-            const commaCount = (firstLine.match(/,/g) || []).length;
-            const semicolonCount = (firstLine.match(/;/g) || []).length;
-            const separator = semicolonCount > commaCount ? ';' : ',';
-
-            parsedRows = parseCSV(cleanContent, separator);
-        } else if (ext === '.xlsx' || ext === '.xls') {
-            parsedRows = parseExcel(filePath);
+                values.push(current.trim());
+                return values;
+            });
+        } else if (fileExt === '.xlsx' || fileExt === '.xls') {
+            const workbook = XLSX.readFile(filePath);
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            parsedRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
         } else {
             fs.unlinkSync(filePath);
             return res.json({
@@ -370,29 +403,40 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
             });
         }
 
-        // Parse headers
-        const originalHeaders = parsedRows[0];
-        const headers = originalHeaders.map(h => normalizeKey(String(h)));
+        const normalizeKey = (key) => {
+            return String(key).replace(/^\uFEFF/i, '')
+                      .replace(/^"+|"+$/g, '')
+                      .trim()
+                      .toLowerCase()
+                      .replace(/[^a-z0-9]/g, '');
+        };
 
-        if (headers.length === 0 || headers.every(h => h === '')) {
-            fs.unlinkSync(filePath);
-            return res.json({
-                success: false,
-                message: 'Validation failed',
-                errors: ['Invalid file format: no valid column headers found.']
-            });
+        // Resilient header detection: Scan rows 0 to 4 to find the true column headers row
+        let headerRowIndex = 0;
+        let detectedHeaders = null;
+        for (let r = 0; r < Math.min(5, parsedRows.length - 1); r++) {
+            const rowCandidates = parsedRows[r].map(h => normalizeKey(String(h)));
+            const hasName = rowCandidates.some(h => h.includes('name') || h.includes('player') || h.includes('first') || h.includes('cricketer'));
+            if (hasName) {
+                headerRowIndex = r;
+                detectedHeaders = rowCandidates;
+                break;
+            }
         }
 
-        // Check if headers contain a Player Name column (the only strictly required column)
+        if (detectedHeaders === null) {
+            headerRowIndex = 0;
+            detectedHeaders = parsedRows[0].map(h => normalizeKey(String(h)));
+        }
+
+        const originalHeaders = parsedRows[headerRowIndex];
+        const headers = detectedHeaders;
+
+        console.log(`[DEBUG] Detected header row at index ${headerRowIndex}:`, originalHeaders);
+        console.log(`[DEBUG] Normalized headers:`, headers);
+
+        // Check strictly required column: Player Name
         const hasNameHeader = headers.some(h => h.includes('name') || h.includes('player') || h.includes('first') || h.includes('cricketer'));
-        const hasRoleHeader = headers.some(h => h.includes('role') || h.includes('category') || h.includes('type') || h.includes('style') || h.includes('position') || h.includes('skill'));
-        const hasPriceHeader = headers.some(h => h.includes('price') || h.includes('bid') || h.includes('base') || h.includes('cost') || h.includes('value') || h.includes('amount'));
-
-        // Debugging logs for detected headers
-        console.log(`[DEBUG] detected headers:`, originalHeaders);
-        console.log(`[DEBUG] normalized headers:`, headers);
-        console.log(`[DEBUG] mapped fields: Name exists: ${hasNameHeader}, Role exists: ${hasRoleHeader}, Price exists: ${hasPriceHeader}`);
-
         if (!hasNameHeader) {
             fs.unlinkSync(filePath);
             return res.json({ 
@@ -402,17 +446,32 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
             });
         }
 
+        // Active auction isolation
+        const activeAuctionId = req.body.activeAuctionId || req.body.auctionId || (data.auctionDetails ? data.auctionDetails.id : 'active_auction');
+        if (activeAuctionId && (!data.auctionDetails || data.auctionDetails.id !== activeAuctionId)) {
+            try {
+                await data.selectAuction(activeAuctionId);
+            } catch (e) {
+                console.error('[Upload Players Select Auction Error]', e.message);
+            }
+        }
+
+        const defaultBasePrice = data.auctionDetails && data.auctionDetails.baseBid ? parseInt(data.auctionDetails.baseBid, 10) : 1000;
         let totalRows = 0;
         let successfulReg = 0;
         let failedReg = 0;
         const results = [];
-        const activeAuctionId = (data.auctionDetails ? data.auctionDetails.id : 'active_auction');
 
-        // Loop through data rows
-        for (let i = 1; i < parsedRows.length; i++) {
+        const isUrl = (val) => {
+            if (!val || typeof val !== 'string') return false;
+            const s = val.trim().toLowerCase();
+            return s.startsWith('http://') || s.startsWith('https://') || s.includes('drive.google.com') || s.includes('docs.google.com') || s.includes('googleusercontent.com');
+        };
+
+        // Loop through data rows starting immediately after header row
+        for (let i = headerRowIndex + 1; i < parsedRows.length; i++) {
             const rawRow = parsedRows[i];
-            if (rawRow.length === 0 || rawRow.every(v => v === undefined || v === null || String(v).trim() === '')) {
-                // Skip empty rows
+            if (!rawRow || rawRow.length === 0 || rawRow.every(v => v === undefined || v === null || String(v).trim() === '')) {
                 continue;
             }
 
@@ -428,57 +487,110 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
                 }
             }
 
-            // Smart header matching: prioritize exact matches, then exclude false positives like 'fathername'
             const keys = Object.keys(normalizedRow);
-            
-            let nameKey = keys.find(k => ['playername', 'name', 'fullname', 'cricketername', 'player'].includes(k)) || 
-                          keys.find(k => (k.includes('name') || k.includes('player')) && !k.includes('father') && !k.includes('mother') && !k.includes('jersey') && !k.includes('team'));
-                          
-            let roleKey = keys.find(k => ['role', 'category', 'playerrole', 'type', 'playingrole'].includes(k)) || 
-                          keys.find(k => k.includes('role') || k.includes('category') || k.includes('type') || k.includes('style') || k.includes('skill'));
-                          
-            let priceKey = keys.find(k => ['baseprice', 'price', 'basevalue', 'startprice'].includes(k)) || 
-                           keys.find(k => k.includes('price') || k.includes('bid') || k.includes('base') || k.includes('cost') || k.includes('amount'));
 
-            const name = nameKey ? (normalizedRow[nameKey] || '') : '';
-            const rawRole = roleKey ? (normalizedRow[roleKey] || '') : '';
-            const rawPrice = priceKey ? (normalizedRow[priceKey] || '') : '';
+            // 1. Resolve Player Name (Support First Name + Last Name or Single Column Name)
+            const firstNameKey = keys.find(k => ['firstname', 'first', 'firstnames', 'fname'].includes(k));
+            const lastNameKey = keys.find(k => ['lastname', 'last', 'surname', 'lname'].includes(k));
+            let name = '';
 
-            // Validation: Skip rows if player name is missing / empty
-            if (!name.trim()) {
-                console.log(`[CSV/Excel Parser] Row ${i} skipped: player name missing`);
+            if (firstNameKey && normalizedRow[firstNameKey]) {
+                name = normalizedRow[firstNameKey].trim();
+                if (lastNameKey && normalizedRow[lastNameKey]) {
+                    name += ' ' + normalizedRow[lastNameKey].trim();
+                }
+            } else {
+                const nameKey = keys.find(k => ['playername', 'name', 'fullname', 'cricketername', 'player'].includes(k)) || 
+                                keys.find(k => (k.includes('name') || k.includes('player')) && !['father', 'mother', 'jersey', 'team', 'owner', 'tag'].some(w => k.includes(w)));
+                if (nameKey && normalizedRow[nameKey]) {
+                    name = normalizedRow[nameKey].trim();
+                }
+            }
+
+            if (!name) {
+                console.log(`[Spreadsheet Parser] Row ${i} skipped: player name missing`);
                 failedReg++;
                 continue;
             }
 
-            // Parse and validate basePrice (with fallback to auction baseBid)
-            let basePrice = 0;
-            const defaultBasePrice = data.auctionDetails && data.auctionDetails.baseBid ? parseInt(data.auctionDetails.baseBid) : 1000;
-            if (rawPrice !== undefined && rawPrice !== null && String(rawPrice).trim() !== '') {
-                const cleanPriceStr = String(rawPrice).replace(/[^0-9\-]/g, '');
-                const parsedPrice = parseInt(cleanPriceStr);
-                if (!isNaN(parsedPrice) && parsedPrice > 0) {
+            // 2. Base Price (Filter out transaction IDs, fee descriptions, etc.)
+            const excludedPriceWords = ['paid', 'fee', 'registration', 'utr', 'transaction', 'ref', 'payment', 'receipt', 'bill', 'account', 'phone', 'mobile'];
+            const priceKey = keys.find(k => ['baseprice', 'price', 'basebid', 'startprice', 'basevalue', 'playerprice', 'bidprice'].includes(k)) || 
+                             keys.find(k => (k.includes('price') || k.includes('basebid') || k.includes('startprice') || k.includes('baseprice')) && !excludedPriceWords.some(ex => k.includes(ex)));
+
+            let basePrice = defaultBasePrice;
+            if (priceKey && normalizedRow[priceKey]) {
+                const cleanPriceStr = String(normalizedRow[priceKey]).replace(/[^0-9]/g, '');
+                const parsedPrice = parseInt(cleanPriceStr, 10);
+                // Sanity check: valid auction base price must be positive and not an enormous transaction reference number (> 500,000,000)
+                if (!isNaN(parsedPrice) && parsedPrice > 0 && parsedPrice <= 500000000) {
                     basePrice = parsedPrice;
                 }
             }
-            if (basePrice <= 0) {
-                basePrice = defaultBasePrice;
+
+            // 3. Resolve Photo URL (from photo columns or any URL-bearing cell)
+            let photoVal = null;
+            const photoColAliases = ['photo', 'playerphoto', 'playerphotos', 'photourl', 'imageurl', 'image', 'picture', 'photos', 'playerpic', 'photolink', 'imagelink', 'pic'];
+            for (const pk of photoColAliases) {
+                if (normalizedRow[pk] && normalizedRow[pk].trim()) {
+                    photoVal = normalizedRow[pk].trim();
+                    break;
+                }
+            }
+            // Check if any other cell contains a web or drive URL
+            if (!photoVal) {
+                for (const k of keys) {
+                    if (isUrl(normalizedRow[k])) {
+                        photoVal = normalizedRow[k].trim();
+                        break;
+                    }
+                }
             }
 
-            // Duplicate checks removed by user request. Unconditional upload allowed.
-            const cleanName = name.trim();
-            const formNo = normalizedRow['formno'] || normalizedRow['formnumber'] || normalizedRow['form'] || normalizedRow['playerid'] || normalizedRow['srno'] || normalizedRow['slno'] || normalizedRow['serialnumber'] || normalizedRow['no'] || normalizedRow['number'] || normalizedRow['serialno'] || '';
-            const cleanFormNo = formNo.trim();
-
-            // Determine category_id if Category is specified
-            let categoryId = null;
-            const categoryName = normalizedRow['category'] || normalizedRow['categoryname'] || normalizedRow['tag'] || normalizedRow['categoryid'];
-            if (categoryName && data.categories) {
-                const cat = data.categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
-                if (cat) categoryId = cat.id;
+            // If Google Drive link, quickly convert to direct high-speed CDN image link without blocking
+            if (photoVal && (photoVal.includes('drive.google.com') || photoVal.includes('docs.google.com') || photoVal.includes('googleusercontent.com'))) {
+                const fileIdMatch = photoVal.match(/(?:\/d\/|folders\/|id=)([a-zA-Z0-9_-]{10,})/);
+                if (fileIdMatch) {
+                    const fileId = fileIdMatch[1];
+                    const localFilename = `gdrive-${fileId}.jpg`;
+                    const destPath = path.join(__dirname, '../public/uploads', localFilename);
+                    if (fs.existsSync(destPath)) {
+                        photoVal = '/uploads/' + localFilename;
+                    } else {
+                        photoVal = `https://lh3.googleusercontent.com/d/${fileId}`;
+                    }
+                }
             }
 
-            // Parse playing role/style (with safe fallback to "Player")
+            // 4. Form Number / Serial Number (Ensure it is NOT a URL)
+            let formNo = '';
+            const formNoCandidates = [
+                normalizedRow['formno'],
+                normalizedRow['formnumber'],
+                normalizedRow['form'],
+                normalizedRow['srno'],
+                normalizedRow['slno'],
+                normalizedRow['serialnumber'],
+                normalizedRow['serialno'],
+                normalizedRow['no'],
+                normalizedRow['number'],
+                normalizedRow['playerid'],
+                normalizedRow['id']
+            ];
+            for (const cand of formNoCandidates) {
+                if (cand && !isUrl(cand)) {
+                    formNo = String(cand).trim();
+                    break;
+                }
+            }
+            if (!formNo) {
+                formNo = String(i - headerRowIndex);
+            }
+
+            // 5. Playing Role
+            const roleKey = keys.find(k => ['role', 'category', 'playerrole', 'type', 'playingrole'].includes(k)) || 
+                            keys.find(k => k.includes('role') || k.includes('type') || k.includes('style') || k.includes('skill'));
+            const rawRole = roleKey ? (normalizedRow[roleKey] || '') : '';
             let roleVal = 'Player';
             if (rawRole.trim()) {
                 const lowerRole = rawRole.trim().toLowerCase();
@@ -495,28 +607,25 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
                 }
             }
 
-            // Detail column (keep only actual detail from detail/description field if present, no raw CSV text)
-            const finalDetail = normalizedRow['detail'] || normalizedRow['details'] || normalizedRow['description'] || normalizedRow['info'] || normalizedRow['about'] || '';
-
-            let photoVal = normalizedRow['photo'] || normalizedRow['photourl'] || normalizedRow['imageurl'] || normalizedRow['image'] || null;
-            if (photoVal && (photoVal.includes('drive.google.com') || photoVal.includes('docs.google.com'))) {
-                try {
-                    const fileIdMatch = photoVal.match(/(?:\/d\/|folders\/|id=)([a-zA-Z0-9_-]{10,})/);
-                    if (fileIdMatch) {
-                        const fileId = fileIdMatch[1];
-                        const filename = `gdrive-${fileId}.jpg`;
-                        const destPath = path.join(__dirname, '../public/uploads', filename);
-                        await downloadGDriveFile(fileId, destPath);
-                        photoVal = '/uploads/' + filename;
-                    }
-                } catch (e) {
-                    console.error(`[GDrive Image Download Error] Row ${i}:`, e.message);
-                    photoVal = null;
-                }
+            // 6. Category ID lookup
+            let categoryId = null;
+            const categoryName = normalizedRow['category'] || normalizedRow['categoryname'] || normalizedRow['tag'] || normalizedRow['categoryid'];
+            if (categoryName && data.categories) {
+                const cat = data.categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
+                if (cat) categoryId = cat.id;
             }
+
+            // 7. Age parsing
+            let ageVal = parseInt(normalizedRow['age'] || normalizedRow['playerage'] || '', 10);
+            if (isNaN(ageVal) || ageVal < 5 || ageVal > 120) {
+                ageVal = null;
+            }
+
+            const finalDetail = normalizedRow['detail'] || normalizedRow['details'] || normalizedRow['description'] || normalizedRow['info'] || normalizedRow['about'] || '';
 
             results.push({
                 id: Date.now().toString() + Math.random().toString().substring(2, 6) + i,
+                auction_id: activeAuctionId,
                 name: name,
                 basePrice: basePrice,
                 role: roleVal,
@@ -526,7 +635,7 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
                 phone: normalizedRow['phone'] || normalizedRow['phonenumber'] || normalizedRow['mobile'] || normalizedRow['mobileno'] || normalizedRow['mobilenumber'] || normalizedRow['contact'] || normalizedRow['contactno'] || normalizedRow['contactnumber'] || null,
                 photo: photoVal,
                 formNo: formNo,
-                age: parseInt(normalizedRow['age'] || normalizedRow['playerage']) || null,
+                age: ageVal,
                 fatherName: normalizedRow['fathername'] || normalizedRow['father'] || normalizedRow['fathersname'] || '',
                 tagOwner: normalizedRow['tagowner'] || normalizedRow['owner'] || normalizedRow['franchise'] || normalizedRow['team'] || '',
                 customTag: normalizedRow['customtag'] || normalizedRow['custom'] || normalizedRow['country'] || normalizedRow['nationality'] || '',
@@ -536,22 +645,25 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
                 tshirtSize: normalizedRow['tshirtsize'] || normalizedRow['tshirt'] || normalizedRow['shirtsize'] || '',
                 jerseyName: normalizedRow['jerseyname'] || normalizedRow['jname'] || normalizedRow['nameonjersey'] || '',
                 jerseyNumber: normalizedRow['jerseynumber'] || normalizedRow['jerseyno'] || normalizedRow['jno'] || normalizedRow['numberonjersey'] || '',
-                trouserSize: normalizedRow['trousersize'] || normalizedRow['trouser'] || normalizedRow['pantsize'] || '/uploads/default-player.svg' && normalizedRow['pant'] || '',
+                trouserSize: normalizedRow['trousersize'] || normalizedRow['trouser'] || normalizedRow['pantsize'] || normalizedRow['pant'] || '',
                 detail: finalDetail,
                 category_id: categoryId
             });
             successfulReg++;
         }
 
-        console.log(`[DEBUG] Final player objects:`, JSON.stringify(results, null, 2));
-        console.log(`[DEBUG] parsed players count: ${results.length}`);
+        console.log(`[DEBUG] Successfully parsed ${results.length} players for auction ${activeAuctionId}`);
 
-        // Insert player records in bulk
+        // Insert player records in bulk and sync
         await data.addPlayersBulk(results);
-        console.log(`[DEBUG] Inserted players count: ${results.length}`);
+        await data.syncWithDB();
 
-        fs.unlinkSync(filePath); // clean up file
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+        
         broadcastUpdates();
+
         return res.json({
             success: true,
             message: 'Spreadsheet imported successfully',
@@ -570,7 +682,7 @@ router.post('/upload-players', upload.single('csvFile'), async (req, res) => {
     } catch (err) {
         console.error('[CSV/Excel Upload Error]', err);
         if (filePath && fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+            try { fs.unlinkSync(filePath); } catch (e) {}
         }
         return res.status(500).json({
             success: false,
@@ -589,6 +701,7 @@ router.post('/adjust-budget', async (req, res) => {
 router.post('/reset-player', async (req, res) => {
     const { playerId } = req.body;
     await data.resetPlayer(playerId);
+    await data.syncWithDB();
     broadcastUpdates();
     res.json({ success: true, players: data.players, teams: data.teams });
 });
@@ -677,15 +790,51 @@ router.post('/assign-captain', async (req, res) => {
     res.json({ success: true, players: data.players, teams: data.teams });
 });
 
-router.post('/update-auction-details', upload.single('logo'), async (req, res) => {
+router.post('/update-sponsor', upload.single('sponsorLogo'), async (req, res) => {
+    try {
+        const { sponsorName, removeLogo, auctionId } = req.body;
+        const targetId = auctionId || (data.auctionDetails ? data.auctionDetails.id : 'active_auction');
+        
+        const updateFields = {
+            sponsorName: sponsorName !== undefined ? sponsorName.trim() : ''
+        };
+
+        if (req.file) {
+            updateFields.sponsorLogo = '/uploads/' + req.file.filename;
+        } else if (removeLogo === 'true' || removeLogo === true) {
+            updateFields.sponsorLogo = null;
+        }
+
+        await data.updateSponsorDetails(targetId, updateFields);
+        broadcastUpdates();
+        res.json({ 
+            success: true, 
+            message: 'Sponsor logo & details updated successfully!',
+            auctionDetails: data.auctionDetails 
+        });
+    } catch (err) {
+        console.error('[Update Sponsor Error]', err);
+        res.json({ success: false, error: err.message });
+    }
+});
+
+router.post('/update-auction-details', upload.fields([
+    { name: 'logo', maxCount: 1 },
+    { name: 'sponsorLogo', maxCount: 1 }
+]), async (req, res) => {
     try {
         const { 
             auctionId, submitAction, sportsType, season, name, auctionDate, auctionTime, 
             pointsPerTeam, units, baseBid, bidIncreaseBy, 
-            playersPerTeamMax, playersPerTeamMin 
+            playersPerTeamMax, playersPerTeamMin,
+            sponsorName
         } = req.body;
         
-        const logoUrl = req.file ? '/uploads/' + req.file.filename : undefined;
+        const logoFile = req.files && req.files.logo ? req.files.logo[0] : (req.file && req.file.fieldname === 'logo' ? req.file : null);
+        const sponsorLogoFile = req.files && req.files.sponsorLogo ? req.files.sponsorLogo[0] : (req.file && req.file.fieldname === 'sponsorLogo' ? req.file : null);
+        
+        const logoUrl = logoFile ? '/uploads/' + logoFile.filename : undefined;
+        const sponsorLogoUrl = sponsorLogoFile ? '/uploads/' + sponsorLogoFile.filename : undefined;
         
         const updatedFields = {
             id: auctionId || 'active_auction',
@@ -699,10 +848,14 @@ router.post('/update-auction-details', upload.single('logo'), async (req, res) =
             baseBid: parseFloat(baseBid) || 0,
             bidIncreaseBy: parseFloat(bidIncreaseBy) || 0,
             playersPerTeamMax: parseInt(playersPerTeamMax) || 0,
-            playersPerTeamMin: parseInt(playersPerTeamMin) || 0
+            playersPerTeamMin: parseInt(playersPerTeamMin) || 0,
+            sponsorName: sponsorName !== undefined ? sponsorName : ''
         };
         if (logoUrl !== undefined) {
             updatedFields.logo = logoUrl;
+        }
+        if (sponsorLogoUrl !== undefined) {
+            updatedFields.sponsorLogo = sponsorLogoUrl;
         }
         
         if (submitAction === 'create') {
@@ -1038,21 +1191,103 @@ router.post('/sync-photos-bulk', async (req, res) => {
         let unmatchedCount = 0;
         const unmatchedNames = [];
 
+        const norm = (s) => (s || '').toLowerCase().replace(/[_\.\-]+/g, ' ').replace(/\s+/g, ' ').trim();
+        const strip = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        function findMatchingPlayer(rawName, playerPool) {
+            if (!rawName || !playerPool || !playerPool.length) return null;
+            const cleanStr = String(rawName).trim();
+            const normClean = norm(cleanStr);
+            const stripClean = strip(cleanStr);
+            
+            let extractedNum = null;
+            const pureInt = parseInt(cleanStr, 10);
+            if (!isNaN(pureInt) && /^\d+$/.test(cleanStr)) {
+                extractedNum = pureInt;
+            } else {
+                const prefixMatch = cleanStr.match(/^(?:id|player|p|form|f|no)[\s_\-#]*(\d+)$/i);
+                if (prefixMatch) extractedNum = parseInt(prefixMatch[1], 10);
+            }
+
+            // 1. By Player ID
+            let p = playerPool.find(item => {
+                if (item.id === undefined || item.id === null) return false;
+                const pIdStr = String(item.id).trim();
+                if (pIdStr.toLowerCase() === cleanStr.toLowerCase()) return true;
+                if (extractedNum !== null) {
+                    const pIdInt = parseInt(pIdStr, 10);
+                    if (!isNaN(pIdInt) && pIdInt === extractedNum) return true;
+                }
+                return false;
+            });
+            if (p) return p;
+
+            // 2. By Player Name
+            p = playerPool.find(item => item.name && norm(item.name) === normClean);
+            if (p) return p;
+            p = playerPool.find(item => item.name && strip(item.name) === stripClean);
+            if (p) return p;
+
+            // 3. By Form No
+            p = playerPool.find(item => {
+                if (!item.formNo) return false;
+                const fStr = String(item.formNo).trim();
+                if (fStr.toLowerCase() === cleanStr.toLowerCase()) return true;
+                if (extractedNum !== null) {
+                    const fInt = parseInt(fStr, 10);
+                    if (!isNaN(fInt) && fInt === extractedNum) return true;
+                }
+                return false;
+            });
+            if (p) return p;
+
+            // 4. By Jersey / Player Number
+            p = playerPool.find(item => {
+                if (!item.jerseyNumber) return false;
+                const jStr = String(item.jerseyNumber).trim();
+                if (jStr.toLowerCase() === cleanStr.toLowerCase()) return true;
+                if (extractedNum !== null) {
+                    const jInt = parseInt(jStr, 10);
+                    if (!isNaN(jInt) && jInt === extractedNum) return true;
+                }
+                return false;
+            });
+            if (p) return p;
+
+            // 5. Compound patterns: "1 - Virat Kohli" or "Virat Kohli_1"
+            const leadMatch = cleanStr.match(/^(\d+)[\s_\-]+(.+)$/);
+            if (leadMatch) {
+                const numPart = parseInt(leadMatch[1], 10);
+                const namePart = norm(leadMatch[2]);
+                p = playerPool.find(item => item.name && norm(item.name) === namePart);
+                if (p) return p;
+                p = playerPool.find(item => parseInt(item.id, 10) === numPart || parseInt(item.formNo, 10) === numPart);
+                if (p) return p;
+            }
+
+            const trailMatch = cleanStr.match(/^(.+?)[\s_\-]+(\d+)$/) || cleanStr.match(/^(.+?)\s*\((.+?)\)$/);
+            if (trailMatch) {
+                const namePart = norm(trailMatch[1]);
+                const numPart = parseInt(trailMatch[2], 10);
+                p = playerPool.find(item => item.name && norm(item.name) === namePart);
+                if (p) return p;
+                if (!isNaN(numPart)) {
+                    p = playerPool.find(item => parseInt(item.id, 10) === numPart || parseInt(item.formNo, 10) === numPart);
+                    if (p) return p;
+                }
+            }
+
+            return null;
+        }
+
+        const auctionPlayers = data.players.filter(p => !activeAuctionId || p.auction_id === activeAuctionId);
+
         for (const file of filesFound) {
             const originalName = file.name;
-            const fileFormNoStr = path.parse(originalName).name.trim();
-            const fileFormNoInt = parseInt(fileFormNoStr, 10);
+            const fileBaseName = path.parse(originalName).name.trim();
 
-            // Find the player with matching formNo in the current active auction
-            const player = data.players.find(p => {
-                if (!p.formNo || p.auction_id !== activeAuctionId) return false;
-                const dbFormNoStr = p.formNo.trim();
-                const dbFormNoInt = parseInt(dbFormNoStr, 10);
-                if (!isNaN(fileFormNoInt) && !isNaN(dbFormNoInt)) {
-                    return fileFormNoInt === dbFormNoInt;
-                }
-                return dbFormNoStr.toLowerCase() === fileFormNoStr.toLowerCase();
-            });
+            // Find the player matching Player ID, Name, Form No, or Player No
+            const player = findMatchingPlayer(fileBaseName, auctionPlayers);
 
             if (player) {
                 try {

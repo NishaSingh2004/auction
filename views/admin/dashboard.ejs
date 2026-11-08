@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=1200">
     <title>Admin Dashboard - Live Auction</title>
     <link rel="stylesheet" href="/css/style.css">
     <script src="/socket.io/socket.io.js"></script>
@@ -99,15 +99,15 @@
         </div>
 
         <!-- NEW TOPBAR -->
-        <header style="height: 60px; background: #0f1115; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; flex-shrink: 0;">
+        <header class="topbar" style="height: 60px; background: #0f1115; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; flex-shrink: 0;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 1.5rem; transform: rotate(-45deg);">🏏</span>
                 <h1 style="font-size: 1.25rem; font-weight: 900; margin: 0; color: #fff; letter-spacing: 1px; text-transform: uppercase;"><%= data.auctionDetails && data.auctionDetails.name ? data.auctionDetails.name : 'ELITE OVERSEER' %></h1>
             </div>
             
             <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
-                <div style="background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); color: #ef4444; font-size: 0.6rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 20px; display: flex; align-items: center; gap: 0.4rem;">
-                    <div style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%;"></div>
+                <div id="auctionStatusBadgeContainer" style="<%= (data.auctionState && data.auctionState.status === 'active') ? 'background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #10b981;' : 'background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); color: #ef4444;' %> font-size: 0.6rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 20px; display: flex; align-items: center; gap: 0.4rem;">
+                    <div id="auctionStatusBadgeDot" style="width: 6px; height: 6px; background: <%= (data.auctionState && data.auctionState.status === 'active') ? '#10b981' : '#ef4444' %>; border-radius: 50%;"></div>
                     <span id="auctionStatusBadge"><%= data.auctionState.status.toUpperCase() %></span>
                 </div>
                 <div style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
@@ -115,7 +115,32 @@
                 </div>
             </div>
             
-            <div style="display: flex; align-items: center; gap: 1.5rem; font-size: 0.85rem; font-weight: 800; color: rgba(255,255,255,0.6);">
+            <div style="display: flex; align-items: center; gap: 0.85rem; font-size: 0.85rem; font-weight: 800; color: rgba(255,255,255,0.6);">
+                <!-- YOUTUBE OVERLAY LINK BUTTON -->
+                <div style="display: flex; align-items: center; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; overflow: hidden;" title="YouTube / OBS Stream Overlay (1920x1080 Transparent)">
+                    <a href="/overlay" target="_blank" style="text-decoration: none; color: #f87171; font-size: 0.75rem; font-weight: 800; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 0.4rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='transparent'">
+                        <span style="font-size: 0.95rem;">📺</span> OVERLAY
+                    </a>
+                    <button type="button" onclick="copyStreamLinkDirect('/overlay', this)" style="background: rgba(239, 68, 68, 0.22); border: none; border-left: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; font-size: 0.72rem; font-weight: 800; padding: 0.35rem 0.5rem; cursor: pointer; transition: all 0.2s;" title="Copy Overlay URL for OBS Browser Source">
+                        📋
+                    </button>
+                </div>
+
+                <!-- LIVE AUCTION ONLY SCREEN LINK BUTTON -->
+                <div style="display: flex; align-items: center; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; overflow: hidden;" title="Live Auction Screen (Auction Only - Fully Responsive)">
+                    <a href="/live-auction" target="_blank" style="text-decoration: none; color: #34d399; font-size: 0.75rem; font-weight: 800; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 0.4rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='transparent'">
+                        <span style="font-size: 0.95rem;">⚡</span> LIVE AUCTION
+                    </a>
+                    <button type="button" onclick="copyStreamLinkDirect('/live-auction', this)" style="background: rgba(16, 185, 129, 0.22); border: none; border-left: 1px solid rgba(16, 185, 129, 0.35); color: #6ee7b7; font-size: 0.72rem; font-weight: 800; padding: 0.35rem 0.5rem; cursor: pointer; transition: all 0.2s;" title="Copy Live Auction URL for Spectators">
+                        📋
+                    </button>
+                </div>
+
+                <!-- SEPARATE SPONSOR LOGO UPLOAD BUTTON -->
+                <button type="button" onclick="openAdminSponsorModal()" class="btn" style="background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.4); color: #fbbf24; font-size: 0.75rem; font-weight: 800; padding: 0.35rem 0.85rem; border-radius: 6px; display: flex; align-items: center; gap: 0.45rem; cursor: pointer; transition: all 0.2s;" title="Upload Sponsor / Owner Logo">
+                    <span style="font-size: 0.95rem;">🏷️</span> SPONSOR LOGO
+                </button>
+
                 <% if (user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('live')))) { %>
                   <div id="tabLiveBid" onclick="switchAdminTab('live')" style="color: #fff; border-bottom: 2px solid #fff; padding-bottom: 0.3rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: color 0.2s;">
                     <span style="font-size: 1.1rem;">🔨</span> Live Bid
@@ -131,7 +156,7 @@
                     <span style="font-size: 1.1rem;">👥</span> Team View
                 </div>
                   <% } %>
-                <% if (user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('settings')))) { %>
+                <% if (user && (user.role === 'superadmin' || user.username === 'admin' || (user.permissions && user.permissions.includes('settings')))) { %>
                   <% const settingsUrl = user.role === 'superadmin' ? '/superadmin/settings' : '/admin/settings'; %>
                   <a href="<%= settingsUrl %>" style="text-decoration: none; color: rgba(255,255,255,0.7); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">SETTINGS</a>
                   <% } %>
@@ -147,9 +172,43 @@
             <!-- LEFT SIDEBAR -->
             <div style="width: 280px; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; background: #0b0d12;">
                 <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <div style="flex: 1; text-align: center; padding: 1rem; font-size: 0.75rem; font-weight: 800; color: #fbbf24; border-bottom: 2px solid #fbbf24;">LIVE</div>
-                    <div style="flex: 1; text-align: center; padding: 1rem; font-size: 0.75rem; font-weight: 800; color: rgba(255,255,255,0.4);">UPCOMING</div>
+                    <div id="tabLiveLeft" onclick="switchLeftSidebarTab('live')" style="flex: 1; text-align: center; padding: 0.85rem; font-size: 0.75rem; font-weight: 800; color: #fbbf24; border-bottom: 2px solid #fbbf24; cursor: pointer; transition: all 0.2s;">LIVE</div>
+                    <div id="tabUpcomingLeft" onclick="switchLeftSidebarTab('upcoming')" style="flex: 1; text-align: center; padding: 0.85rem; font-size: 0.75rem; font-weight: 800; color: rgba(255,255,255,0.4); cursor: pointer; transition: all 0.2s;">UPCOMING</div>
                 </div>
+
+                <!-- 1. LIVE AUCTION PLAYER QUEUE CONTAINER -->
+                <div id="leftLiveContainer" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                <!-- COMPACT SEARCH & SELECTOR -->
+                <div style="padding: 0.4rem 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.06); background: #12141c; display: flex; flex-direction: column; gap: 0.35rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; line-height: 1;">
+                        <span style="font-size: 0.62rem; color: #fbbf24; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">SELECT PLAYER</span>
+                        <span id="queueMatchCount" style="font-size: 0.58rem; color: rgba(255,255,255,0.4); font-weight: 700;"></span>
+                    </div>
+
+                    <!-- Single Compact Row -->
+                    <div style="display: flex; gap: 0.3rem; align-items: center;">
+                        <div style="position: relative; flex: 1.15; min-width: 0;">
+                            <input type="text" id="manualPlayerSearchInput" placeholder="🔍 Search..." 
+                                   oninput="handleManualPlayerSearch(this.value)"
+                                   onkeydown="if(event.key === 'Enter') { const firstCard = document.querySelector('#leftPlayerQueue > div[onclick]'); if(firstCard) firstCard.click(); }"
+                                   style="width: 100%; height: 28px; background: #1a1c26; border: 1px solid rgba(255,255,255,0.15); border-radius: 5px; padding: 0 1.3rem 0 0.5rem; font-size: 0.72rem; color: #fff; outline: none; font-weight: 600;">
+                            <span id="clearPlayerSearchBtn" onclick="clearManualPlayerSearch()" 
+                                  style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.4); cursor: pointer; font-size: 0.7rem; display: none;" title="Clear">✕</span>
+                        </div>
+                        <select id="visiblePlayerDropdown" onchange="if(this.value) { loadSpecificPlayer(this.value); }"
+                                style="flex: 1; min-width: 0; height: 28px; background: #1a1c26; border: 1px solid rgba(255,255,255,0.12); border-radius: 5px; padding: 0 0.25rem; font-size: 0.7rem; color: #e2e8f0; outline: none; cursor: pointer; font-weight: 600;">
+                            <option value="" style="background: #181a24; color: #94a3b8;">Choose...</option>
+                            <% data.players.filter(p => p.status === 'available').sort((a,b) => a.name.localeCompare(b.name)).forEach(p => { %>
+                                <option value="<%= p.id %>" style="background: #181a24; color: #ffffff;"><%= p.name %> (#<%= p.formNo || '?' %>)</option>
+                            <% }) %>
+                        </select>
+                        <button type="button" onclick="const sel=document.getElementById('visiblePlayerDropdown'); if(sel && sel.value) loadSpecificPlayer(sel.value);" 
+                                class="btn" style="height: 28px; background: #fbbf24; color: #000; font-weight: 800; font-size: 0.65rem; padding: 0 0.55rem; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; display: flex; align-items: center; justify-content: center;">
+                            LOAD
+                        </button>
+                    </div>
+                </div>
+
                 <div id="leftPlayerQueue" style="flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;" class="sleek-scroll">
                     <% 
                        const livePlayers = data.players.filter(p => p.status === 'available').slice(0, 15);
@@ -165,6 +224,53 @@
                         </div>
                     </div>
                     <% }) %>
+                </div>
+                </div>
+
+                <!-- 2. UPCOMING AUCTIONS CONTAINER (FILTER BY DATE) -->
+                <div id="leftUpcomingContainer" style="display: none; flex-direction: column; flex: 1; min-height: 0;">
+                    <!-- Date Filter Bar -->
+                    <div style="padding: 0.5rem 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.08); background: #12141c; display: flex; flex-direction: column; gap: 0.35rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.62rem; color: #38bdf8; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">UPCOMING AUCTIONS</span>
+                            <span id="upcomingAuctionCount" style="font-size: 0.58rem; color: rgba(255,255,255,0.4); font-weight: 700;"><%= data.auctionsList ? data.auctionsList.length : 0 %> Events</span>
+                        </div>
+                        <div style="display: flex; gap: 0.3rem; align-items: center;">
+                            <input type="date" id="upcomingDateFilterInput" onchange="filterUpcomingAuctions(this.value)" 
+                                   style="flex: 1; height: 28px; background: #1a1c26; border: 1px solid rgba(255,255,255,0.15); border-radius: 5px; padding: 0 0.5rem; font-size: 0.72rem; color: #fff; outline: none; font-weight: 600; color-scheme: dark;">
+                            <button type="button" onclick="clearUpcomingDateFilter()" 
+                                    class="btn" style="height: 28px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #e2e8f0; font-weight: 800; font-size: 0.65rem; padding: 0 0.55rem; border-radius: 5px; cursor: pointer; white-space: nowrap;">
+                                ALL
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Auctions List -->
+                    <div id="leftUpcomingAuctionQueue" style="flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.65rem;" class="sleek-scroll">
+                        <% if (data.auctionsList && data.auctionsList.length > 0) { %>
+                            <% data.auctionsList.forEach(auc => { 
+                                const isCurrent = auc.id === (data.auctionDetails ? data.auctionDetails.id : 'active_auction');
+                            %>
+                            <div class="upcoming-auction-card" data-date="<%= auc.auctionDate || '' %>" style="background: #161821; border-radius: 8px; padding: 0.75rem; border: 1px solid <%= isCurrent ? 'rgba(56, 189, 248, 0.4)' : 'rgba(255,255,255,0.06)' %>; display: flex; flex-direction: column; gap: 0.4rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.65rem; color: #38bdf8; font-weight: 800; text-transform: uppercase;">📅 <%= auc.auctionDate || 'Date TBA' %></span>
+                                    <span style="font-size: 0.6rem; color: rgba(255,255,255,0.4); font-weight: 700;">⏰ <%= auc.auctionTime || 'TBA' %></span>
+                                </div>
+                                <div style="font-size: 0.82rem; font-weight: 800; color: #fff; line-height: 1.2;"><%= auc.name || 'Unnamed Auction' %></div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; color: rgba(255,255,255,0.5);">
+                                    <span><%= auc.sportsType || 'Cricket' %> • <%= auc.season || '2026' %></span>
+                                    <% if (isCurrent) { %>
+                                        <span style="color: #22c55e; font-weight: 800; font-size: 0.62rem; background: rgba(34, 197, 94, 0.15); padding: 0.15rem 0.4rem; border-radius: 4px;">ACTIVE</span>
+                                    <% } else { %>
+                                        <button type="button" onclick="selectAuctionAdmin('<%= auc.id %>')" class="btn" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 0.6rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer;">SWITCH</button>
+                                    <% } %>
+                                </div>
+                            </div>
+                            <% }) %>
+                        <% } else { %>
+                            <div style="text-align: center; color: rgba(255,255,255,0.4); font-size: 0.75rem; padding: 2rem 1rem;">No upcoming auctions found</div>
+                        <% } %>
+                    </div>
                 </div>
             </div>
             
@@ -201,11 +307,11 @@
                             <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 800; letter-spacing: 1px; display: flex; align-items: center; gap: 0.5rem;">
                                 <span style="color: #fbbf24;">⌨</span> MANUAL BID ENTRY
                             </div>
-                            <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.1); padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
-                                👥 <select id="quickTeamSelect" style="background: transparent; border: none; color: #fff; font-weight: 800; outline: none; min-width: 150px;">
-                                    <option value="">SELECT TEAM</option>
+                            <div style="background: #1a1c23; border: 1px solid rgba(255,255,255,0.15); padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+                                👥 <select id="quickTeamSelect" style="background: #181a24; border: 1px solid rgba(255,255,255,0.15); color: #fbbf24; font-weight: 800; outline: none; min-width: 150px; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer;">
+                                    <option value="" style="background: #181a24; color: #94a3b8; font-weight: 700;">SELECT TEAM</option>
                                     <% data.teams.forEach(team => { %>
-                                        <option value="<%= team.name %>"><%= team.shortName || team.name %></option>
+                                        <option value="<%= team.name %>" style="background: #181a24; color: #ffffff; font-weight: 700;"><%= team.shortName || team.name %></option>
                                     <% }) %>
                                 </select>
                             </div>
@@ -222,9 +328,7 @@
                                     <button class="btn btn-secondary" style="border: 1px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.6); padding: 0.5rem 1rem; font-weight: 800; font-size: 1rem; border-radius: 6px;">L</button>
                                 </div>
                             </div>
-                            <div style="color: #ef4444; font-size: 0.75rem; font-weight: 700; margin-top: 1rem; display: flex; align-items: center; gap: 0.4rem;">
-                                <span style="font-size: 1rem;">⚠</span> Must be greater than current bid (<span id="minBidWarning"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></span>)
-                            </div>
+                            <div id="manualBidWarningContainer" style="color: #ef4444; font-size: 0.75rem; font-weight: 700; margin-top: 0.75rem; display: none; align-items: center; gap: 0.4rem;"><span style="font-size: 1rem;">⚠️</span> Bid must be at least <span id="minBidWarning"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></span></div>
                         </div>
                         
                         <!-- Timer Section (Integrated) -->
@@ -308,9 +412,16 @@
         
         <!-- PLAYER LIST VIEW -->
         <div id="playerListView" style="display: none; flex: 1; background: #0b0d12; overflow-y: auto; padding: 2rem;" class="sleek-scroll">
-            <div style="max-width: 1200px; margin: 0 auto; background: #12141a; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
-                <!-- Header block similar to image -->
-                <div style="height: 60px; background: #1a1d24; border-bottom: 1px solid rgba(255,255,255,0.05);"></div>
+            <div style="max-width: 1300px; margin: 0 auto; background: #12141a; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
+                <!-- Header block with clear column labels -->
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 2rem; background: #161820; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <div style="width: 140px; color: #fbbf24;">Real Player ID</div>
+                    <div style="width: 140px; color: #94a3b8;">Unique ID (Short)</div>
+                    <div style="flex: 1; color: rgba(255,255,255,0.7); padding-left: 0.5rem;">Player Info</div>
+                    <div style="width: 140px; color: rgba(255,255,255,0.7);">Role</div>
+                    <div style="width: 140px; color: rgba(255,255,255,0.7);">Price</div>
+                    <div style="width: 110px; text-align: right; color: rgba(255,255,255,0.7);">Status</div>
+                </div>
                 
                 <div style="display: flex; flex-direction: column;">
                     <% data.players.forEach((p, idx) => { 
@@ -318,32 +429,45 @@
                         const isUnsold = p.status === 'unsold';
                         const statusColor = isSold ? '#3b82f6' : (isUnsold ? '#ef4444' : '#22c55e');
                         const statusBg = isSold ? 'rgba(59,130,246,0.1)' : (isUnsold ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)');
+                        let paddedId = p.id || '00';
+                        if (!isNaN(paddedId) && paddedId.toString().length < 3) {
+                            paddedId = paddedId.toString().padStart(3, '0');
+                        }
+                        let realUploadedId = p.formNo ? String(p.formNo).trim() : paddedId;
+                        let shortUid = String(p.id).length > 6 ? '..' + String(p.id).slice(-5) : p.id;
                     %>
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'" onclick="loadSpecificPlayer('<%= p.id %>'); switchAdminTab('live');">
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'" onclick="loadSpecificPlayer('<%= p.id %>'); switchAdminTab('live');">
                         
-                        <!-- Left: ID & Player Name -->
-                        <div style="display: flex; align-items: center; gap: 2rem; width: 35%;">
-                            <span style="color: #fff; font-size: 0.85rem; font-weight: 700; width: 40px;">#<%= String(p.id).padStart(3, '0') %></span>
-                            <div style="display: flex; align-items: center; gap: 1rem;">
-                                <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                                    <img src="<%= p.photo || '/uploads/default-player.svg' %>" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
-                                </div>
-                                <span style="color: #fff; font-size: 0.95rem; font-weight: 800;"><%= p.name %></span>
-                            </div>
+                        <!-- Real Player ID -->
+                        <div style="width: 140px;">
+                            <span style="font-weight: 900; color: #fbbf24; font-size: 1rem; font-family: monospace; background: rgba(251,191,36,0.1); padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid rgba(251,191,36,0.25);">#<%= realUploadedId %></span>
                         </div>
 
-                        <!-- Middle: Role -->
-                        <div style="display: flex; align-items: center; gap: 0.5rem; width: 25%; color: rgba(255,255,255,0.6); font-size: 0.85rem; font-weight: 600;">
+                        <!-- Unique ID (Short) -->
+                        <div style="width: 140px;">
+                            <span style="font-size: 0.75rem; color: #94a3b8; font-family: monospace; background: rgba(255,255,255,0.06); padding: 0.25rem 0.55rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);" title="DB Unique ID: <%= p.id %>">UID: <%= shortUid %></span>
+                        </div>
+
+                        <!-- Player Info -->
+                        <div style="flex: 1; display: flex; align-items: center; gap: 0.8rem; padding-left: 0.5rem;">
+                            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                <img src="<%= p.photo || '/uploads/default-player.svg' %>" style="width: 100%; height: 100%; object-fit: cover;">
+                            </div>
+                            <span style="color: #fff; font-size: 0.95rem; font-weight: 800;"><%= p.name %></span>
+                        </div>
+
+                        <!-- Role -->
+                        <div style="width: 140px; display: flex; align-items: center; gap: 0.5rem; color: rgba(255,255,255,0.6); font-size: 0.85rem; font-weight: 600;">
                             <span style="color: #fbbf24;">🏏</span> <%= p.role %>
                         </div>
 
                         <!-- Price -->
-                        <div style="width: 20%; color: #fff; font-size: 0.9rem; font-weight: 800;">
+                        <div style="width: 140px; color: #fff; font-size: 0.9rem; font-weight: 800;">
                             <%= isSold ? formatCurrencyLocal(p.soldPrice) : formatCurrencyLocal(p.basePrice) %>
                         </div>
 
                         <!-- Status Pill -->
-                        <div style="width: 15%; display: flex; justify-content: flex-end;">
+                        <div style="width: 110px; display: flex; justify-content: flex-end;">
                             <div style="background: <%= statusBg %>; border: 1px solid <%= statusColor %>; color: <%= statusColor %>; font-size: 0.65rem; font-weight: 800; padding: 0.35rem 0.8rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px;">
                                 <%= p.status %>
                             </div>
@@ -651,9 +775,20 @@
         
         // Roster HTML
         const rosterHtml = teamPlayers.sort((a,b) => parseInt(b.soldPrice||0) - parseInt(a.soldPrice||0)).map(p => `
-            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 0.75rem 1rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #fff; font-size: 0.85rem; font-weight: 800;">${p.name}</span>
-                <span style="color: #fbbf24; font-size: 0.85rem; font-weight: 900;">${formatCurrencyLocal(p.soldPrice)}</span>
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 0.65rem 0.9rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <img src="${p.photo || '/uploads/default-player.svg'}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; flex-direction: column; text-align: left;">
+                        <span style="color: #fff; font-size: 0.85rem; font-weight: 800;">${p.name} ${p.isCaptain ? '👑' : ''}</span>
+                        <span style="color: rgba(255,255,255,0.5); font-size: 0.68rem; text-transform: uppercase;">${p.role || '--'} • #${p.formNo || p.id}</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="color: #fbbf24; font-size: 0.85rem; font-weight: 900;">${formatCurrencyLocal(p.soldPrice)}</span>
+                    <button type="button" onclick="window.removePlayerFromTeam('${p.id}', '${p.name.replace(/'/g, "\\'")}', '${team.name.replace(/'/g, "\\'")}', '${p.soldPrice}')" class="btn" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); padding: 0.25rem 0.65rem; border-radius: 6px; font-size: 0.72rem; font-weight: 800; cursor: pointer; transition: all 0.2s;" title="Remove player from ${team.name} & refund purse">
+                        ✕ Remove
+                    </button>
+                </div>
             </div>
         `).join('');
         
@@ -674,16 +809,231 @@
         const select = document.getElementById('playerSelect');
         const startBtn = document.getElementById('startBtn');
         if (select && select.options.length > 0) {
-            for(let i=0; i<select.options.length; i++){
-                if(select.options[i].value !== '') {
-                    select.selectedIndex = i;
-                    startBtn.click();
-                    break;
+            let currentIndex = select.selectedIndex;
+            let nextIndex = currentIndex + 1;
+            while (nextIndex < select.options.length && select.options[nextIndex].value === '') {
+                nextIndex++;
+            }
+            if (nextIndex < select.options.length) {
+                select.selectedIndex = nextIndex;
+            } else {
+                for(let i=0; i<select.options.length; i++){
+                    if(select.options[i].value !== '') {
+                        select.selectedIndex = i;
+                        break;
+                    }
                 }
             }
+            startBtn.click();
         }
     }
     
+    function filterPlayerDropdown(val) {
+        const select = document.getElementById('playerSelect');
+        const filter = val.toLowerCase();
+        for (let i = 0; i < select.options.length; i++) {
+            const txt = select.options[i].text.toLowerCase();
+            select.options[i].style.display = txt.includes(filter) ? 'block' : 'none';
+        }
+    }
+    
+    
+    window.handleManualPlayerSearch = function(query) {
+        const q = (query || '').trim().toLowerCase();
+        const clearBtn = document.getElementById('clearPlayerSearchBtn');
+        const queue = document.getElementById('leftPlayerQueue');
+        const matchCountEl = document.getElementById('queueMatchCount');
+        const dropdown = document.getElementById('visiblePlayerDropdown');
+        
+        if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+
+        const allPlayers = window.currentPlayersDataCache || [];
+        
+        // Filter dropdown options
+        if (dropdown) {
+            let matchCount = 0;
+            Array.from(dropdown.options).forEach((opt, idx) => {
+                if (idx === 0) {
+                    opt.style.display = '';
+                    return;
+                }
+                const txt = opt.textContent.toLowerCase();
+                const matches = !q || txt.includes(q);
+                opt.style.display = matches ? '' : 'none';
+                if (matches) matchCount++;
+            });
+            if (matchCountEl) {
+                matchCountEl.textContent = q ? (matchCount + ' found') : '';
+            }
+        }
+
+        // Filter left queue list
+        if (queue && allPlayers.length > 0) {
+            const matches = allPlayers.filter(p => {
+                if (!q) return p.status === 'available';
+                const name = (p.name || '').toLowerCase();
+                const formNo = String(p.formNo || '').toLowerCase();
+                const role = (p.role || '').toLowerCase();
+                return name.includes(q) || formNo.includes(q) || role.includes(q);
+            });
+
+            if (matches.length === 0) {
+                queue.innerHTML = '<div style="text-align:center; padding: 2rem 1rem; color: rgba(255,255,255,0.4); font-size: 0.75rem;">No players found matching \'' + query + '\'</div>';
+            } else {
+                const displayList = q ? matches : matches.slice(0, 20);
+                queue.innerHTML = displayList.map(p => {
+                    const initials = (p.name || 'PL').substring(0,2).toUpperCase();
+                    const statusBadge = p.status === 'available' 
+                        ? '<span style="color:#10b981; font-size:0.6rem; font-weight:800;">AVAILABLE</span>'
+                        : '<span style="color:#ef4444; font-size:0.6rem; font-weight:800;">' + (p.status || '').toUpperCase() + '</span>';
+                    const price = window.formatCurrencyLocal ? window.formatCurrencyLocal(p.basePrice) : ('₹' + (p.basePrice || 0));
+
+                    return `
+                    <div style="background: #161821; border-radius: 8px; padding: 0.75rem; display: flex; align-items: center; gap: 0.75rem; border: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: all 0.2s;" 
+                         onmouseover="this.style.borderColor='rgba(251,191,36,0.4)'; this.style.background='#1e2230';" 
+                         onmouseout="this.style.borderColor='rgba(255,255,255,0.06)'; this.style.background='#161821';"
+                         onclick="loadSpecificPlayer('${p.id}')">
+                        <div style="width: 36px; height: 36px; background: rgba(255,255,255,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; color: #fbbf24; flex-shrink: 0;">
+                            ${initials}
+                        </div>
+                        <div style="display: flex; flex-direction: column; flex: 1; min-width: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.25rem;">
+                                <span style="color: #fff; font-size: 0.8rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</span>
+                                <span style="font-size: 0.65rem; color: #fbbf24; font-weight: 800; font-family: monospace;">#${p.formNo || 'N/A'}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.15rem;">
+                                <span style="color: rgba(255,255,255,0.5); font-size: 0.65rem;">${p.role || 'Player'} • ${price}</span>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+        }
+    };
+
+    window.clearManualPlayerSearch = function() {
+        const input = document.getElementById('manualPlayerSearchInput');
+        if (input) input.value = '';
+        window.handleManualPlayerSearch('');
+    };
+
+    window.refreshManualPlayerSelector = function() {
+        const dropdown = document.getElementById('visiblePlayerDropdown');
+        const allPlayers = window.currentPlayersDataCache || [];
+        const avail = allPlayers.filter(p => p.status === 'available').sort((a,b) => a.name.localeCompare(b.name));
+        
+        if (dropdown) {
+            const curVal = dropdown.value;
+            dropdown.innerHTML = '<option value="">-- Choose Player to Start --</option>' + avail.map(p => `
+                <option value="${p.id}">#${p.formNo || '?'} ${p.name} (${p.role || 'Player'})</option>
+            `).join('');
+            if (curVal && avail.some(p => p.id === curVal)) {
+                dropdown.value = curVal;
+            }
+        }
+        
+        const searchInput = document.getElementById('manualPlayerSearchInput');
+        if (searchInput && searchInput.value) {
+            window.handleManualPlayerSearch(searchInput.value);
+        } else {
+            window.handleManualPlayerSearch('');
+        }
+    };
+
+    
+    function previewSponsorLogo(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const el = document.getElementById('sponsorLogoPreview');
+                if (el) el.src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function switchLeftSidebarTab(tab) {
+        const tabLive = document.getElementById('tabLiveLeft');
+        const tabUpcoming = document.getElementById('tabUpcomingLeft');
+        const liveContainer = document.getElementById('leftLiveContainer');
+        const upcomingContainer = document.getElementById('leftUpcomingContainer');
+        
+        if (tab === 'live') {
+            if (tabLive) {
+                tabLive.style.color = '#fbbf24';
+                tabLive.style.borderBottom = '2px solid #fbbf24';
+            }
+            if (tabUpcoming) {
+                tabUpcoming.style.color = 'rgba(255,255,255,0.4)';
+                tabUpcoming.style.borderBottom = 'none';
+            }
+            if (liveContainer) liveContainer.style.display = 'flex';
+            if (upcomingContainer) upcomingContainer.style.display = 'none';
+        } else {
+            if (tabLive) {
+                tabLive.style.color = 'rgba(255,255,255,0.4)';
+                tabLive.style.borderBottom = 'none';
+            }
+            if (tabUpcoming) {
+                tabUpcoming.style.color = '#38bdf8';
+                tabUpcoming.style.borderBottom = '2px solid #38bdf8';
+            }
+            if (liveContainer) liveContainer.style.display = 'none';
+            if (upcomingContainer) upcomingContainer.style.display = 'flex';
+        }
+    }
+
+    function filterUpcomingAuctions(selectedDate) {
+        const queue = document.getElementById('leftUpcomingAuctionQueue');
+        const countSpan = document.getElementById('upcomingAuctionCount');
+        const cards = document.querySelectorAll('.upcoming-auction-card');
+        const dateStr = (selectedDate || '').trim();
+        
+        let visibleCount = 0;
+        cards.forEach(card => {
+            const cardDate = (card.getAttribute('data-date') || '').trim();
+            if (!dateStr || cardDate === dateStr) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        if (countSpan) {
+            countSpan.textContent = dateStr ? (visibleCount + ' for ' + dateStr) : (visibleCount + ' Events');
+        }
+    }
+
+    function clearUpcomingDateFilter() {
+        const input = document.getElementById('upcomingDateFilterInput');
+        if (input) input.value = '';
+        filterUpcomingAuctions('');
+    }
+
+    async function selectAuctionAdmin(auctionId) {
+        try {
+            const res = await fetch('/admin/select-auction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ auctionId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (typeof showToast === 'function') {
+                    showToast('Switched to auction: ' + (data.auctionDetails ? data.auctionDetails.name : auctionId), 'success');
+                }
+                setTimeout(() => window.location.reload(), 600);
+            } else {
+                alert(data.error || 'Failed to select auction');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error selecting auction: ' + e.message);
+        }
+    }
+
     function loadSpecificPlayer(id) {
         const select = document.getElementById('playerSelect');
         const startBtn = document.getElementById('startBtn');
@@ -705,7 +1055,7 @@
         if(livePhoto) origObserver.observe(livePhoto, { attributes: true, attributeFilter: ['src'] });
     });
     </script>
-\n         <!-- DATA MANAGEMENT MODAL -->
+         <!-- DATA MANAGEMENT MODAL -->
          <div id="dataModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7,11,20,0.92); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
              <div class="panel animate-fade-in" style="width: 95%; max-width: 1250px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: var(--bg-dark); padding: 1.5rem 2rem; border-radius: 16px; box-shadow: var(--shadow-luxury); text-align: left;">
                  
@@ -716,12 +1066,13 @@
                  </div>
 
                  <!-- Navigation Tabs -->
-                 <div style="display: flex; gap: 0.2rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0px; flex-shrink: 0;">
+                 <div style="display: flex; gap: 0.2rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0px; flex-shrink: 0; overflow-x: auto;">
                      <button class="modal-tab-btn active" onclick="switchModalTab('franchises')">🛡️ FRANCHISES</button>
                      <button class="modal-tab-btn" onclick="switchModalTab('players')">👤 PLAYERS</button>
                      <button class="modal-tab-btn" onclick="switchModalTab('categories')">📁 CATEGORIES</button>
                      <button class="modal-tab-btn" onclick="switchModalTab('auction')">🏆 ADD AUCTION</button>
                      <button class="modal-tab-btn" onclick="switchModalTab('advanced')">⚡ SYSTEM CONSOLE</button>
+                     <button class="modal-tab-btn" onclick="switchModalTab('links')" style="color: #38bdf8; font-weight: 800;">📡 STREAM & LIVE LINKS</button>
                  </div>
 
                  <!-- Tabs Content Container -->
@@ -956,7 +1307,10 @@
                                                                                      <span style="font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase;"><%= player.role %></span>
                                                                                  </div>
                                                                              </div>
-                                                                             <span style="font-size: 0.76rem; font-weight: bold; color: var(--success);"><%= formatTblCurrency(player.soldPrice) %></span>
+                                                                             <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                                                                  <span style="font-size: 0.76rem; font-weight: bold; color: var(--success);"><%= formatTblCurrency(player.soldPrice) %></span>
+                                                                                  <button type="button" class="btn-remove-player" data-player-id="<%= player.id %>" data-player-name="<%= player.name %>" data-team-name="<%= team.name %>" data-sold-price="<%= player.soldPrice %>" onclick="event.stopPropagation(); window.handleRemovePlayerClick(this);" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.65rem; font-weight: 800; cursor: pointer; transition: all 0.2s;" title="Remove player from <%= team.name %>">✕</button>
+                                                                              </div>
                                                                          </div>
                                                                      <% }) %>
                                                                  </div>
@@ -1169,12 +1523,14 @@
                                              ↩️ Bulk Unsold (0 Selected)
                                          </button>
                                      </div>
+                                     <input type="text" id="directorySearchInput" placeholder="Search Player by Name or Form No..." style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.65rem; border-radius: 6px; font-size: 0.9rem; margin-bottom: 1rem;" oninput="filterDirectoryTable()">
                                      <div style="max-height: 52vh; overflow-y: auto;">
                                          <table class="data-table" id="playersTable">
                                              <thead>
                                                  <tr>
                                                      <th style="width: 36px; text-align: center;"><input type="checkbox" id="selectAllPlayers" onchange="toggleSelectAllPlayers(this)"></th>
-                                                     <th style="font-size: 0.72rem !important;">PLAYER NUMBER</th>
+                                                     <th style="font-size: 0.72rem !important; color: #fbbf24 !important;">REAL PLAYER ID</th>
+                                                    <th style="font-size: 0.72rem !important; color: #94a3b8 !important;">UNIQUE ID (SHORT)</th>
                                                      <th style="font-size: 0.72rem !important;">PLAYER NAME</th>
                                                      <th style="font-size: 0.72rem !important;">CATEGORY</th>
                                                      <th style="font-size: 0.72rem !important;">PLAYING ROLE</th>
@@ -1196,8 +1552,11 @@
                                                                  <input type="checkbox" disabled style="opacity: 0.25;">
                                                              <% } %>
                                                          </td>
-                                                         <td style="font-family: monospace; font-weight: bold; vertical-align: top; color: var(--accent); padding: 0.65rem 0.5rem !important;">
-                                                             #<%= player.formNo || 'N/A' %>
+                                                         <td style="font-family: monospace; font-weight: 900; vertical-align: top; color: #fbbf24; padding: 0.65rem 0.5rem !important; font-size: 0.95rem;">
+                                                             #<%= player.formNo ? String(player.formNo).trim() : (String(player.id).length > 6 ? '..' + String(player.id).slice(-5) : player.id) %>
+                                                         </td>
+                                                         <td style="font-family: monospace; font-size: 0.72rem; vertical-align: top; color: #94a3b8; padding: 0.65rem 0.5rem !important;">
+                                                             <span style="background: rgba(255,255,255,0.06); padding: 0.2rem 0.45rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);" title="Database UID: <%= player.id %>">UID: <%= String(player.id).length > 6 ? '..' + String(player.id).slice(-5) : player.id %></span>
                                                          </td>
                                                          <td style="font-weight: 700; vertical-align: top; text-align: left; padding: 0.65rem 0.5rem !important;">
                                                              <%= player.name %>
@@ -1329,6 +1688,29 @@
                                              <input type="file" name="logo" accept="image/*" onchange="previewAuctionLogo(this)" style="position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
                                          </div>
                                      </div>
+                                 </div>
+
+                                 <!-- Sponsor / Owner Logo Picker (Shows on Live Dashboard) -->
+                                 <div style="display: flex; gap: 1.25rem; align-items: center; text-align: left; padding: 0.75rem 0; border-top: 1px dashed rgba(255,255,255,0.08); border-bottom: 1px dashed rgba(255,255,255,0.08);">
+                                     <div style="display: flex; flex-direction: column; width: 130px;">
+                                         <label style="font-weight: 700; color: #fbbf24; font-size: 0.78rem; text-transform: uppercase;">Sponsor Logo</label>
+                                         <span style="font-size: 0.62rem; color: rgba(255,255,255,0.4);">Shows on Live Screen</span>
+                                     </div>
+                                     <div style="display: flex; gap: 0.85rem; align-items: center; flex: 1;">
+                                         <div style="width: 72px; height: 72px; border-radius: 8px; border: 2px dashed rgba(251,191,36,0.35); background: rgba(15, 23, 42, 0.4); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+                                             <img id="sponsorLogoPreview" src="<%= (data.auctionDetails && data.auctionDetails.sponsorLogo) ? data.auctionDetails.sponsorLogo : '/uploads/default-auction.svg' %>" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.src='/uploads/default-auction.svg'">
+                                         </div>
+                                         <div style="position: relative; overflow: hidden; display: inline-block;">
+                                             <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.85rem; border-radius: 6px; pointer-events: none; border-color: rgba(251,191,36,0.3); color: #fbbf24;">CHOOSE SPONSOR LOGO</button>
+                                             <input type="file" name="sponsorLogo" accept="image/*" onchange="previewSponsorLogo(this)" style="position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
+                                         </div>
+                                     </div>
+                                 </div>
+
+                                 <!-- Sponsor / Owner Name Row -->
+                                 <div class="form-group" style="display: flex; flex-direction: column; gap: 0.3rem; text-align: left;">
+                                     <label style="font-weight: 700; color: #fbbf24; font-size: 0.78rem; text-transform: uppercase;">Sponsor / Presenter Name (Owner)</label>
+                                     <input type="text" name="sponsorName" id="editSponsorName" class="form-control" placeholder="e.g. TATA / Owner Name" value="<%= (data.auctionDetails && data.auctionDetails.sponsorName) ? data.auctionDetails.sponsorName : '' %>" style="border-radius: 8px !important;">
                                  </div>
 
                                  <!-- Sports Type & Season Row -->
@@ -1577,10 +1959,10 @@
                                      <form id="adjustBudgetForm" class="stacked-form">
                                          <input type="hidden" name="actionType" id="budgetActionType" value="add">
                                          <div style="display: flex; gap: 0.75rem;">
-                                             <select name="teamName" id="adjustBudgetTeamSelect" required class="form-control" style="flex: 1.3; border-radius: 8px !important;">
-                                                 <option value="" disabled selected>Select Franchise</option>
+                                             <select name="teamName" id="adjustBudgetTeamSelect" required class="form-control" style="flex: 1.3; border-radius: 8px !important; background: #1a1c26; color: #ffffff;">
+                                                 <option value="" disabled selected style="background: #181a24; color: #94a3b8;">Select Franchise</option>
                                                  <% data.teams.sort((a, b) => a.name.localeCompare(b.name)).forEach(team => { %>
-                                                     <option value="<%= team.name %>"><%= team.name %></option>
+                                                     <option value="<%= team.name %>" style="background: #181a24; color: #ffffff;"><%= team.name %></option>
                                                  <% }) %>
                                              </select>
                                              <input type="number" name="amount" placeholder="Amount ($)" required class="form-control" style="flex: 1; border-radius: 8px !important;">
@@ -1640,6 +2022,165 @@
                                      <% }) %>
                                  </div>
                              </div>
+                         </div>
+                     </div>
+
+                     <!-- TAB 5: BROADCAST & STREAM LINKS -->
+                     <div id="modalTabLinks" class="modal-tab-content" style="display: none;">
+                         <div style="display: flex; flex-direction: column; gap: 1.5rem; text-align: left;">
+                             
+                             <!-- Header Banner -->
+                             <div style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(16, 185, 129, 0.08) 100%); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                                 <div>
+                                     <h3 style="margin: 0 0 0.25rem 0; color: #fff; font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                                         <span>📡</span> Broadcast, Stream & Spectator Links
+                                     </h3>
+                                     <p style="margin: 0; color: var(--text-muted); font-size: 0.8rem; line-height: 1.4;">
+                                         Official links for OBS Studio, YouTube Live streaming, war room projectors, and spectator mobile devices.
+                                     </p>
+                                 </div>
+                                 <div style="display: flex; gap: 0.6rem;">
+                                     <button type="button" onclick="copyAllStreamLinks()" class="btn btn-secondary" style="font-size: 0.78rem; font-weight: 800; border-radius: 8px; padding: 0.5rem 1rem;">
+                                         📋 Copy All Links
+                                     </button>
+                                 </div>
+                             </div>
+
+                             <!-- 3 Feature Link Cards Grid -->
+                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+                                 
+                                 <!-- CARD 1: LIVE AUCTION ONLY (Mobile & TV Responsive) -->
+                                 <div class="panel" style="background: rgba(15, 23, 42, 0.4); border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; position: relative;">
+                                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                         <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                             <span style="font-size: 1.6rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">⚡</span>
+                                             <div>
+                                                 <h4 style="margin: 0; color: #fff; font-size: 1.05rem; font-weight: 800;">Live Auction Only Screen</h4>
+                                                 <span style="color: #10b981; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Fully Responsive • Zero Distractions</span>
+                                             </div>
+                                         </div>
+                                         <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.68rem; font-weight: 800;">NEW PAGE</span>
+                                     </div>
+
+                                     <p style="margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 0.8rem; line-height: 1.45;">
+                                         Distraction-free live bidding arena for viewers, projectors, war rooms & mobile users. Shows <strong>only</strong> the live auction action (active player profile, real-time current bid, highest bidder, bid stream, team purses, and sponsor ticker).
+                                     </p>
+
+                                     <!-- URL Box with Copy & Open -->
+                                     <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: auto;">
+                                         <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Direct Link URL:</label>
+                                         <div style="display: flex; gap: 0.4rem;">
+                                             <input type="text" id="linkInputLiveAuction" readonly class="form-control" style="font-family: monospace; font-size: 0.82rem; background: #0c0f17; border-radius: 8px !important; color: #34d399; font-weight: 700;">
+                                             <button type="button" onclick="copyLinkFromInput('linkInputLiveAuction', this)" class="btn btn-success" style="padding: 0.5rem 1rem; font-size: 0.78rem; font-weight: 800; border-radius: 8px; flex-shrink: 0;">
+                                                 📋 Copy
+                                             </button>
+                                         </div>
+                                     </div>
+
+                                     <div style="display: flex; gap: 0.5rem;">
+                                         <a id="btnOpenLiveAuction" href="/live-auction" target="_blank" class="btn btn-primary" style="text-decoration: none; flex: 1; text-align: center; padding: 0.6rem; font-size: 0.8rem; font-weight: 800; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); border: none;">
+                                             ↗️ Open Live Auction Stage
+                                         </a>
+                                     </div>
+                                 </div>
+
+                                 <!-- CARD 2: YOUTUBE & OBS STREAM OVERLAY -->
+                                 <div class="panel" style="background: rgba(15, 23, 42, 0.4); border: 1.5px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; position: relative;">
+                                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                         <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                             <span style="font-size: 1.6rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">📺</span>
+                                             <div>
+                                                 <h4 style="margin: 0; color: #fff; font-size: 1.05rem; font-weight: 800;">YouTube / OBS Stream Overlay</h4>
+                                                 <span style="color: #f87171; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">OBS Studio • vMix • YouTube Live</span>
+                                             </div>
+                                         </div>
+                                         <span style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.68rem; font-weight: 800;">BROADCAST</span>
+                                     </div>
+
+                                     <p style="margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 0.8rem; line-height: 1.45;">
+                                         Transparent lower-third broadcast overlay for streaming to YouTube, Facebook, and Twitch via OBS Studio or vMix. Real-time active player graphic, radiant green bid numerals, live timer, and celebration confetti.
+                                     </p>
+
+                                     <!-- URL Box with Copy & Open -->
+                                     <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: auto;">
+                                         <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">OBS Browser Source URL:</label>
+                                         <div style="display: flex; gap: 0.4rem;">
+                                             <input type="text" id="linkInputOverlay" readonly class="form-control" style="font-family: monospace; font-size: 0.82rem; background: #0c0f17; border-radius: 8px !important; color: #f87171; font-weight: 700;">
+                                             <button type="button" onclick="copyLinkFromInput('linkInputOverlay', this)" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.78rem; font-weight: 800; border-radius: 8px; flex-shrink: 0;">
+                                                 📋 Copy
+                                             </button>
+                                         </div>
+                                     </div>
+
+                                     <div style="display: flex; gap: 0.5rem;">
+                                         <a id="btnOpenOverlay" href="/overlay" target="_blank" class="btn" style="text-decoration: none; flex: 1; text-align: center; padding: 0.6rem; font-size: 0.8rem; font-weight: 800; border-radius: 8px; background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; border: none;">
+                                             ↗️ Preview Stream Overlay
+                                         </a>
+                                     </div>
+                                 </div>
+
+                                 <!-- CARD 3: FULL SPECTATOR PORTAL (3-IN-1) -->
+                                 <div class="panel" style="background: rgba(15, 23, 42, 0.4); border: 1.5px solid rgba(251, 191, 36, 0.35); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; position: relative;">
+                                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                         <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                             <span style="font-size: 1.6rem; background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">🌐</span>
+                                             <div>
+                                                 <h4 style="margin: 0; color: #fff; font-size: 1.05rem; font-weight: 800;">Full Spectator Portal (3-in-1)</h4>
+                                                 <span style="color: #fbbf24; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Bidding + Players Database + Teams</span>
+                                             </div>
+                                         </div>
+                                         <span style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.68rem; font-weight: 800;">SPECTATOR</span>
+                                     </div>
+
+                                     <p style="margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 0.8rem; line-height: 1.45;">
+                                         The full spectator dashboard with interactive multi-slide navigation: Live Bidding Stage, Searchable Player Database, and Franchise Squads Roster Overview.
+                                     </p>
+
+                                     <!-- URL Box with Copy & Open -->
+                                     <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: auto;">
+                                         <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Public Spectator URL:</label>
+                                         <div style="display: flex; gap: 0.4rem;">
+                                             <input type="text" id="linkInputFullLive" readonly class="form-control" style="font-family: monospace; font-size: 0.82rem; background: #0c0f17; border-radius: 8px !important; color: #fbbf24; font-weight: 700;">
+                                             <button type="button" onclick="copyLinkFromInput('linkInputFullLive', this)" class="btn" style="background: rgba(251, 191, 36, 0.2); border: 1px solid rgba(251, 191, 36, 0.4); color: #fbbf24; padding: 0.5rem 1rem; font-size: 0.78rem; font-weight: 800; border-radius: 8px; flex-shrink: 0;">
+                                                 📋 Copy
+                                             </button>
+                                         </div>
+                                     </div>
+
+                                     <div style="display: flex; gap: 0.5rem;">
+                                         <a id="btnOpenFullLive" href="/live" target="_blank" class="btn" style="text-decoration: none; flex: 1; text-align: center; padding: 0.6rem; font-size: 0.8rem; font-weight: 800; border-radius: 8px; background: linear-gradient(135deg, #fbbf24, #d97706); color: #000; border: none;">
+                                             ↗️ Open Spectator Portal
+                                         </a>
+                                     </div>
+                                 </div>
+
+                             </div>
+
+                             <!-- OBS Setup Instructions Guide Box -->
+                             <div class="panel" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1.25rem 1.5rem;">
+                                 <h4 style="margin: 0 0 0.85rem 0; color: #38bdf8; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                                     <span>🛠️</span> Quick Setup Guide for OBS Studio & YouTube Live
+                                 </h4>
+                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; font-size: 0.78rem; color: rgba(255,255,255,0.75);">
+                                     <div style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                                         <strong style="color: #fff;">1. Add Browser Source:</strong><br>
+                                         In OBS Studio, click <strong>Sources (+)</strong> &gt; <strong>Browser</strong>.
+                                     </div>
+                                     <div style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                                         <strong style="color: #fff;">2. Paste URL:</strong><br>
+                                         Paste the <strong>YouTube Overlay Link</strong> in the URL field.
+                                     </div>
+                                     <div style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                                         <strong style="color: #fff;">3. Set Dimensions:</strong><br>
+                                         Width: <span style="color:#fbbf24; font-weight:800;">1920</span> • Height: <span style="color:#fbbf24; font-weight:800;">1080</span> • FPS: <span style="color:#fbbf24; font-weight:800;">60</span>.
+                                     </div>
+                                     <div style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                                         <strong style="color: #fff;">4. Auto Transparency:</strong><br>
+                                         The background is 100% transparent. No chroma key required.
+                                     </div>
+                                 </div>
+                             </div>
+
                          </div>
                      </div>
 
@@ -1720,21 +2261,145 @@
              }
          </style>
 
-         <!-- Client Script for Modal Navigation -->
-         <script>
-             function switchModalTab(tab) {
-                 localStorage.setItem('keepDataModalTab', tab);
-                 document.querySelectorAll('.modal-tab-content').forEach(el => el.style.display = 'none');
-                 document.querySelectorAll('.modal-tab-btn').forEach(btn => {
-                     btn.classList.remove('active');
-                 });
- 
-                 document.getElementById('modalTab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
-                 const btn = document.querySelector(`[onclick="switchModalTab('${tab}')"]`);
-                 if (btn) btn.classList.add('active');
-             }
-             window.switchModalTab = switchModalTab;
-         </script>
+        <!-- Client Script for Modal Navigation & Broadcast Links -->
+        <script>
+            function switchModalTab(tab) {
+                localStorage.setItem('keepDataModalTab', tab);
+                document.querySelectorAll('.modal-tab-content').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.modal-tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                const target = document.getElementById('modalTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+                if (target) target.style.display = 'block';
+                const btn = document.querySelector(`[onclick="switchModalTab('${tab}')"]`);
+                if (btn) btn.classList.add('active');
+
+                if (tab === 'links' && typeof window.initStreamLinkInputs === 'function') {
+                    window.initStreamLinkInputs();
+                }
+            }
+            window.switchModalTab = switchModalTab;
+
+            window.initStreamLinkInputs = function() {
+                try {
+                    const origin = window.location.origin;
+                    const inpLive = document.getElementById('linkInputLiveAuction');
+                    const inpOverlay = document.getElementById('linkInputOverlay');
+                    const inpFull = document.getElementById('linkInputFullLive');
+                    if (inpLive) inpLive.value = origin + '/live-auction';
+                    if (inpOverlay) inpOverlay.value = origin + '/overlay';
+                    if (inpFull) inpFull.value = origin + '/live';
+                } catch (e) {
+                    console.error('Error initStreamLinkInputs:', e);
+                }
+            };
+
+            window.copyLinkFromInput = function(inputId, btn) {
+                const inp = document.getElementById(inputId);
+                if (!inp) return;
+                inp.select();
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(inp.value).then(() => {
+                        const orig = btn.innerHTML;
+                        btn.innerHTML = '✅ Copied!';
+                        btn.style.filter = 'brightness(1.2)';
+                        setTimeout(() => {
+                            btn.innerHTML = orig;
+                            btn.style.filter = '';
+                        }, 2000);
+                    }).catch(() => fallbackCopy(inp.value, btn));
+                } else {
+                    fallbackCopy(inp.value, btn);
+                }
+            };
+
+            function fallbackCopy(text, btn) {
+                try {
+                    const temp = document.createElement('textarea');
+                    temp.value = text;
+                    temp.style.position = 'fixed';
+                    temp.style.opacity = '0';
+                    document.body.appendChild(temp);
+                    temp.focus();
+                    temp.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(temp);
+                    if (btn) {
+                        const orig = btn.innerHTML;
+                        btn.innerHTML = '✅ Copied!';
+                        setTimeout(() => btn.innerHTML = orig, 2000);
+                    }
+                } catch (e) {
+                    prompt('Copy this link:', text);
+                }
+            }
+
+            window.copyStreamLinkDirect = function(path, btn) {
+                const fullUrl = window.location.origin + path;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(fullUrl).then(() => {
+                        const orig = btn.innerHTML;
+                        btn.innerHTML = '✅';
+                        setTimeout(() => btn.innerHTML = orig, 1800);
+                    }).catch(() => fallbackCopyDirect(fullUrl, btn));
+                } else {
+                    fallbackCopyDirect(fullUrl, btn);
+                }
+            };
+
+            function fallbackCopyDirect(text, btn) {
+                try {
+                    const temp = document.createElement('textarea');
+                    temp.value = text;
+                    temp.style.position = 'fixed';
+                    temp.style.opacity = '0';
+                    document.body.appendChild(temp);
+                    temp.focus();
+                    temp.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(temp);
+                    if (btn) {
+                        const orig = btn.innerHTML;
+                        btn.innerHTML = '✅';
+                        setTimeout(() => btn.innerHTML = orig, 1800);
+                    }
+                } catch (e) {
+                    prompt('Copy this link:', text);
+                }
+            }
+
+            window.copyAllStreamLinks = function() {
+                const origin = window.location.origin;
+                const text = `🏆 LIVE AUCTION STREAM & SPECTATOR LINKS:\n\n⚡ Live Auction Stage (Distraction-Free): ${origin}/live-auction\n📺 YouTube / OBS Stream Overlay (Transparent 1080p): ${origin}/overlay\n🌐 Spectator Interactive Portal (3-in-1): ${origin}/live`;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert('All broadcast & spectator links copied to clipboard!');
+                    }).catch(() => fallbackCopy(text));
+                } else {
+                    fallbackCopy(text);
+                }
+            };
+
+            // Auto-populate link inputs and support ?tab= URL param
+            function checkInitialTab() {
+                if (typeof window.initStreamLinkInputs === 'function') {
+                    window.initStreamLinkInputs();
+                }
+                try {
+                    const params = new URLSearchParams(window.location.search);
+                    const tab = params.get('tab');
+                    if (tab && typeof window.switchModalTab === 'function') {
+                        window.switchModalTab(tab);
+                    }
+                } catch(e) {}
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', checkInitialTab);
+            } else {
+                checkInitialTab();
+            }
+        </script>
 
      </main>
  </div>
@@ -1868,7 +2533,7 @@ window.openSoldConfirmationModal = function(e) {
         if (teamGrid) teamGrid.style.display = 'none';
         
         // Ensure no settings are accidentally shown via URL trick if no perm
-        <% if (!(user && (user.role === 'superadmin' || (user.permissions && user.permissions.includes('settings'))))) { %>
+        <% if (!(user && (user.role === 'superadmin' || user.username === 'admin' || (user.permissions && user.permissions.includes('settings'))))) { %>
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('openSettings') || typeof showSettingsInline !== 'undefined') {
                 document.body.innerHTML = "<h2 style='color:white;text-align:center;margin-top:20vh;'>Access Denied to Settings</h2>";
@@ -1890,6 +2555,231 @@ window.openSoldConfirmationModal = function(e) {
         }
     });
 </script>
+
+    <!-- DEDICATED ADMIN SPONSOR LOGO MODAL -->
+    <div id="adminSponsorModal" style="display: none; position: fixed; inset: 0; background: rgba(7, 11, 20, 0.9); z-index: 10000; backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 1.5rem;">
+        <div class="panel animate-fade-in" style="width: 520px; max-width: 100%; background: #11131a; border-radius: 14px; border: 1px solid rgba(251, 191, 36, 0.3); box-shadow: 0 25px 60px rgba(0,0,0,0.7); overflow: hidden; display: flex; flex-direction: column;">
+            
+            <!-- Modal Header -->
+            <div style="background: rgba(251, 191, 36, 0.08); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(251, 191, 36, 0.2);">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.3rem;">🏷️</span>
+                    <div>
+                        <h3 style="margin: 0; color: #fbbf24; font-size: 1.1rem; font-weight: 900; letter-spacing: 0.5px;">TOURNAMENT SPONSOR / OWNER</h3>
+                        <div style="font-size: 0.68rem; color: rgba(255,255,255,0.5);">Upload logo to display live across viewer dashboard and big screen</div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeAdminSponsorModal()" style="background: transparent; border: none; color: rgba(255,255,255,0.6); font-size: 1.4rem; cursor: pointer; line-height: 1;">✕</button>
+            </div>
+
+            <!-- Modal Body Form -->
+            <form id="adminSeparateSponsorForm" onsubmit="handleAdminSponsorSubmit(event)" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
+                
+                <!-- Active Auction Badge -->
+                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); padding: 0.5rem 0.85rem; border-radius: 8px;">
+                    <span style="font-size: 0.7rem; color: #38bdf8; font-weight: 800; text-transform: uppercase;">ACTIVE TOURNAMENT:</span>
+                    <span style="font-size: 0.78rem; color: #fff; font-weight: 800;"><%= (data.auctionDetails && data.auctionDetails.name) ? data.auctionDetails.name : 'Active Auction' %></span>
+                </div>
+
+                <!-- Sponsor Logo Preview & Upload -->
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="font-size: 0.75rem; color: #fbbf24; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Sponsor / Owner Logo Image</label>
+                    
+                    <div style="display: flex; gap: 1rem; align-items: center; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 10px; border: 1px dashed rgba(255,255,255,0.15);">
+                        <div style="width: 100px; height: 80px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px;">
+                            <img id="adminSeparateSponsorPreviewImg" src="<%= (data.auctionDetails && data.auctionDetails.sponsorLogo) ? data.auctionDetails.sponsorLogo : '/uploads/default-auction.svg' %>" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                            <div style="position: relative; overflow: hidden; display: inline-block;">
+                                <button type="button" class="btn" style="background: rgba(251, 191, 36, 0.2); border: 1px solid rgba(251, 191, 36, 0.4); color: #fbbf24; font-weight: 800; font-size: 0.78rem; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; width: 100%;">
+                                    📁 CHOOSE NEW LOGO
+                                </button>
+                                <input type="file" id="adminSeparateSponsorFileInput" name="sponsorLogo" accept="image/*" onchange="previewAdminSeparateSponsor(this)" style="position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
+                            </div>
+                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.4);">Supported: PNG (Transparent), JPG, WebP, SVG</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sponsor / Owner Name Field -->
+                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label style="font-size: 0.75rem; color: rgba(255,255,255,0.7); font-weight: 800; text-transform: uppercase;">Sponsor / Presenter Name (Owner)</label>
+                    <input type="text" id="adminSeparateSponsorNameInput" name="sponsorName" placeholder="e.g. TATA, Dream11, or Owner Name" value="<%= (data.auctionDetails && data.auctionDetails.sponsorName) ? data.auctionDetails.sponsorName : '' %>" style="background: #1a1c26; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.9rem; font-weight: 700; padding: 0.65rem 0.85rem; outline: none;">
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                    <button type="button" onclick="removeAdminSponsorLogo()" class="btn" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 0.75rem; font-weight: 800; padding: 0.5rem 0.85rem; border-radius: 6px; cursor: pointer;">
+                        🗑️ Remove Logo
+                    </button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" onclick="closeAdminSponsorModal()" class="btn" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.6); font-size: 0.8rem; font-weight: 700; padding: 0.5rem 1rem; border-radius: 6px; border: none; cursor: pointer;">
+                            Cancel
+                        </button>
+                        <button type="submit" id="adminSponsorSaveBtn" class="btn" style="background: #fbbf24; color: #000; font-size: 0.82rem; font-weight: 900; padding: 0.5rem 1.4rem; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(251,191,36,0.3);">
+                            💾 Save & Apply Live
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT FOR SEPARATE SPONSOR MODAL -->
+    <script>
+        function openAdminSponsorModal() {
+            const modal = document.getElementById('adminSponsorModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeAdminSponsorModal() {
+            const modal = document.getElementById('adminSponsorModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function previewAdminSeparateSponsor(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('adminSeparateSponsorPreviewImg');
+                    if (img) img.src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function handleAdminSponsorSubmit(e) {
+            e.preventDefault();
+            const saveBtn = document.getElementById('adminSponsorSaveBtn');
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+            
+            const form = document.getElementById('adminSeparateSponsorForm');
+            const formData = new FormData(form);
+
+            try {
+                const res = await fetch('/admin/update-sponsor', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+                if (result.success) {
+                    if (typeof showToast === 'function') {
+                        showToast('⚡ Sponsor Logo & Owner details updated live!', 'success');
+                    } else {
+                        alert('Sponsor Logo & Owner details updated live!');
+                    }
+                    closeAdminSponsorModal();
+                    setTimeout(() => window.location.reload(), 600);
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to update sponsor'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Network error updating sponsor: ' + err.message);
+            } finally {
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save & Apply Live'; }
+            }
+        }
+
+        async function removeAdminSponsorLogo() {
+            if (!confirm('Are you sure you want to remove the Sponsor Logo?')) return;
+            const formData = new FormData();
+            formData.append('removeLogo', 'true');
+            formData.append('sponsorName', document.getElementById('adminSeparateSponsorNameInput').value || '');
+
+            try {
+                const res = await fetch('/admin/update-sponsor', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+                if (result.success) {
+                    document.getElementById('adminSeparateSponsorPreviewImg').src = '/uploads/default-auction.svg';
+                    if (typeof showToast === 'function') {
+                        showToast('Sponsor logo removed.', 'info');
+                    }
+                    closeAdminSponsorModal();
+                    setTimeout(() => window.location.reload(), 600);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error removing sponsor logo: ' + err.message);
+            }
+        }
+    
+    window.removePlayerFromTeam = async function(playerId, playerName, teamName, soldPrice) {
+        if (!playerId) return;
+        const priceFormatted = soldPrice ? (typeof formatCurrencyLocal === 'function' ? formatCurrencyLocal(soldPrice) : '₹' + Number(soldPrice).toLocaleString()) : 'the sold amount';
+        const confirmMsg = `Are you sure you want to remove ${playerName || 'this player'} from ${teamName || 'this team'}?\n\nThis will refund ${priceFormatted} back to ${teamName || 'the team'}'s purse and return the player to the available pool.`;
+        
+        if (!confirm(confirmMsg)) return;
+
+        // Optimistic local cache update for instant UI feedback
+        if (window.currentPlayersDataCache) {
+            const p = window.currentPlayersDataCache.find(x => String(x.id).trim() === String(playerId).trim() || (x.formNo && String(x.formNo).trim() === String(playerId).trim()));
+            if (p) {
+                p.status = 'available';
+                p.soldTo = null;
+                p.soldPrice = null;
+            }
+        }
+        if (window.currentTeamsCache) {
+            const t = window.currentTeamsCache.find(x => x.name === teamName);
+            if (t) {
+                t.budget = parseInt(t.budget || 0) + parseInt(soldPrice || 0);
+            }
+        }
+        if (typeof openTeamDetailsModal === 'function') {
+            const modal = document.getElementById('teamDetailsModalOverlay');
+            if (modal && modal.style.display !== 'none') {
+                openTeamDetailsModal(teamName);
+            }
+        }
+
+        try {
+            const res = await fetch('/admin/reset-player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (typeof socket !== 'undefined') {
+                    socket.emit('adminDataAdded');
+                    socket.emit('removePlayerFromTeam', { playerId });
+                }
+                if (typeof showToast === 'function') {
+                    showToast(`Removed ${playerName || 'player'} from ${teamName}`, 'success');
+                }
+                const modal = document.getElementById('teamDetailsModalOverlay');
+                if (modal && modal.style.display !== 'none' && typeof openTeamDetailsModal === 'function') {
+                    openTeamDetailsModal(teamName);
+                }
+                return;
+            }
+        } catch (err) {
+            console.warn('HTTP reset-player error, falling back to socket:', err);
+        }
+
+        if (typeof socket !== 'undefined') {
+            socket.emit('removePlayerFromTeam', { playerId });
+            if (typeof showToast === 'function') {
+                showToast(`Removed ${playerName || 'player'} from ${teamName}`, 'success');
+            }
+        }
+    };
+
+    window.handleRemovePlayerClick = function(btn) {
+        if (!btn) return;
+        const playerId = btn.getAttribute('data-player-id');
+        const playerName = btn.getAttribute('data-player-name') || 'player';
+        const teamName = btn.getAttribute('data-team-name') || 'team';
+        const soldPrice = btn.getAttribute('data-sold-price') || '0';
+        window.removePlayerFromTeam(playerId, playerName, teamName, soldPrice);
+    };
+
+</script>
+
 </body>
 
  </html>

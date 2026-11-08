@@ -161,7 +161,7 @@ module.exports = (io) => {
         }
 
         io.emit('auctionEnd', data.auctionState);
-        io.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories });
+        io.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories, auctionDetails: data.auctionDetails, auctionsList: data.auctionsList });
         broadcastAuctionUpdate();
 
         // Wait 4 seconds, then auto-load the next available player
@@ -176,12 +176,12 @@ module.exports = (io) => {
 
                 const nextCatId = nextPlayer.category_id;
                 const nextCategory = nextCatId ? data.categories.find(c => c.id === nextCatId) : null;
-                let startingBid = nextPlayer.basePrice || 0;
+                let startingBid = parseInt(nextPlayer.basePrice, 10) || 0;
                 if (startingBid === 0) {
-                    startingBid = data.auctionDetails && data.auctionDetails.baseBid ? parseFloat(data.auctionDetails.baseBid) : 1000;
+                    startingBid = data.auctionDetails && data.auctionDetails.baseBid ? parseInt(data.auctionDetails.baseBid, 10) : 1000;
                 }
                 if (nextCategory && nextCategory.baseBid && nextCategory.baseBid > 0) {
-                    startingBid = Math.max(startingBid, nextCategory.baseBid);
+                    startingBid = Math.max(startingBid, parseInt(nextCategory.baseBid, 10));
                 }
 
                 data.auctionState.currentBid = startingBid;
@@ -214,14 +214,14 @@ module.exports = (io) => {
                 data.auctionState.status = 'finished';
 
                 broadcastAuctionUpdate();
-                io.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories });
+                io.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories, auctionDetails: data.auctionDetails, auctionsList: data.auctionsList });
             }
-        }, 4000);
+        }, 6500);
     };
 
     io.on('connection', (socket) => {
         socket.emit('auctionUpdate', data.auctionState);
-        socket.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories });
+        socket.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories, auctionDetails: data.auctionDetails, auctionsList: data.auctionsList });
 
         socket.on('startAuction', ({ playerId }) => {
             const player = data.players.find(p => p.id === playerId);
@@ -231,12 +231,12 @@ module.exports = (io) => {
 
                 const currentCatId = player.category_id;
                 const category = currentCatId ? data.categories.find(c => c.id === currentCatId) : null;
-                let startingBid = player.basePrice || 0;
+                let startingBid = parseInt(player.basePrice, 10) || 0;
                 if (startingBid === 0) {
-                    startingBid = data.auctionDetails && data.auctionDetails.baseBid ? parseFloat(data.auctionDetails.baseBid) : 1000;
+                    startingBid = data.auctionDetails && data.auctionDetails.baseBid ? parseInt(data.auctionDetails.baseBid, 10) : 1000;
                 }
                 if (category && category.baseBid && category.baseBid > 0) {
-                    startingBid = Math.max(startingBid, category.baseBid);
+                    startingBid = Math.max(startingBid, parseInt(category.baseBid, 10));
                 }
 
                 data.auctionState.currentBid = startingBid;
@@ -247,6 +247,7 @@ module.exports = (io) => {
                 data.auctionState.isPaused = false;
                 data.auctionState.timerOff = false;
 
+                data.saveStateToRedis();
                 broadcastAuctionUpdate();
 
                 if (timerInterval) clearInterval(timerInterval);
@@ -274,21 +275,30 @@ module.exports = (io) => {
                 return;
             }
 
+            const currentBid = parseInt(data.auctionState.currentBid, 10) || 0;
+            const parsedBidAmount = parseInt(bidAmount, 10);
+            if (isNaN(parsedBidAmount) || parsedBidAmount <= 0) {
+                socket.emit('bidError', 'Invalid bid amount!');
+                return;
+            }
+
             const currentCatId = data.auctionState.currentPlayer ? data.auctionState.currentPlayer.category_id : null;
             const category = currentCatId ? data.categories.find(c => c.id === currentCatId) : null;
             const increment = (category && category.increment && category.increment > 0) 
-                ? category.increment 
-                : (data.auctionDetails && data.auctionDetails.bidIncreaseBy ? parseFloat(data.auctionDetails.bidIncreaseBy) : 500);
+                ? parseInt(category.increment, 10) 
+                : (data.auctionDetails && data.auctionDetails.bidIncreaseBy ? parseInt(data.auctionDetails.bidIncreaseBy, 10) : 500);
 
             // Starting bid and increment check
             let minRequiredBid = 0;
             if (!data.auctionState.highestBidder) {
-                minRequiredBid = Math.max((data.auctionState.currentPlayer && data.auctionState.currentPlayer.basePrice) || 0, (category && category.baseBid) || 0);
+                const playerBase = (data.auctionState.currentPlayer && parseInt(data.auctionState.currentPlayer.basePrice, 10)) || 0;
+                const catBase = (category && parseInt(category.baseBid, 10)) || 0;
+                minRequiredBid = Math.max(playerBase, catBase, currentBid);
             } else {
-                minRequiredBid = data.auctionState.currentBid + increment;
+                minRequiredBid = currentBid + increment;
             }
 
-            if (bidAmount < minRequiredBid) {
+            if (parsedBidAmount < minRequiredBid) {
                 socket.emit('bidError', `Bid amount must be at least ${minRequiredBid.toLocaleString()}!`);
                 return;
             }
@@ -299,9 +309,9 @@ module.exports = (io) => {
                     socket.emit('bidError', `Team "${teamName}" not found!`);
                     return;
                 }
-                if (team.budget < bidAmount) {
+                if (team.budget < parsedBidAmount) {
                     const unit = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
-                    socket.emit('bidError', `${teamName} does not have enough budget (Remaining: ${unit}${team.budget.toLocaleString()}, Attempted Bid: ${unit}${bidAmount.toLocaleString()})!`);
+                    socket.emit('bidError', `${teamName} does not have enough budget (Remaining: ${unit}${team.budget.toLocaleString()}, Attempted Bid: ${unit}${parsedBidAmount.toLocaleString()})!`);
                     return;
                 }
 
@@ -366,9 +376,9 @@ module.exports = (io) => {
                     return;
                 }
 
-                if (purseLeft - bidAmount < reservePoint) {
+                if (purseLeft - parsedBidAmount < reservePoint) {
                     const unit = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
-                    socket.emit('bidError', `Bidding ${unit}${bidAmount.toLocaleString()} leaves ${teamName} with ${unit}${(purseLeft - bidAmount).toLocaleString()} budget, which is less than the required reserve of ${unit}${reservePoint.toLocaleString()} to buy remaining category/normal players!`);
+                    socket.emit('bidError', `Bidding ${unit}${parsedBidAmount.toLocaleString()} leaves ${teamName} with ${unit}${(purseLeft - parsedBidAmount).toLocaleString()} budget, which is less than the required reserve of ${unit}${reservePoint.toLocaleString()} to buy remaining category/normal players!`);
                     return;
                 }
 
@@ -388,7 +398,7 @@ module.exports = (io) => {
                         }
                     }
                     // Highest bid per player constraint
-                    if (category.highestBidPerPlayer && category.highestBidPerPlayer > 0 && bidAmount > category.highestBidPerPlayer) {
+                    if (category.highestBidPerPlayer && category.highestBidPerPlayer > 0 && parsedBidAmount > category.highestBidPerPlayer) {
                         const unit = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
                         socket.emit('bidError', `Bid exceeds the maximum allowed bid per player for the ${category.name} category (${unit}${category.highestBidPerPlayer.toLocaleString()})!`);
                         return;
@@ -397,7 +407,7 @@ module.exports = (io) => {
                     if (category.categoryHighestBidAll && category.categoryHighestBidAll > 0) {
                         const teamPlayersInCat = teamPlayers.filter(p => p.category_id === currentCatId);
                         const spentInCat = teamPlayersInCat.reduce((sum, p) => sum + (p.soldPrice || 0), 0);
-                        if (spentInCat + bidAmount > category.categoryHighestBidAll) {
+                        if (spentInCat + parsedBidAmount > category.categoryHighestBidAll) {
                             const unit = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
                             socket.emit('bidError', `${teamName} exceeds the total budget limit for the ${category.name} category (${unit}${category.categoryHighestBidAll.toLocaleString()})!`);
                             return;
@@ -407,12 +417,12 @@ module.exports = (io) => {
             }
 
             // Prevent bids from going below the player's base price
-            let minBase = data.auctionState.currentPlayer ? data.auctionState.currentPlayer.basePrice : 0;
+            let minBase = data.auctionState.currentPlayer ? (parseInt(data.auctionState.currentPlayer.basePrice, 10) || 0) : 0;
             if (category && category.baseBid && category.baseBid > 0) {
-                minBase = category.baseBid;
+                minBase = parseInt(category.baseBid, 10);
             }
 
-            if (data.auctionState.currentPlayer && bidAmount < minBase) {
+            if (data.auctionState.currentPlayer && parsedBidAmount < minBase) {
                 const unit = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
                 socket.emit('bidError', `Bid amount cannot be less than the base price (${unit}${minBase.toLocaleString()})!`);
                 return;
@@ -422,10 +432,10 @@ module.exports = (io) => {
             if (!data.auctionState.bidHistory) data.auctionState.bidHistory = [];
             data.auctionState.bidHistory.push({
                 teamName: data.auctionState.highestBidder,
-                amount: data.auctionState.currentBid
+                amount: currentBid
             });
 
-            data.auctionState.currentBid = bidAmount;
+            data.auctionState.currentBid = parsedBidAmount;
             data.auctionState.highestBidder = teamName || null;
             data.auctionState.timer = 30; 
 
@@ -481,12 +491,13 @@ module.exports = (io) => {
             }
         });
 
-        socket.on('undoBid', () => {
+        socket.on('undoBid', async () => {
             if (data.auctionState.status === 'active' && data.auctionState.bidHistory && data.auctionState.bidHistory.length > 0) {
                 const lastBid = data.auctionState.bidHistory.pop();
-                data.auctionState.currentBid = lastBid.amount;
+                data.auctionState.currentBid = parseInt(lastBid.amount, 10) || 0;
                 data.auctionState.highestBidder = lastBid.teamName;
                 data.auctionState.timer = 30;
+                await data.saveStateToRedis();
                 io.emit('bidUpdate', {
                     currentBid: data.auctionState.currentBid,
                     highestBidder: data.auctionState.highestBidder
@@ -512,8 +523,23 @@ module.exports = (io) => {
 
         socket.on('adminDataAdded', async () => {
             await data.syncWithDB();
-            io.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories });
+            io.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories, auctionDetails: data.auctionDetails, auctionsList: data.auctionsList });
             broadcastAuctionUpdate();
+        });
+
+        socket.on('removePlayerFromTeam', async ({ playerId }) => {
+            try {
+                if (playerId) {
+                    console.log(`[Socket] removePlayerFromTeam received for player ${playerId}`);
+                    await data.resetPlayer(playerId);
+                    await data.syncWithDB();
+                    io.emit('dataUpdate', { teams: data.teams, players: data.players, categories: data.categories, auctionDetails: data.auctionDetails, auctionsList: data.auctionsList });
+                    broadcastAuctionUpdate();
+                    console.log(`[Socket] removePlayerFromTeam completed for player ${playerId}`);
+                }
+            } catch (err) {
+                console.error('[Socket] Error in removePlayerFromTeam:', err);
+            }
         });
     });
 };

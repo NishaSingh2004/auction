@@ -3,6 +3,7 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 const socketHandler = require('./sockets');
+const data = require('./models/data');
 
 const app = express();
 const server = http.createServer(app);
@@ -23,6 +24,25 @@ app.use((req, res, next) => {
             const parts = cookie.split('=');
             req.cookies[parts[0].trim()] = decodeURIComponent(parts[1]);
         });
+    }
+    next();
+});
+
+let vercelInitPromise = null;
+app.use(async (req, res, next) => {
+    if (process.env.VERCEL) {
+        if (!vercelInitPromise) {
+            vercelInitPromise = data.init().catch(err => {
+                console.error('[Vercel DB Init Error]:', err);
+                vercelInitPromise = null;
+                throw err;
+            });
+        }
+        try {
+            await vercelInitPromise;
+        } catch (e) {
+            return res.status(500).send('Database initialization error: ' + e.message);
+        }
     }
     next();
 });
@@ -48,11 +68,10 @@ app.use('/user', userRouter);
 socketHandler(io);
 
 const PORT = process.env.PORT || 3000;
-const data = require('./models/data');
 
 data.init().then(() => {
     if (!process.env.VERCEL) {
-        server.listen(PORT, () => {
+        server.listen(PORT, '0.0.0.0', () => {
             console.log(`Server is running on http://localhost:${PORT}`);
         });
     }

@@ -2,280 +2,701 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Superadmin Control Center - Elite Auction</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-base: #070b14;
-            --bg-panel: #11131a;
+            --bg-panel: #11141f;
+            --bg-card: #151928;
+            --bg-card-hover: #1a2034;
             --primary: #fbbf24;
             --primary-hover: #f59e0b;
             --accent: #3b82f6;
+            --success: #10b981;
             --danger: #ef4444;
             --text: #ffffff;
             --text-dim: rgba(255, 255, 255, 0.6);
-            --border: rgba(255, 255, 255, 0.05);
-            --glass: rgba(17, 19, 26, 0.8);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-active: rgba(251, 191, 36, 0.4);
+            --glass: rgba(17, 20, 31, 0.85);
         }
-        body {
+
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }
+
+        body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: var(--bg-base);
             color: var(--text);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(251, 191, 36, 0.03), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.03), transparent 25%);
-        }
-        .sidebar {
-            width: 280px;
-            background: var(--glass);
-            border-right: 1px solid var(--border);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            padding: 2.5rem 1.5rem;
-            backdrop-filter: blur(10px);
-            z-index: 10;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(251, 191, 36, 0.04), transparent 30%),
+                radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.04), transparent 30%);
         }
-        .main-content {
-            flex: 1;
-            padding: 3rem;
-            overflow-y: auto;
-            position: relative;
-        }
-        h1 {
-            font-size: 1.6rem;
-            font-weight: 900;
-            margin: 0 0 2.5rem 0;
-            background: linear-gradient(135deg, #fbbf24, #f59e0b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+
+        /* Top Header Navigation */
+        .sa-topbar {
+            height: 64px;
+            background: #0d101a;
+            border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: space-between;
+            padding: 0 1.75rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
         }
-        .nav-item {
-            color: var(--text-dim);
-            text-decoration: none;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
+
+        .sa-brand {
             display: flex;
             align-items: center;
             gap: 0.75rem;
         }
-        .nav-item:hover, .nav-item.active {
+
+        .sa-brand-crown {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.05));
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.15);
+        }
+
+        .sa-title {
+            font-size: 1.15rem;
+            font-weight: 900;
+            letter-spacing: 1px;
             color: #fff;
-            background: rgba(255,255,255,0.05);
-        }
-        .card {
-            background: var(--bg-panel);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            position: relative;
-            overflow: hidden;
-        }
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, var(--primary), transparent);
-            opacity: 0.5;
-        }
-        .btn {
-            background: var(--primary);
-            color: #000;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            font-weight: 800;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
             text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
         }
-        .btn:hover {
-            transform: translateY(-2px);
+
+        .sa-subtitle {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .sa-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sa-nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .sa-nav-btn-primary {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1));
+            color: #fbbf24;
+            border-color: rgba(251, 191, 36, 0.35);
+        }
+
+        .sa-nav-btn-primary:hover {
+            background: #fbbf24;
+            color: #000;
             box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
-            background: var(--primary-hover);
+            transform: translateY(-1px);
         }
-        .btn-danger {
+
+        .sa-nav-btn-secondary {
+            background: rgba(255, 255, 255, 0.04);
+            color: rgba(255, 255, 255, 0.8);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .sa-nav-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .sa-nav-btn-danger {
             background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.25);
         }
-        .btn-danger:hover {
-            background: var(--danger);
+
+        .sa-nav-btn-danger:hover {
+            background: #ef4444;
             color: #fff;
             box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
-        table {
+
+        /* Main Container */
+        .sa-container {
+            flex: 1;
+            max-width: 1400px;
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-        th, td {
-            padding: 1.25rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-        th {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            color: var(--text-dim);
-            letter-spacing: 1px;
-            font-weight: 800;
-        }
-        td {
-            font-size: 0.9rem;
-        }
-        .checkbox-group {
+            margin: 0 auto;
+            padding: 2rem 1.75rem 4rem 1.75rem;
             display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 2rem;
         }
-        .checkbox-label {
+
+        /* KPI Metric Cards */
+        .sa-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .sa-kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            transition: all 0.2s;
+        }
+
+        .sa-kpi-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        .sa-kpi-label {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sa-kpi-value {
+            font-size: 1.85rem;
+            font-weight: 900;
+            color: #fff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            line-height: 1.2;
+        }
+
+        .sa-kpi-sub {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 0.2rem;
+        }
+
+        /* Content Card Panels */
+        .sa-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.75rem;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+
+        .sa-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .sa-card-title {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: 0.5px;
             display: flex;
             align-items: center;
-            gap: 0.4rem;
-            font-size: 0.8rem;
+            gap: 0.6rem;
+        }
+
+        .sa-card-desc {
+            font-size: 0.82rem;
             color: var(--text-dim);
-            cursor: pointer;
-            transition: color 0.2s;
-            background: rgba(0,0,0,0.3);
-            padding: 0.4rem 0.8rem;
-            border-radius: 6px;
-            border: 1px solid var(--border);
+            margin-top: 0.25rem;
         }
-        .checkbox-label:hover {
-            color: #fff;
-            border-color: rgba(255,255,255,0.2);
-        }
-        input[type="checkbox"] {
-            accent-color: var(--primary);
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-        }
+
+        /* Form Inputs */
         .form-input {
             width: 100%;
-            padding: 0.85rem 1rem;
-            background: rgba(0,0,0,0.5);
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.4);
             border: 1px solid var(--border);
             border-radius: 8px;
             color: #fff;
             font-family: inherit;
             font-size: 0.9rem;
-            transition: border-color 0.2s;
+            transition: all 0.2s;
         }
+
         .form-input:focus {
             outline: none;
             border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
+            background: rgba(0, 0, 0, 0.6);
         }
-        .role-badge {
-            background: rgba(59,130,246,0.1);
-            color: var(--accent);
-            padding: 0.3rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 800;
+
+        .btn-gold {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #000;
+            font-weight: 900;
+            font-size: 0.85rem;
+            padding: 0.65rem 1.4rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.35);
+        }
+
+        /* RBAC Table */
+        .sa-table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sa-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .sa-table th {
+            padding: 1rem;
+            color: var(--text-dim);
+            font-size: 0.72rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border: 1px solid rgba(59,130,246,0.2);
+            font-weight: 800;
+            letter-spacing: 1px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sa-table td {
+            padding: 1.15rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: middle;
+        }
+
+        .sa-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .admin-user-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #60a5fa;
+        }
+
+        .perm-checkbox-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .perm-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.6);
+            background: rgba(0, 0, 0, 0.35);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .perm-pill:hover {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .perm-pill.active {
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+            border-color: rgba(251, 191, 36, 0.3);
+        }
+
+        .perm-pill input {
+            accent-color: #fbbf24;
+            cursor: pointer;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .sa-topbar {
+                height: auto;
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                gap: 0.75rem;
+                align-items: flex-start;
+            }
+            .sa-nav-links {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            }
+            .sa-container {
+                padding: 1.25rem 1rem 3rem 1rem;
+                gap: 1.25rem;
+            }
+            .sa-card {
+                padding: 1.25rem;
+            }
+            #superadminSponsorForm {
+                grid-template-columns: 1fr !important;
+                gap: 1.25rem !important;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <h1><span>👑</span> SUPERADMIN</h1>
+    <!-- Topbar Navigation -->
+    <header class="sa-topbar">
+        <div class="sa-brand">
+            <div class="sa-brand-crown">👑</div>
+            <div>
+                <div class="sa-title">SUPERADMIN CONTROL CENTER</div>
+                <div class="sa-subtitle"><%= (data.auctionDetails && data.auctionDetails.name) ? data.auctionDetails.name : 'ELITE AUCTION SYSTEM' %></div>
+            </div>
+        </div>
+
+        <nav class="sa-nav-links">
+            <a href="/overlay" target="_blank" class="sa-nav-btn" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35);" title="YouTube / OBS Transparent Broadcast Overlay (1920x1080)">
+                <span>📺</span> Overlay
+            </a>
+            <a href="/live-auction" target="_blank" class="sa-nav-btn" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);" title="Live Auction Only Screen (Fully Responsive)">
+                <span>⚡</span> Live Auction
+            </a>
+            <a href="/admin/dashboard" class="sa-nav-btn sa-nav-btn-primary" title="Switch to Admin Live Console">
+                <span>⚡</span> Enter Live Console
+            </a>
+            <a href="/superadmin/settings" class="sa-nav-btn sa-nav-btn-secondary" title="Global Auction Settings">
+                <span>⚙️</span> Auction Settings
+            </a>
+            <a href="/logout" class="sa-nav-btn sa-nav-btn-danger" title="Logout Superadmin">
+                <span>🚪</span> Logout
+            </a>
+        </nav>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="sa-container">
         
-        <div style="margin-bottom: 2rem;">
-            <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-dim); font-weight: 800; letter-spacing: 1px; margin-bottom: 1rem; padding-left: 1rem;">Navigation</div>
-            <a href="#admins" class="nav-item active"><span>🛡️</span> Access Control</a>
-            <a href="/superadmin/settings" class="nav-item"><span>⚙️</span> Global Settings</a>
-        </div>
+        <!-- Metric Cards -->
+        <div class="sa-kpi-grid">
+            <div class="sa-kpi-card" style="border-left: 3px solid #fbbf24;">
+                <div class="sa-kpi-label">
+                    <span>ACTIVE TOURNAMENT</span>
+                    <span>🏆</span>
+                </div>
+                <div class="sa-kpi-value"><%= (data.auctionDetails && data.auctionDetails.name) ? data.auctionDetails.name : 'Premier League' %></div>
+                <div class="sa-kpi-sub">Season <%= (data.auctionDetails && data.auctionDetails.season) ? data.auctionDetails.season : '2026' %> • Status: <%= data.auctionState.status.toUpperCase() %></div>
+            </div>
 
-        <div style="margin-bottom: 2rem;">
-            <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-dim); font-weight: 800; letter-spacing: 1px; margin-bottom: 1rem; padding-left: 1rem;">System Actions</div>
-            <a href="/admin/dashboard" class="nav-item" style="color: var(--primary);"><span>⚡</span> Enter Live Console</a>
-        </div>
+            <div class="sa-kpi-card" style="border-left: 3px solid #3b82f6;">
+                <div class="sa-kpi-label">
+                    <span>FRANCHISE TEAMS</span>
+                    <span>🛡️</span>
+                </div>
+                <div class="sa-kpi-value"><%= data.teams ? data.teams.length : 0 %></div>
+                <div class="sa-kpi-sub">Registered franchises with allocated budgets</div>
+            </div>
 
-        <a href="/logout" class="nav-item" style="color: var(--danger); margin-top: auto;"><span>🚪</span> Secure Logout</a>
-    </div>
-
-    <div class="main-content sleek-scroll">
-        <div id="admins" class="card animate-fade-in">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                <div>
-                    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 800;">Role-Based Access Control (RBAC)</h2>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem;">Manage subordinate admin accounts and delegate specific sections of the dashboard.</p>
+            <div class="sa-kpi-card" style="border-left: 3px solid #10b981;">
+                <div class="sa-kpi-label">
+                    <span>PLAYER POOL</span>
+                    <span>👥</span>
+                </div>
+                <div class="sa-kpi-value"><%= data.players ? data.players.length : 0 %></div>
+                <div class="sa-kpi-sub">
+                    <% 
+                        const soldCount = data.players ? data.players.filter(p => p.status === 'sold').length : 0;
+                        const availCount = data.players ? data.players.filter(p => p.status === 'available').length : 0;
+                    %>
+                    <%= soldCount %> Sold • <%= availCount %> Available
                 </div>
             </div>
-            
-            <div style="overflow-x: auto;">
-                <table>
+
+            <div class="sa-kpi-card" style="border-left: 3px solid #a855f7;">
+                <div class="sa-kpi-label">
+                    <span>SUBORDINATE ADMINS</span>
+                    <span>🔑</span>
+                </div>
+                <div class="sa-kpi-value"><%= admins ? admins.length : 0 %></div>
+                <div class="sa-kpi-sub">Active RBAC accounts provisioned</div>
+            </div>
+        </div>
+
+        <!-- SEPARATE SPONSOR & OWNER BRANDING CARD -->
+        <div class="sa-card" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.04), rgba(59, 130, 246, 0.02)); border-color: rgba(251, 191, 36, 0.25);">
+            <div class="sa-card-header">
+                <div>
+                    <h2 class="sa-card-title">
+                        <span>🏷️</span> SPONSOR & TOURNAMENT OWNER BRANDING
+                    </h2>
+                    <p class="sa-card-desc">Uploaded sponsor logos and owner presenter names stream live directly to spectator big screens, spectator mobiles, and the scrolling ticker.</p>
+                </div>
+                <a href="/superadmin/settings" class="sa-nav-btn sa-nav-btn-secondary" style="font-size: 0.75rem;">
+                    ⚙️ All Tournament Settings
+                </a>
+            </div>
+
+            <form id="superadminSponsorForm" onsubmit="handleSuperadminSponsorSubmit(event)" style="display: grid; grid-template-columns: 200px 1fr; gap: 2rem; align-items: center;">
+                <!-- Logo Box -->
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: 12px; border: 1px dashed rgba(251,191,36,0.35);">
+                    <div style="width: 160px; height: 95px; border-radius: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 6px;">
+                        <img id="superadminSponsorPreviewImg" src="<%= (data.auctionDetails && data.auctionDetails.sponsorLogo) ? data.auctionDetails.sponsorLogo : '/uploads/default-auction.svg' %>" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                    </div>
+                    <div style="position: relative; overflow: hidden; width: 100%;">
+                        <button type="button" class="sa-nav-btn sa-nav-btn-primary" style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 0.5rem 0.6rem;">
+                            📁 CHOOSE LOGO
+                        </button>
+                        <input type="file" id="superadminSponsorFileInput" name="sponsorLogo" accept="image/*" onchange="previewSuperadminSponsor(this)" style="position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
+                    </div>
+                </div>
+
+                <!-- Fields & Controls -->
+                <div style="display: flex; flex-direction: column; gap: 1.15rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; color: #fbbf24; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Sponsor / Presenter / Owner Name</label>
+                        <input type="text" id="superadminSponsorNameInput" name="sponsorName" placeholder="e.g. TATA, Dream11, or Tournament Owner Name" value="<%= (data.auctionDetails && data.auctionDetails.sponsorName) ? data.auctionDetails.sponsorName : '' %>" class="form-input" style="font-size: 1rem; font-weight: 700;">
+                        <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.35rem;">Supported formats: PNG (transparent background strongly recommended), JPG, WebP, SVG.</div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <button type="submit" id="superadminSponsorSaveBtn" class="btn-gold">
+                            💾 Save & Apply Live
+                        </button>
+                        <button type="button" onclick="removeSuperadminSponsorLogo()" class="sa-nav-btn sa-nav-btn-danger" style="padding: 0.65rem 1.15rem;">
+                            🗑️ Remove Logo
+                        </button>
+                        <span id="superadminSponsorStatus" style="font-size: 0.8rem; font-weight: 800; color: #10b981; display: none;"></span>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- BROADCAST, YOUTUBE & SPECTATOR LIVE LINKS CARD -->
+        <div class="sa-card" style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.05), rgba(16, 185, 129, 0.04)); border-color: rgba(56, 189, 248, 0.3); margin-bottom: 2rem;">
+            <div class="sa-card-header">
+                <div>
+                    <h2 class="sa-card-title">
+                        <span>📡</span> BROADCAST, YOUTUBE & LIVE SPECTATOR LINKS
+                    </h2>
+                    <p class="sa-card-desc">Official production URLs for OBS Studio, YouTube Live streams, arena projection screens, and spectator mobile browsers.</p>
+                </div>
+                <button type="button" onclick="copyAllSaStreamLinks()" class="sa-nav-btn sa-nav-btn-secondary" style="font-size: 0.75rem; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">
+                    📋 Copy All Links
+                </button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+                <!-- Link 1: Live Auction Only -->
+                <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 800; font-size: 0.95rem; color: #fff; display: flex; align-items: center; gap: 0.45rem;">
+                            <span style="color: #10b981;">⚡</span> Live Auction Stage
+                        </span>
+                        <span style="font-size: 0.65rem; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.15rem 0.5rem; border-radius: 20px; font-weight: 800;">RESPONSIVE PAGE</span>
+                    </div>
+                    <p style="font-size: 0.78rem; color: var(--text-dim); margin: 0; line-height: 1.4;">
+                        Dedicated screen showing <strong>only</strong> the live bidding stage with zero tab distractions. Perfect for mobile viewers and arena LED walls.
+                    </p>
+                    <div style="display: flex; gap: 0.4rem; margin-top: auto;">
+                        <input type="text" id="saLinkLiveAuction" readonly class="form-input" style="font-family: monospace; font-size: 0.78rem; color: #34d399; background: #0c0f17; font-weight: 700;">
+                        <button type="button" onclick="copySaLink('saLinkLiveAuction', this)" class="sa-nav-btn sa-nav-btn-primary" style="padding: 0.45rem 0.8rem; font-size: 0.75rem; flex-shrink: 0;">
+                            📋 Copy
+                        </button>
+                    </div>
+                    <a href="/live-auction" target="_blank" class="sa-nav-btn" style="text-align: center; justify-content: center; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.75rem; text-decoration: none;">
+                        ↗️ Open Live Auction Stage
+                    </a>
+                </div>
+
+                <!-- Link 2: YouTube / OBS Stream Overlay -->
+                <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 800; font-size: 0.95rem; color: #fff; display: flex; align-items: center; gap: 0.45rem;">
+                            <span style="color: #f87171;">📺</span> YouTube / OBS Overlay
+                        </span>
+                        <span style="font-size: 0.65rem; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.15rem 0.5rem; border-radius: 20px; font-weight: 800;">1080P TRANSPARENT</span>
+                    </div>
+                    <p style="font-size: 0.78rem; color: var(--text-dim); margin: 0; line-height: 1.4;">
+                        Transparent lower-third broadcast graphics for OBS Studio, vMix, and YouTube Live. 1920x1080 resolution, auto-transparent, no green screen needed.
+                    </p>
+                    <div style="display: flex; gap: 0.4rem; margin-top: auto;">
+                        <input type="text" id="saLinkOverlay" readonly class="form-input" style="font-family: monospace; font-size: 0.78rem; color: #f87171; background: #0c0f17; font-weight: 700;">
+                        <button type="button" onclick="copySaLink('saLinkOverlay', this)" class="sa-nav-btn sa-nav-btn-danger" style="padding: 0.45rem 0.8rem; font-size: 0.75rem; flex-shrink: 0;">
+                            📋 Copy
+                        </button>
+                    </div>
+                    <a href="/overlay" target="_blank" class="sa-nav-btn" style="text-align: center; justify-content: center; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.75rem; text-decoration: none;">
+                        ↗️ Preview Stream Overlay
+                    </a>
+                </div>
+
+                <!-- Link 3: Full Spectator Portal -->
+                <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 800; font-size: 0.95rem; color: #fff; display: flex; align-items: center; gap: 0.45rem;">
+                            <span style="color: #fbbf24;">🌐</span> Full Spectator Portal
+                        </span>
+                        <span style="font-size: 0.65rem; background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); padding: 0.15rem 0.5rem; border-radius: 20px; font-weight: 800;">3-IN-1 PORTAL</span>
+                    </div>
+                    <p style="font-size: 0.78rem; color: var(--text-dim); margin: 0; line-height: 1.4;">
+                        Complete spectator suite featuring live auction stage, searchable player database, and franchise team squads.
+                    </p>
+                    <div style="display: flex; gap: 0.4rem; margin-top: auto;">
+                        <input type="text" id="saLinkFullLive" readonly class="form-input" style="font-family: monospace; font-size: 0.78rem; color: #fbbf24; background: #0c0f17; font-weight: 700;">
+                        <button type="button" onclick="copySaLink('saLinkFullLive', this)" class="sa-nav-btn sa-nav-btn-secondary" style="padding: 0.45rem 0.8rem; font-size: 0.75rem; flex-shrink: 0; color: #fbbf24;">
+                            📋 Copy
+                        </button>
+                    </div>
+                    <a href="/live" target="_blank" class="sa-nav-btn" style="text-align: center; justify-content: center; background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); font-size: 0.75rem; text-decoration: none;">
+                        ↗️ Open Spectator Portal
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROLE-BASED ACCESS CONTROL (RBAC) CARD -->
+        <div id="admins" class="sa-card">
+            <div class="sa-card-header">
+                <div>
+                    <h2 class="sa-card-title">
+                        <span>🛡️</span> ROLE-BASED ACCESS CONTROL (RBAC)
+                    </h2>
+                    <p class="sa-card-desc">Delegate individual permissions to subordinate administrator accounts. Changes take effect on next login or tab switch.</p>
+                </div>
+            </div>
+
+            <div class="sa-table-responsive">
+                <table class="sa-table">
                     <thead>
                         <tr>
-                            <th>Admin Username</th>
-                            <th>Role Level</th>
-                            <th>Delegated Permissions</th>
-                            <th style="text-align: right;">Security Action</th>
+                            <th>ADMINISTRATOR</th>
+                            <th>ROLE</th>
+                            <th>DELEGATED PERMISSIONS</th>
+                            <th style="text-align: right;">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
                         <% if (admins && admins.length > 0) { %>
                             <% admins.forEach(a => { %>
                                 <tr>
-                                    <td style="font-weight: 800; font-size: 1.1rem;"><%= a.username %></td>
-                                    <td><span class="role-badge"><%= a.role %></span></td>
                                     <td>
-                                        <form action="/superadmin/update-permissions" method="POST" style="display: flex; gap: 1rem; align-items: center;">
+                                        <div class="admin-user-pill">
+                                            <div class="admin-avatar"><%= a.username.substring(0, 2).toUpperCase() %></div>
+                                            <div>
+                                                <div style="font-weight: 800; font-size: 1rem; color: #fff;"><%= a.username %></div>
+                                                <div style="font-size: 0.68rem; color: var(--text-dim);">Admin User</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span style="background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); padding: 0.25rem 0.65rem; border-radius: 20px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase;">
+                                            <%= a.role %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <form action="/superadmin/update-permissions" method="POST" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                                             <input type="hidden" name="username" value="<%= a.username %>">
                                             <% 
                                                 let perms = [];
                                                 try { perms = JSON.parse(a.permissions || '[]'); } catch(e){} 
                                             %>
-                                            <div class="checkbox-group">
-                                                <label class="checkbox-label" style="<%= perms.includes('live') ? 'color: #fff; border-color: rgba(255,255,255,0.2);' : '' %>">
-                                                    <input type="checkbox" name="permissions" value="live" <%= perms.includes('live') ? 'checked' : '' %>> Live Bidding
+                                            <div class="perm-checkbox-group">
+                                                <label class="perm-pill <%= perms.includes('live') ? 'active' : '' %>">
+                                                    <input type="checkbox" name="permissions" value="live" <%= perms.includes('live') ? 'checked' : '' %>> ⚡ Live Bidding
                                                 </label>
-                                                <label class="checkbox-label" style="<%= perms.includes('teams') ? 'color: #fff; border-color: rgba(255,255,255,0.2);' : '' %>">
-                                                    <input type="checkbox" name="permissions" value="teams" <%= perms.includes('teams') ? 'checked' : '' %>> Team View
+                                                <label class="perm-pill <%= perms.includes('teams') ? 'active' : '' %>">
+                                                    <input type="checkbox" name="permissions" value="teams" <%= perms.includes('teams') ? 'checked' : '' %>> 🛡️ Team View
                                                 </label>
-                                                <label class="checkbox-label" style="<%= perms.includes('players') ? 'color: #fff; border-color: rgba(255,255,255,0.2);' : '' %>">
-                                                    <input type="checkbox" name="permissions" value="players" <%= perms.includes('players') ? 'checked' : '' %>> Players
+                                                <label class="perm-pill <%= perms.includes('players') ? 'active' : '' %>">
+                                                    <input type="checkbox" name="permissions" value="players" <%= perms.includes('players') ? 'checked' : '' %>> 👥 Players
                                                 </label>
-                                                <label class="checkbox-label" style="<%= perms.includes('settings') ? 'color: #fff; border-color: rgba(255,255,255,0.2);' : '' %>">
-                                                    <input type="checkbox" name="permissions" value="settings" <%= perms.includes('settings') ? 'checked' : '' %>> Settings
+                                                <label class="perm-pill <%= perms.includes('settings') ? 'active' : '' %>">
+                                                    <input type="checkbox" name="permissions" value="settings" <%= perms.includes('settings') ? 'checked' : '' %>> ⚙️ Settings
                                                 </label>
                                             </div>
-                                            <button type="submit" class="btn" style="padding: 0.5rem 1rem; font-size: 0.75rem; margin-left: auto;">Update</button>
+                                            <button type="submit" class="sa-nav-btn sa-nav-btn-primary" style="padding: 0.35rem 0.85rem; font-size: 0.75rem;">
+                                                Save
+                                            </button>
                                         </form>
                                     </td>
                                     <td style="text-align: right;">
-                                        <form action="/superadmin/delete-admin" method="POST" onsubmit="return confirm('Are you sure you want to permanently revoke all access for <%= a.username %>?');">
+                                        <form action="/superadmin/delete-admin" method="POST" onsubmit="return confirm('Permanently revoke all access for admin \'<%= a.username %>\'?');" style="display: inline-block;">
                                             <input type="hidden" name="username" value="<%= a.username %>">
-                                            <button type="submit" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.75rem;">Revoke</button>
+                                            <button type="submit" class="sa-nav-btn sa-nav-btn-danger" style="padding: 0.35rem 0.85rem; font-size: 0.75rem;">
+                                                ✕ Revoke
+                                            </button>
                                         </form>
                                     </td>
                                 </tr>
                             <% }) %>
                         <% } else { %>
                             <tr>
-                                <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 3rem;">
-                                    No subordinate admins exist. Create one below.
+                                <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 2.5rem;">
+                                    No subordinate administrators registered. Provision an account below.
                                 </td>
                             </tr>
                         <% } %>
@@ -284,27 +705,152 @@
             </div>
         </div>
 
-        <div class="card animate-fade-in" style="animation-delay: 0.1s;">
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
-                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(59,130,246,0.1); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.2rem;">
-                    ➕
-                </div>
+        <!-- PROVISION NEW ADMIN CARD -->
+        <div class="sa-card">
+            <div class="sa-card-header">
                 <div>
-                    <h3 style="margin: 0 0 0.25rem 0; font-size: 1.1rem; font-weight: 800;">Provision New Admin</h3>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.85rem;">Create a new restricted account. Permissions must be assigned after creation.</p>
+                    <h2 class="sa-card-title">
+                        <span>➕</span> PROVISION NEW ADMINISTRATOR
+                    </h2>
+                    <p class="sa-card-desc">Create a new credentials-based restricted administrator. Permissions can be assigned above immediately upon creation.</p>
                 </div>
             </div>
-            
-            <form action="/superadmin/create-admin" method="POST" style="display: flex; gap: 1rem; align-items: center;">
-                <div style="flex: 1;">
-                    <input type="text" name="username" placeholder="Enter Admin Username" class="form-input" required autocomplete="off">
+
+            <form action="/superadmin/create-admin" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) auto; gap: 1rem; align-items: flex-end;">
+                <div>
+                    <label style="display: block; font-size: 0.72rem; color: var(--text-dim); font-weight: 800; text-transform: uppercase; margin-bottom: 0.4rem;">Username</label>
+                    <input type="text" name="username" placeholder="e.g. operator_mumbai" class="form-input" required autocomplete="off">
                 </div>
-                <div style="flex: 1;">
-                    <input type="password" name="password" placeholder="Enter Password" class="form-input" required autocomplete="new-password">
+                <div>
+                    <label style="display: block; font-size: 0.72rem; color: var(--text-dim); font-weight: 800; text-transform: uppercase; margin-bottom: 0.4rem;">Password</label>
+                    <input type="password" name="password" placeholder="Set a secure password" class="form-input" required autocomplete="new-password">
                 </div>
-                <button type="submit" class="btn" style="min-width: 150px;">Create Admin</button>
+                <button type="submit" class="btn-gold" style="height: 44px; justify-content: center; white-space: nowrap;">
+                    ➕ Create Account
+                </button>
             </form>
         </div>
-    </div>
+
+    </main>
+
+    <!-- SCRIPT FOR SEPARATE SPONSOR LOGO UPLOAD -->
+    <script>
+        function previewSuperadminSponsor(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('superadminSponsorPreviewImg');
+                    if (img) img.src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function handleSuperadminSponsorSubmit(e) {
+            e.preventDefault();
+            const saveBtn = document.getElementById('superadminSponsorSaveBtn');
+            const statusSpan = document.getElementById('superadminSponsorStatus');
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+            
+            const form = document.getElementById('superadminSponsorForm');
+            const formData = new FormData(form);
+
+            try {
+                const res = await fetch('/superadmin/update-sponsor', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+                if (result.success) {
+                    if (statusSpan) {
+                        statusSpan.style.display = 'inline';
+                        statusSpan.style.color = '#10b981';
+                        statusSpan.textContent = '✓ Sponsor updated live!';
+                    }
+                    setTimeout(() => window.location.reload(), 700);
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to update sponsor'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Network error: ' + err.message);
+            } finally {
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save & Apply Live'; }
+            }
+        }
+
+        async function removeSuperadminSponsorLogo() {
+            if (!confirm('Are you sure you want to remove the Sponsor Logo?')) return;
+            const formData = new FormData();
+            formData.append('removeLogo', 'true');
+            formData.append('sponsorName', document.getElementById('superadminSponsorNameInput').value || '');
+
+            try {
+                const res = await fetch('/superadmin/update-sponsor', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+                if (result.success) {
+                    document.getElementById('superadminSponsorPreviewImg').src = '/uploads/default-auction.svg';
+                    alert('Sponsor logo removed.');
+                    setTimeout(() => window.location.reload(), 600);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error: ' + err.message);
+            }
+        }
+    
+        function initSaStreamLinks() {
+            try {
+                const origin = window.location.origin;
+                const live = document.getElementById('saLinkLiveAuction');
+                const overlay = document.getElementById('saLinkOverlay');
+                const full = document.getElementById('saLinkFullLive');
+                if (live) live.value = origin + '/live-auction';
+                if (overlay) overlay.value = origin + '/overlay';
+                if (full) full.value = origin + '/live';
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function copySaLink(id, btn) {
+            const inp = document.getElementById(id);
+            if (!inp) return;
+            inp.select();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(inp.value).then(() => {
+                    const orig = btn.innerHTML;
+                    btn.innerHTML = '✅ Copied!';
+                    setTimeout(() => btn.innerHTML = orig, 2000);
+                });
+            } else {
+                document.execCommand('copy');
+                const orig = btn.innerHTML;
+                btn.innerHTML = '✅ Copied!';
+                setTimeout(() => btn.innerHTML = orig, 2000);
+            }
+        }
+
+        function copyAllSaStreamLinks() {
+            const origin = window.location.origin;
+            const text = `🏆 LIVE AUCTION STREAM & SPECTATOR LINKS:\n\n⚡ Live Auction Stage: ${origin}/live-auction\n📺 YouTube/OBS Stream Overlay: ${origin}/overlay\n🌐 Spectator Portal: ${origin}/live`;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('All broadcast & spectator links copied to clipboard!');
+                });
+            } else {
+                prompt('Copy links:', text);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSaStreamLinks);
+        } else {
+            initSaStreamLinks();
+        }
+</script>
 </body>
 </html>

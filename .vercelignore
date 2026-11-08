@@ -1,0 +1,12 @@
+node_modules
+scratch
+.git
+.dockerignore
+Dockerfile
+docker-compose.yml
+auction.db
+auction.db-journal
+*.bat
+*.ps1
+*.py
+*.sql

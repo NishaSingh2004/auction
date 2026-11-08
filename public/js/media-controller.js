@@ -38,45 +38,161 @@
         document.getElementById('bulkSyncStatusContainer').style.display = 'none';
     };
 
-    // Client-side player matching priority engine
+    function normalizeText(str) {
+        if (!str) return '';
+        return String(str)
+            .toLowerCase()
+            .replace(/[_\.\-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function stripNonAlphanumeric(str) {
+        if (!str) return '';
+        return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    // Client-side player matching priority engine (Matches by Player ID or Player Name reliably)
     function findMatchedPlayerByPriority(nameWithoutExt, players) {
-        if (!nameWithoutExt) return null;
-        const cleanId = String(nameWithoutExt).trim();
-        const cleanIdLower = cleanId.toLowerCase();
-        const cleanIdInt = parseInt(cleanId, 10);
+        if (!nameWithoutExt || !players || !players.length) return null;
         
-        // Priority 1: Player ID
-        let player = players.find(p => p.id && String(p.id).trim() === cleanId);
-        if (player) return { player, matchedBy: 'Player ID' };
+        const rawStr = String(nameWithoutExt).trim();
+        const norm = (str) => {
+            if (!str) return '';
+            return String(str).toLowerCase()
+                .replace(/[_.\-]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+        const strip = (str) => {
+            if (!str) return '';
+            return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+        };
+        const stripTitles = (str) => {
+            return norm(str).replace(/^(?:dr|mr|mrs|ms|prof|shri|adv|capt)\.?\s+/i, '').trim();
+        };
+
+        const normStr = norm(rawStr);
+        const strippedStr = strip(rawStr);
+        const titleFreeStr = stripTitles(rawStr);
         
-        // Priority 2: Form Number
-        player = players.find(p => {
+        // Check if identifier contains a pure integer or prefix + integer
+        let extractedNumber = null;
+        const pureInt = parseInt(rawStr, 10);
+        if (!isNaN(pureInt) && /^\d+$/.test(rawStr)) {
+            extractedNumber = pureInt;
+        } else {
+            const prefixMatch = rawStr.match(/^(?:id|player|p|form|f|no|img|image|photo|pic|picture|sr|srno|slno|sl)[\s_\-#]*(\d+)$/i);
+            if (prefixMatch) {
+                extractedNumber = parseInt(prefixMatch[1], 10);
+            }
+        }
+
+        // Priority 1: Match by Form Number (high priority for auction player lists)
+        let player = players.find(p => {
             if (!p.formNo) return false;
             const dbFormStr = String(p.formNo).trim();
-            if (dbFormStr === cleanId) return true;
-            const dbFormInt = parseInt(dbFormStr, 10);
-            return (!isNaN(dbFormInt) && !isNaN(cleanIdInt) && dbFormInt === cleanIdInt);
+            if (dbFormStr.toLowerCase() === rawStr.toLowerCase()) return true;
+            if (extractedNumber !== null) {
+                const dbFormInt = parseInt(dbFormStr, 10);
+                if (!isNaN(dbFormInt) && dbFormInt === extractedNumber) return true;
+            }
+            return false;
         });
         if (player) return { player, matchedBy: 'Form Number' };
-        
-        // Priority 3, 4, 5: Player Number / Registration Number / Jersey Number (maps to jerseyNumber)
+
+        // Priority 2: Match by Player ID (exact string or integer comparison)
+        player = players.find(p => {
+            if (p.id === undefined || p.id === null) return false;
+            const pIdStr = String(p.id).trim();
+            if (pIdStr.toLowerCase() === rawStr.toLowerCase()) return true;
+            if (extractedNumber !== null) {
+                const pIdInt = parseInt(pIdStr, 10);
+                if (!isNaN(pIdInt) && pIdInt === extractedNumber) return true;
+            }
+            return false;
+        });
+        if (player) return { player, matchedBy: 'Player ID' };
+
+        // Priority 3: Match by Player Name (normalized: "Virat_Kohli", "Dr. Mayur" -> "dr mayur")
+        player = players.find(p => {
+            if (!p.name) return false;
+            return norm(p.name) === normStr;
+        });
+        if (player) return { player, matchedBy: 'Player Name' };
+
+        // Priority 4: Match by Player Name (stripped alphanumeric: "ViratKohli" -> "viratkohli")
+        player = players.find(p => {
+            if (!p.name) return false;
+            return strip(p.name) === strippedStr;
+        });
+        if (player) return { player, matchedBy: 'Player Name' };
+
+        // Priority 5: Match by Player Name (Title-free: "Dr. Mayur" vs "Mayur")
+        if (titleFreeStr) {
+            player = players.find(p => {
+                if (!p.name) return false;
+                return stripTitles(p.name) === titleFreeStr;
+            });
+            if (player) return { player, matchedBy: 'Player Name' };
+        }
+
+        // Priority 6: Match by Jersey Number / Player Number
         player = players.find(p => {
             if (!p.jerseyNumber) return false;
             const dbJerseyStr = String(p.jerseyNumber).trim();
-            if (dbJerseyStr === cleanId) return true;
-            const dbJerseyInt = parseInt(dbJerseyStr, 10);
-            return (!isNaN(dbJerseyInt) && !isNaN(cleanIdInt) && dbJerseyInt === cleanIdInt);
+            if (dbJerseyStr.toLowerCase() === rawStr.toLowerCase()) return true;
+            if (extractedNumber !== null) {
+                const dbJerseyInt = parseInt(dbJerseyStr, 10);
+                if (!isNaN(dbJerseyInt) && dbJerseyInt === extractedNumber) return true;
+            }
+            return false;
         });
         if (player) return { player, matchedBy: 'Player Number' };
-        
-        // Priority 6: Player Name (case-insensitive)
-        player = players.find(p => p.name && p.name.trim().toLowerCase() === cleanIdLower);
-        if (player) return { player, matchedBy: 'Player Name' };
-        
+
+        // Priority 7: Compound pattern - leading number ("1 - Virat Kohli", "144_Dr_Mayur", "144-Dr. Mayur")
+        const leadingNumMatch = rawStr.match(/^(\d+)[\s_\-]+(.+)$/);
+        if (leadingNumMatch) {
+            const numPart = parseInt(leadingNumMatch[1], 10);
+            const namePart = norm(leadingNumMatch[2]);
+            player = players.find(p => p.name && norm(p.name) === namePart);
+            if (player) return { player, matchedBy: 'Player Name' };
+            player = players.find(p => p.formNo && parseInt(p.formNo, 10) === numPart);
+            if (player) return { player, matchedBy: 'Form Number' };
+            player = players.find(p => parseInt(p.id, 10) === numPart);
+            if (player) return { player, matchedBy: 'Player ID' };
+        }
+
+        // Priority 8: Compound pattern - trailing number ("Virat Kohli_1", "Dr Mayur (144)", "Dr. Mayur_144")
+        const trailingNumMatch = rawStr.match(/^(.+?)[\s_\-]+(\d+)$/) || rawStr.match(/^(.+?)\s*\((.+?)\)$/);
+        if (trailingNumMatch) {
+            const namePart = norm(trailingNumMatch[1]);
+            const numPart = parseInt(trailingNumMatch[2], 10);
+            player = players.find(p => p.name && norm(p.name) === namePart);
+            if (player) return { player, matchedBy: 'Player Name' };
+            if (!isNaN(numPart)) {
+                player = players.find(p => p.formNo && parseInt(p.formNo, 10) === numPart);
+                if (player) return { player, matchedBy: 'Form Number' };
+                player = players.find(p => parseInt(p.id, 10) === numPart);
+                if (player) return { player, matchedBy: 'Player ID' };
+            }
+        }
+
+        // Priority 9: Smart partial name match
+        if (normStr.length >= 4) {
+            const partialMatches = players.filter(p => {
+                if (!p.name) return false;
+                const pNorm = norm(p.name);
+                return (pNorm.length >= 4 && (pNorm.includes(normStr) || normStr.includes(pNorm)));
+            });
+            if (partialMatches.length === 1) {
+                return { player: partialMatches[0], matchedBy: 'Player Name' };
+            }
+        }
+
         return null;
     }
 
-    // Extract file base name without path or extension
     function getFileBaseName(filename) {
         const parts = filename.split('/');
         const nameWithExt = parts[parts.length - 1];
@@ -190,7 +306,24 @@
                 }
 
                 statusTitle.textContent = 'Auto-matching files...';
-                const players = window.currentPlayersDataCache || [];
+                let players = window.currentPlayersDataCache || [];
+                if (!players.length && window.cachedPlayers && window.cachedPlayers.length) {
+                    players = window.cachedPlayers;
+                }
+                if (!players.length) {
+                    try {
+                        const pRes = await fetch('/admin/api/players?activeAuctionId=' + encodeURIComponent(activeAuctionId));
+                        if (pRes.ok) {
+                            const pData = await pRes.json();
+                            if (pData.success && pData.players && pData.players.length) {
+                                players = pData.players;
+                                window.currentPlayersDataCache = pData.players;
+                            }
+                        }
+                    } catch (fetchErr) {
+                        console.error('Failed to pre-fetch players for matching:', fetchErr);
+                    }
+                }
                 
                 const matchedQueue = [];
                 let unmatchedCount = 0;
@@ -211,17 +344,13 @@
                     const match = findMatchedPlayerByPriority(nameWithoutExt, players);
 
                     if (match) {
-                        if (match.player.photo) {
-                            skippedCount++;
-                            unmatchedList.push(`${file.name} (Photo already uploaded for ${match.player.name})`);
-                        } else {
-                            matchedQueue.push({ file, player: match.player });
-                            
-                            if (match.matchedBy === 'Player ID') matchedById++;
-                            else if (match.matchedBy === 'Form Number') matchedByFormNo++;
-                            else if (match.matchedBy === 'Player Number') matchedByPlayerNo++;
-                            else if (match.matchedBy === 'Player Name') matchedByName++;
-                        }
+                        // Directly assign and overwrite photo (never skip matched players)
+                        matchedQueue.push({ file, player: match.player });
+                        
+                        if (match.matchedBy === 'Player ID') matchedById++;
+                        else if (match.matchedBy === 'Form Number') matchedByFormNo++;
+                        else if (match.matchedBy === 'Player Number') matchedByPlayerNo++;
+                        else if (match.matchedBy === 'Player Name') matchedByName++;
                     } else {
                         unmatchedCount++;
                         unmatchedList.push(file.name);
@@ -345,6 +474,20 @@
         safeSetText('sumByName', summary.matchedByName || 0);
         safeSetText('sumUnmatched', summary.unmatched || 0);
 
+        const statusHeaderEl = document.querySelector('#bulkSummaryReport > div:first-child');
+        if (statusHeaderEl) {
+            if ((summary.failed || 0) > 0 && (summary.matched || 0) === 0) {
+                statusHeaderEl.textContent = '❌ Photo Download Failed (Check Drive Permissions)';
+                statusHeaderEl.style.color = '#ef4444';
+            } else if ((summary.failed || 0) > 0) {
+                statusHeaderEl.textContent = `⚠️ Import Partially Completed (${summary.failed} Failed Downloads)`;
+                statusHeaderEl.style.color = '#f59e0b';
+            } else {
+                statusHeaderEl.textContent = '✅ Import Completed Successfully';
+                statusHeaderEl.style.color = 'var(--success)';
+            }
+        }
+
         const unmatchedListContainer = document.getElementById('unmatchedListContainer');
         const unmatchedListEl = document.getElementById('unmatchedList');
         
@@ -352,6 +495,10 @@
         
         if (summary.unmatchedList && summary.unmatchedList.length > 0) {
             unmatchedListContainer.style.display = 'block';
+            const unmatchedTitle = unmatchedListContainer.querySelector('div');
+            if (unmatchedTitle) {
+                unmatchedTitle.textContent = (summary.failed > 0) ? 'Failed / Unmatched Details:' : 'Unmatched Photos:';
+            }
             summary.unmatchedList.slice(0, 50).forEach(item => {
                 const li = document.createElement('li');
                 li.textContent = item;
@@ -370,20 +517,30 @@
         
         // Final alert popup summary (clean format)
         setTimeout(() => {
-            let msg = "";
-            if (summary.skipped > 0) {
-                msg += "Already file photos are uploaded\n\n";
+            let title = '✅ Import Completed Successfully';
+            let extraHelp = '';
+            
+            if ((summary.failed || 0) > 0 && (summary.matched || 0) === 0) {
+                title = '⚠️ Photo Download Failed';
+                extraHelp = '\n\nWhy did photos fail to download?\n' +
+                            '• Private Google Drive links: Google Drive prevents downloads if permissions are not set to "Anyone with the link can view". In Google Drive, open the folder -> Share -> Change to "Anyone with the link".\n' +
+                            '• Quickest Alternative: Click the "📁 FOLDER" tab to upload your photo files directly from your computer without Google Drive permissions!';
+            } else if ((summary.failed || 0) > 0) {
+                title = '⚠️ Import Completed with Some Errors';
+                extraHelp = `\n\n${summary.failed} photo(s) failed to download. Check drive sharing permissions or use the "📁 FOLDER" tab to upload remaining photos directly.`;
             }
-            msg += `Import Completed Successfully\n\n` +
-                   `Total Photos Found: ${summary.total || 0}\n` +
+
+            let msg = `${title}\n\n` +
+                   `Total Processed: ${summary.total || 0}\n` +
                    `Successfully Assigned: ${summary.matched || 0}\n` +
-                   `Skipped: ${summary.skipped || 0}\n` +
-                   `Failed: ${summary.failed || 0}\n\n` +
+                   `Skipped (Empty URL): ${summary.skipped || 0}\n` +
+                   `Failed to Download: ${summary.failed || 0}\n\n` +
                    `Matched by Player ID: ${summary.matchedById || 0}\n` +
                    `Matched by Form Number: ${summary.matchedByFormNo || 0}\n` +
                    `Matched by Player Number: ${summary.matchedByPlayerNo || 0}\n` +
                    `Matched by Player Name: ${summary.matchedByName || 0}\n` +
-                   `Unmatched: ${summary.unmatched || 0}`;
+                   `Unmatched Players: ${summary.unmatched || 0}` +
+                   extraHelp;
             alert(msg);
         }, 100);
     }

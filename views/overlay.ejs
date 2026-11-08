@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube / OBS Live Stream Broadcast Overlay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: transparent !important;
+            user-select: none;
+            position: relative;
+        }
+
+        body.preview-dark-bg {
+            background: radial-gradient(circle at 50% 30%, #171d2b 0%, #090b10 100%) !important;
+        }
+
+        /* Ambient Glow & Highlights */
+        @keyframes emeraldGlow {
+            0%, 100% { text-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2); }
+            50% { text-shadow: 0 0 35px rgba(16, 185, 129, 0.8), 0 0 60px rgba(16, 185, 129, 0.4); }
+        }
+
+        @keyframes livePulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.6; }
+        }
+
+        @keyframes bannerPopIn {
+            0% { transform: translate(-50%, -60%) scale(0.8); opacity: 0; }
+            70% { transform: translate(-50%, -50%) scale(1.04); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        @keyframes spotlightSweep {
+            0% { transform: translateX(-150%) rotate(25deg); opacity: 0; }
+            50% { opacity: 0.25; }
+            100% { transform: translateX(250%) rotate(25deg); opacity: 0; }
+        }
+
+        /* 1. TOP BROADCAST SCOREBUG (Top Right) */
+        .top-scorebug {
+            position: absolute;
+            top: 24px;
+            right: 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(12, 14, 22, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 40px;
+            padding: 8px 18px 8px 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+            z-index: 100;
+        }
+
+        .scorebug-logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: contain;
+            background: #fff;
+            padding: 2px;
+        }
+
+        .scorebug-text {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .scorebug-title {
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.1;
+        }
+
+        .scorebug-subtitle {
+            color: #fbbf24;
+            font-size: 0.75rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ef4444;
+            animation: livePulse 1.2s infinite ease-in-out;
+            display: inline-block;
+        }
+
+        .scorebug-sponsor {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            padding-left: 12px;
+            margin-left: 4px;
+        }
+
+        .scorebug-sponsor-img {
+            max-height: 24px;
+            max-width: 90px;
+            object-fit: contain;
+        }
+
+        /* 2. LOWER-THIRD BROADCAST STAGE (Bottom of Screen) */
+        .lower-third-container {
+            position: absolute;
+            bottom: 24px;
+            left: 28px;
+            right: 28px;
+            display: flex;
+            flex-direction: column;
+            z-index: 90;
+        }
+
+        .lower-third-bar {
+            display: grid;
+            grid-template-columns: 1.3fr 1.1fr 220px;
+            background: linear-gradient(135deg, rgba(12, 15, 23, 0.96) 0%, rgba(18, 22, 35, 0.96) 100%);
+            backdrop-filter: blur(16px);
+            border: 1.5px solid rgba(251, 191, 36, 0.35);
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Lower Third Zone 1: Player Card */
+        .player-zone {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 16px 22px;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-photo-box {
+            width: 104px;
+            height: 104px;
+            flex-shrink: 0;
+            border-radius: 14px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(251, 191, 36, 0.5);
+            background: #141722;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .player-photo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top;
+        }
+
+        .player-photo-box .spotlight {
+            position: absolute;
+            inset: 0;
+            width: 50%;
+            height: 250%;
+            top: -75%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+            transform: rotate(25deg);
+            pointer-events: none;
+            animation: spotlightSweep 5s infinite ease-in-out;
+        }
+
+        .player-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .player-top-badges {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .badge-id {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.35);
+            font-size: 0.8rem;
+            font-weight: 900;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .badge-role {
+            background: rgba(255, 255, 255, 0.08);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+
+        .badge-cat {
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .player-name-text {
+            font-size: 1.65rem;
+            font-weight: 900;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+
+        .player-stats-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 2px;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.65);
+            font-weight: 700;
+        }
+
+        .player-stats-row strong {
+            color: #fff;
+        }
+
+        /* Lower Third Zone 2: Current Bid & Leading Franchise */
+        .bid-zone {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 16px 24px;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+        }
+
+        .bid-label-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 900;
+            color: #10b981;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .bid-amount-num {
+            font-size: 2.85rem;
+            font-weight: 900;
+            color: #10b981;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            letter-spacing: -1px;
+            line-height: 1;
+            margin: 2px 0 6px 0;
+            animation: emeraldGlow 3s infinite ease-in-out;
+            white-space: nowrap;
+        }
+
+        .leading-bidder-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 4px 10px;
+            width: fit-content;
+            max-width: 100%;
+        }
+
+        .bidder-logo {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            object-fit: contain;
+            background: #fff;
+            padding: 1px;
+        }
+
+        .bidder-name {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        .bidder-crown {
+            color: #fbbf24;
+            font-size: 0.85rem;
+        }
+
+        /* Lower Third Zone 3: Clock & Base Price */
+        .clock-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.25);
+            text-align: center;
+        }
+
+        .clock-label {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .clock-timer {
+            font-size: 2.5rem;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+            line-height: 1;
+            margin: 4px 0;
+        }
+
+        .clock-timer.timer-warning {
+            color: #ef4444;
+            text-shadow: 0 0 25px rgba(239, 68, 68, 0.8);
+            animation: livePulse 0.8s infinite ease-in-out;
+        }
+
+        .clock-base-price {
+            font-size: 0.72rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .clock-base-price strong {
+            color: #fbbf24;
+        }
+
+        /* Lower Third Bottom Marquee Bar */
+        .lower-marquee-bar {
+            height: 32px;
+            background: #090b10;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: none;
+            border-radius: 0 0 16px 16px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 700;
+            padding: 0 16px;
+        }
+
+        .marquee-track {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            gap: 2rem;
+            animation: overlayMarquee 35s linear infinite;
+        }
+
+        @keyframes overlayMarquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* 3. BROADCAST EVENT POPUPS (Sold / Unsold Celebration) */
+        .broadcast-event-overlay {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            pointer-events: none;
+        }
+
+        .sold-banner-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.95) 0%, rgba(5, 150, 105, 0.98) 100%);
+            border: 3px solid #34d399;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 60px rgba(16, 185, 129, 0.6);
+            border-radius: 20px;
+            padding: 24px 48px;
+            text-align: center;
+            animation: bannerPopIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sold-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 2px;
+            line-height: 1;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .sold-detail-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-top: 4px;
+        }
+
+        .sold-team-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #fff;
+            padding: 2px;
+            object-fit: contain;
+        }
+
+        .sold-team-name {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+
+        .sold-price-badge {
+            background: #fbbf24;
+            color: #000;
+            font-size: 1.4rem;
+            font-weight: 900;
+            padding: 4px 16px;
+            border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .unsold-banner-card {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(185, 28, 28, 0.98) 100%);
+            border: 3px solid #f87171;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 60px rgba(220, 38, 38, 0.6);
+            border-radius: 20px;
+            padding: 24px 50px;
+            text-align: center;
+            animation: bannerPopIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .unsold-title {
+            font-size: 3.8rem;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        .unsold-sub {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #fee2e2;
+            margin-top: 6px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Floating Helper Bar (auto hides, only for browser preview) */
+        .overlay-preview-controls {
+            position: absolute;
+            top: 14px;
+            left: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 9999;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 30px;
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            color: #fff;
+            transition: opacity 0.4s ease;
+        }
+
+        .overlay-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 14px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .overlay-btn:hover {
+            background: #fbbf24;
+            color: #000;
+        }
+
+        /* Responsive Scaling for smaller screens / window preview */
+        @media (max-width: 1200px) {
+            .lower-third-bar {
+                grid-template-columns: 1.2fr 1fr 180px;
+            }
+            .player-name-text {
+                font-size: 1.35rem;
+            }
+            .bid-amount-num {
+                font-size: 2.2rem;
+            }
+            .clock-timer {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .lower-third-container {
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+            }
+            .lower-third-bar {
+                grid-template-columns: 1fr;
+            }
+            .bid-zone {
+                border-right: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+            }
+            .clock-zone {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="<%= typeof theme !== 'undefined' && theme === 'dark' ? 'preview-dark-bg' : '' %>">
+    <%
+      const unitsLocal = data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹';
+      const formatCurrencyLocal = (amt) => {
+        return ['₹', '$', '€', '£'].includes(unitsLocal) ? `${unitsLocal}${amt.toLocaleString()}` : `${amt.toLocaleString()} ${unitsLocal}`;
+      };
+    %>
+
+    <!-- Preview Controls Pill (For web testing; hidden in OBS by default after 5 seconds) -->
+    <div id="previewControls" class="overlay-preview-controls">
+        <span>📺 <strong>OBS Overlay (1920x1080)</strong></span>
+        <button type="button" class="overlay-btn" onclick="copyCurrentOverlayUrl(this)">📋 Copy Link</button>
+        <button type="button" class="overlay-btn" onclick="toggleDarkPreview()">🌓 Toggle Dark BG</button>
+        <button type="button" class="overlay-btn" onclick="this.parentElement.style.display='none'">✕</button>
+    </div>
+
+    <!-- 1. TOP RIGHT BROADCAST SCOREBUG -->
+    <div class="top-scorebug">
+        <% if (data.auctionDetails && data.auctionDetails.logo) { %>
+            <img src="<%= data.auctionDetails.logo %>" alt="League" class="scorebug-logo">
+        <% } else { %>
+            <div style="font-size: 1.4rem;">🏆</div>
+        <% } %>
+        <div class="scorebug-text">
+            <div class="scorebug-title"><%= data.auctionDetails ? data.auctionDetails.name : 'ELITE PREMIER LEAGUE' %></div>
+            <div class="scorebug-subtitle">
+                <span class="live-dot"></span>
+                <span>AUCTION LIVE</span>
+                <span>• R<span id="scorebugRound"><%= data.auctionState.round || 1 %></span></span>
+            </div>
+        </div>
+        <% if (data.auctionDetails && data.auctionDetails.sponsorLogo) { %>
+            <div class="scorebug-sponsor">
+                <span style="font-size: 0.6rem; color: #fbbf24; font-weight: 800; text-transform: uppercase;">PRESENTED BY</span>
+                <img src="<%= data.auctionDetails.sponsorLogo %>" alt="Sponsor" class="scorebug-sponsor-img">
+            </div>
+        <% } %>
+    </div>
+
+    <!-- 2. LOWER-THIRD BROADCAST BAR -->
+    <div class="lower-third-container">
+        <div class="lower-third-bar">
+            <!-- Zone 1: Active Player Spotlight -->
+            <div class="player-zone">
+                <div class="player-photo-box">
+                    <img id="overlayPlayerPhoto" src="<%= data.auctionState.currentPlayer && data.auctionState.currentPlayer.photo ? (data.auctionState.currentPlayer.photo.startsWith('http') ? data.auctionState.currentPlayer.photo : (data.auctionState.currentPlayer.photo.startsWith('/') ? data.auctionState.currentPlayer.photo : '/' + data.auctionState.currentPlayer.photo)) : '/uploads/default-player.svg' %>" onerror="this.onerror=null; this.src='/uploads/default-player.svg';" alt="Player">
+                    <div class="spotlight"></div>
+                </div>
+                <div class="player-info">
+                    <div class="player-top-badges">
+                        <span class="badge-id">#<span id="overlayPlayerFormNo"><%= data.auctionState.currentPlayer ? (data.auctionState.currentPlayer.formNo || (String(data.auctionState.currentPlayer.id).length > 6 ? '..' + String(data.auctionState.currentPlayer.id).slice(-5) : data.auctionState.currentPlayer.id)) : '--' %></span></span>
+                        <span class="badge-role" id="overlayPlayerRole"><%= data.auctionState.currentPlayer ? data.auctionState.currentPlayer.role : 'BATSMAN' %></span>
+                        <span class="badge-cat" id="overlayPlayerCategory"><%= data.auctionState.activeCategoryName || (data.auctionState.currentPlayer && data.auctionState.currentPlayer.category_id) || 'OPEN' %></span>
+                    </div>
+                    <div id="overlayPlayerName" class="player-name-text">
+                        <%= data.auctionState.currentPlayer ? data.auctionState.currentPlayer.name : 'Waiting for nomination...' %>
+                    </div>
+                    <div class="player-stats-row">
+                        <span>MATCHES: <strong id="overlayPlayerMatches"><%= data.auctionState.currentPlayer && data.auctionState.currentPlayer.matches != null ? data.auctionState.currentPlayer.matches : '--' %></strong></span>
+                        <span>RUNS: <strong id="overlayPlayerRuns"><%= data.auctionState.currentPlayer && data.auctionState.currentPlayer.runs != null ? data.auctionState.currentPlayer.runs : '--' %></strong></span>
+                        <span>SR: <strong id="overlayPlayerSR"><%= data.auctionState.currentPlayer && data.auctionState.currentPlayer.strikeRate != null ? data.auctionState.currentPlayer.strikeRate : '--' %></strong></span>
+                        <span>AVG: <strong id="overlayPlayerAvg"><%= data.auctionState.currentPlayer && data.auctionState.currentPlayer.average != null ? data.auctionState.currentPlayer.average : '--' %></strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zone 2: Current Bid & Leading Bidder -->
+            <div class="bid-zone">
+                <div class="bid-label-row">
+                    <span style="width: 7px; height: 7px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; display: inline-block;"></span>
+                    <span>CURRENT BID</span>
+                </div>
+                <div id="overlayBidAmount" class="bid-amount-num">
+                    <%= formatCurrencyLocal(data.auctionState.currentBid || 0) %>
+                </div>
+                <div class="leading-bidder-pill" id="overlayBidderPill">
+                    <span class="bidder-crown">👑</span>
+                    <div id="overlayBidderLogoWrap">
+                        <% 
+                            const currentBidderTeam = data.teams ? data.teams.find(t => t.name === data.auctionState.highestBidder) : null;
+                        %>
+                        <% if (currentBidderTeam && currentBidderTeam.logo) { %>
+                            <img src="<%= currentBidderTeam.logo %>" class="bidder-logo" id="overlayBidderLogo">
+                        <% } else { %>
+                            <span id="overlayBidderLogoEmoji">🏆</span>
+                        <% } %>
+                    </div>
+                    <span id="overlayHighestBidder" class="bidder-name"><%= data.auctionState.highestBidder ? data.auctionState.highestBidder : 'NO BIDS YET' %></span>
+                </div>
+            </div>
+
+            <!-- Zone 3: Clock & Base Price -->
+            <div class="clock-zone">
+                <div class="clock-label">TIME REMAINING</div>
+                <div id="overlayTimer" class="clock-timer">00:30</div>
+                <div class="clock-base-price">
+                    BASE BID: <strong id="overlayBasePrice"><%= formatCurrencyLocal(data.auctionState.currentPlayer ? (data.auctionState.currentPlayer.basePrice || 0) : 1000) %></strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Marquee Ticker along bottom of overlay bar -->
+        <div class="lower-marquee-bar">
+            <div class="marquee-track" id="overlayMarqueeTrack">
+                <span>⚡ <strong><%= data.auctionDetails ? data.auctionDetails.name : 'AUCTION LIVE' %></strong></span>
+                <span>•</span>
+                <span>🏆 NOW BIDDING: <strong id="tickerPlayer"><%= data.auctionState.currentPlayer ? data.auctionState.currentPlayer.name : 'Waiting...' %></strong></span>
+                <span>•</span>
+                <span>💰 CURRENT BID: <strong id="tickerBid" style="color: #10b981;"><%= formatCurrencyLocal(data.auctionState.currentBid || 0) %></strong></span>
+                <span>•</span>
+                <span>👑 HIGHEST BIDDER: <strong id="tickerBidder"><%= data.auctionState.highestBidder || 'NO BIDS YET' %></strong></span>
+                <span>•</span>
+                <span>🏷️ SPONSOR: <%= data.auctionDetails && data.auctionDetails.sponsorName ? data.auctionDetails.sponsorName : 'OFFICIAL TOURNAMENT SPONSOR' %></span>
+                <span>•</span>
+                <span>⚡ <strong><%= data.auctionDetails ? data.auctionDetails.name : 'AUCTION LIVE' %></strong></span>
+                <span>•</span>
+                <span>🏆 NOW BIDDING: <strong id="tickerPlayer2"><%= data.auctionState.currentPlayer ? data.auctionState.currentPlayer.name : 'Waiting...' %></strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. BROADCAST EVENT BANNER OVERLAYS (Sold / Unsold) -->
+    <div id="soldEventOverlay" class="broadcast-event-overlay">
+        <div class="sold-banner-card">
+            <div style="font-size: 0.95rem; color: #fbbf24; font-weight: 800; letter-spacing: 2px;">⚡ OFFICIAL RESULT</div>
+            <div class="sold-title">🏆 SOLD!</div>
+            <div class="sold-detail-row">
+                <div id="soldTeamLogoWrap"></div>
+                <div id="soldTeamName" class="sold-team-name">TEAM NAME</div>
+            </div>
+            <div id="soldPriceBadge" class="sold-price-badge">₹ 0</div>
+        </div>
+    </div>
+
+    <div id="unsoldEventOverlay" class="broadcast-event-overlay">
+        <div class="unsold-banner-card">
+            <div class="unsold-title">⚠️ UNSOLD</div>
+            <div class="unsold-sub">PASSED TO RE-AUCTION POOL</div>
+        </div>
+    </div>
+
+    <!-- Celebration Confetti Canvas -->
+    <canvas id="overlayConfettiCanvas" style="position: fixed; inset: 0; pointer-events: none; z-index: 150; width: 100%; height: 100%; display: none;"></canvas>
+
+    <script>
+        const socket = io();
+        window.teamsCache = <%- JSON.stringify(data.teams || []) %>;
+        window.currencyUnit = "<%= data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹' %>";
+
+        function formatCurrency(val) {
+            const num = Number(val) || 0;
+            const u = window.currencyUnit || '₹';
+            return ['₹', '$', '€', '£'].includes(u) ? `${u}${num.toLocaleString()}` : `${num.toLocaleString()} ${u}`;
+        }
+
+        function copyCurrentOverlayUrl(btn) {
+            const cleanUrl = window.location.origin + '/overlay';
+            navigator.clipboard.writeText(cleanUrl).then(() => {
+                const old = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#10b981';
+                setTimeout(() => {
+                    btn.textContent = old;
+                    btn.style.background = '';
+                }, 2000);
+            });
+        }
+
+        function toggleDarkPreview() {
+            document.body.classList.toggle('preview-dark-bg');
+        }
+
+        // Auto hide preview control pill after 4 seconds
+        setTimeout(() => {
+            const pill = document.getElementById('previewControls');
+            if (pill && !window.location.search.includes('preview')) {
+                pill.style.opacity = '0';
+                setTimeout(() => pill.style.display = 'none', 400);
+            }
+        }, 4000);
+
+        // Confetti Engine for OBS celebration
+        function fireOverlayConfetti() {
+            const canvas = document.getElementById('overlayConfettiCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvas.style.display = 'block';
+
+            const particles = [];
+            const colors = ['#fbbf24', '#10b981', '#38bdf8', '#f43f5e', '#a855f7', '#ffffff'];
+            for (let i = 0; i < 90; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height * 0.45,
+                    vx: (Math.random() - 0.5) * 18,
+                    vy: (Math.random() - 0.7) * 18,
+                    size: Math.random() * 9 + 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rot: Math.random() * 360,
+                    vrot: (Math.random() - 0.5) * 12,
+                    alpha: 1
+                });
+            }
+
+            let start = performance.now();
+            function draw(now) {
+                const elapsed = now - start;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let alive = 0;
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.35; // gravity
+                    p.rot += p.vrot;
+                    p.alpha = Math.max(0, 1 - (elapsed / 3200));
+                    if (p.alpha > 0) {
+                        alive++;
+                        ctx.save();
+                        ctx.globalAlpha = p.alpha;
+                        ctx.translate(p.x, p.y);
+                        ctx.rotate((p.rot * Math.PI) / 180);
+                        ctx.fillStyle = p.color;
+                        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+                        ctx.restore();
+                    }
+                });
+                if (alive > 0 && elapsed < 3500) {
+                    requestAnimationFrame(draw);
+                } else {
+                    canvas.style.display = 'none';
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            requestAnimationFrame(draw);
+        }
+
+        // Live Socket Handlers
+        socket.on('auctionUpdate', function(state) {
+            if (!state) return;
+
+            // Player data
+            const p = state.currentPlayer;
+            const elName = document.getElementById('overlayPlayerName');
+            const elPhoto = document.getElementById('overlayPlayerPhoto');
+            const elFormNo = document.getElementById('overlayPlayerFormNo');
+            const elRole = document.getElementById('overlayPlayerRole');
+            const elCat = document.getElementById('overlayPlayerCategory');
+            const elMatches = document.getElementById('overlayPlayerMatches');
+            const elRuns = document.getElementById('overlayPlayerRuns');
+            const elSR = document.getElementById('overlayPlayerSR');
+            const elAvg = document.getElementById('overlayPlayerAvg');
+            const elBase = document.getElementById('overlayBasePrice');
+            const elTickerP = document.getElementById('tickerPlayer');
+            const elTickerP2 = document.getElementById('tickerPlayer2');
+
+            if (p) {
+                if (elName) elName.textContent = p.name || 'Waiting...';
+                if (elPhoto) {
+                    elPhoto.onerror = function() { this.onerror = null; this.src = '/uploads/default-player.svg'; };
+                    const photoSrc = p.photo ? (p.photo.includes('drive.google.com') ? 'https://lh3.googleusercontent.com/d/' + (p.photo.match(/[-\w]{25,}/) || [''])[0] : (p.photo.startsWith('http') || p.photo.startsWith('/') ? p.photo : '/uploads/' + p.photo)) : '/uploads/default-player.svg';
+                    elPhoto.src = photoSrc;
+                }
+                let realId = p.formNo ? String(p.formNo).trim() : (String(p.id).length > 6 ? '..' + String(p.id).slice(-5) : p.id);
+                if (elFormNo) elFormNo.textContent = realId || '--';
+                if (elRole) elRole.textContent = p.role || 'PLAYER';
+                if (elCat) elCat.textContent = state.activeCategoryName || p.category_id || 'OPEN';
+                if (elMatches) elMatches.textContent = p.matches != null ? p.matches : '--';
+                if (elRuns) elRuns.textContent = p.runs != null ? p.runs : '--';
+                if (elSR) elSR.textContent = p.strikeRate != null ? p.strikeRate : '--';
+                if (elAvg) elAvg.textContent = p.average != null ? p.average : '--';
+                if (elBase) elBase.textContent = formatCurrency(p.basePrice || 0);
+                if (elTickerP) elTickerP.textContent = p.name || '--';
+                if (elTickerP2) elTickerP2.textContent = p.name || '--';
+            } else {
+                if (elName) elName.textContent = 'Waiting for next player...';
+                if (elPhoto) elPhoto.src = '/uploads/default-player.svg';
+                if (elFormNo) elFormNo.textContent = '--';
+            }
+
+            // Current Bid
+            const elBid = document.getElementById('overlayBidAmount');
+            const elTickerBid = document.getElementById('tickerBid');
+            if (elBid) elBid.textContent = formatCurrency(state.currentBid || 0);
+            if (elTickerBid) elTickerBid.textContent = formatCurrency(state.currentBid || 0);
+
+            // Highest Bidder & Team Logo
+            const elBidder = document.getElementById('overlayHighestBidder');
+            const elTickerBidder = document.getElementById('tickerBidder');
+            const bidderWrap = document.getElementById('overlayBidderLogoWrap');
+            const bidderName = state.highestBidder || 'NO BIDS YET';
+            if (elBidder) elBidder.textContent = bidderName;
+            if (elTickerBidder) elTickerBidder.textContent = bidderName;
+
+            if (bidderWrap && window.teamsCache) {
+                const team = window.teamsCache.find(t => t.name === state.highestBidder);
+                if (team && team.logo) {
+                    bidderWrap.innerHTML = `<img src="${team.logo}" class="bidder-logo">`;
+                } else {
+                    bidderWrap.innerHTML = `<span>🏆</span>`;
+                }
+            }
+
+            // Timer
+            const elTimer = document.getElementById('overlayTimer');
+            if (elTimer && state.timer !== undefined) {
+                const sec = Math.max(0, parseInt(state.timer, 10));
+                const formatted = '00:' + (sec < 10 ? '0' : '') + sec;
+                elTimer.textContent = formatted;
+                if (sec <= 5 && state.status === 'active') {
+                    elTimer.classList.add('timer-warning');
+                } else {
+                    elTimer.classList.remove('timer-warning');
+                }
+            }
+
+            // Round
+            const elRound = document.getElementById('scorebugRound');
+            if (elRound && state.round) elRound.textContent = state.round;
+
+            // Status Banners
+            const soldOverlay = document.getElementById('soldEventOverlay');
+            const unsoldOverlay = document.getElementById('unsoldEventOverlay');
+
+            if (state.status === 'sold') {
+                if (unsoldOverlay) unsoldOverlay.style.display = 'none';
+                if (soldOverlay) {
+                    const soldTeamName = document.getElementById('soldTeamName');
+                    const soldPriceBadge = document.getElementById('soldPriceBadge');
+                    const soldLogoWrap = document.getElementById('soldTeamLogoWrap');
+                    if (soldTeamName) soldTeamName.textContent = state.highestBidder || 'WINNING TEAM';
+                    if (soldPriceBadge) soldPriceBadge.textContent = formatCurrency(state.currentBid || 0);
+                    if (soldLogoWrap && window.teamsCache) {
+                        const team = window.teamsCache.find(t => t.name === state.highestBidder);
+                        if (team && team.logo) {
+                            soldLogoWrap.innerHTML = `<img src="${team.logo}" class="sold-team-logo">`;
+                        } else {
+                            soldLogoWrap.innerHTML = '';
+                        }
+                    }
+                    soldOverlay.style.display = 'flex';
+                    fireOverlayConfetti();
+                }
+            } else if (state.status === 'unsold') {
+                if (soldOverlay) soldOverlay.style.display = 'none';
+                if (unsoldOverlay) unsoldOverlay.style.display = 'flex';
+            } else {
+                if (soldOverlay) soldOverlay.style.display = 'none';
+                if (unsoldOverlay) unsoldOverlay.style.display = 'none';
+            }
+        });
+
+        socket.on('timerUpdate', function(timer) {
+            const elTimer = document.getElementById('overlayTimer');
+            if (elTimer) {
+                const sec = Math.max(0, parseInt(timer, 10));
+                elTimer.textContent = '00:' + (sec < 10 ? '0' : '') + sec;
+                if (sec <= 5) {
+                    elTimer.classList.add('timer-warning');
+                } else {
+                    elTimer.classList.remove('timer-warning');
+                }
+            }
+        });
+
+        socket.on('dataUpdate', function(d) {
+            if (d && d.teams) window.teamsCache = d.teams;
+        });
+    </script>
+</body>
+</html>

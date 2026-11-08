@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Live Auction Room</title>
     <link rel="stylesheet" href="/css/style.css">
     <script src="/socket.io/socket.io.js"></script>
@@ -81,6 +81,55 @@
             <div id="teamNameData" data-teamname="<%= username %>" style="display: none;"></div>
         </main>
     </div>
+
+    <!-- Live Scrolling Footer with Sponsor & Real-time Updates -->
+    <footer id="liveFooterTicker" class="live-footer-ticker">
+        <!-- Sponsor Badge on Left -->
+        <div class="footer-sponsor-badge" id="footerSponsorBadge">
+            <span class="footer-sponsor-label">PRESENTED BY</span>
+            <div id="footerSponsorLogoContainer" class="footer-sponsor-logo-box">
+                <% if (data.auctionDetails && data.auctionDetails.sponsorLogo) { %>
+                    <img id="footerSponsorLogoImg" src="<%= data.auctionDetails.sponsorLogo %>" alt="<%= (data.auctionDetails && data.auctionDetails.sponsorName) ? data.auctionDetails.sponsorName : 'Sponsor' %>" class="footer-sponsor-img">
+                <% } else if (data.auctionDetails && data.auctionDetails.sponsorName) { %>
+                    <span id="footerSponsorNameText" class="footer-sponsor-text"><%= data.auctionDetails.sponsorName %></span>
+                <% } else { %>
+                    <span id="footerSponsorDefault" class="footer-sponsor-text">OFFICIAL SPONSOR</span>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Scrolling Marquee Ticker -->
+        <div class="footer-ticker-track">
+            <div class="footer-ticker-content" id="footerTickerContent">
+                <div class="ticker-item"><span class="ticker-dot live-pulse"></span> <strong class="gold-text">AUCTION LIVE:</strong> <%= data.auctionDetails ? data.auctionDetails.name : 'ELITE LEAGUE' %> (<%= data.auctionDetails && data.auctionDetails.season ? data.auctionDetails.season : '2026' %>)</div>
+                <div class="ticker-divider">★</div>
+                <div class="ticker-item">⚡ <strong>NOW BIDDING:</strong> <span id="tickerPlayerName"><%= data.auctionState.currentPlayer ? data.auctionState.currentPlayer.name : 'Waiting for host...' %></span> (<span id="tickerPlayerRole"><%= data.auctionState.currentPlayer ? data.auctionState.currentPlayer.role : '--' %></span>)</div>
+                <div class="ticker-divider">★</div>
+                <div class="ticker-item">💰 <strong>CURRENT BID:</strong> <span id="tickerBidAmount" class="ticker-bid-green"><%= ['₹', '$', '€', '£'].includes(units) ? `${units}${(data.auctionState.currentBid || 0).toLocaleString()}` : `${(data.auctionState.currentBid || 0).toLocaleString()} ${units}` %></span></div>
+                <div class="ticker-divider">★</div>
+                <div class="ticker-item">🏆 <strong>HIGHEST BIDDER:</strong> <span id="tickerHighestBidder"><%= data.auctionState.highestBidder || 'NO BIDS YET' %></span></div>
+                <div class="ticker-divider">★</div>
+                <div class="ticker-item">🏷️ <strong>SPONSORED BY:</strong> <span id="tickerSponsorName"><%= data.auctionDetails && data.auctionDetails.sponsorName ? data.auctionDetails.sponsorName : 'Official Sponsor' %></span></div>
+                <div class="ticker-divider">★</div>
+                <div class="ticker-item">⏱️ <strong>ROUND:</strong> <%= data.auctionState.round || 1 %> • <strong>TEAMS:</strong> <%= data.teams ? data.teams.length : 0 %></div>
+                <div class="ticker-divider">★</div>
+            </div>
+            <div class="footer-ticker-content" id="footerTickerContentClone" aria-hidden="true">
+                <div class="ticker-item"><span class="ticker-dot live-pulse"></span> <strong class="gold-text">AUCTION LIVE:</strong> <%= data.auctionDetails ? data.auctionDetails.name : 'ELITE LEAGUE' %> (<%= data.auctionDetails && data.auctionDetails.season ? data.auctionDetails.season : '2026' %>)</div>
+                <div class="ticker-divider">★</div>
+                <div class="ticker-item">⚡ <strong>NOW BIDDING:</strong> <span id="tickerPlayerNameClone"><%= data.auctionState.currentPlayer ? data.auctionState.currentPlayer.name : 'Waiting for host...' %></span> (<span id="tickerPlayerRoleClone"><%= data.auctionState.currentPlayer ? data.auctionState.currentPlayer.role : '--' %></span>)</div>
+                <div class="ticker-divider">★</div>
+                <div class="ticker-item">💰 <strong>CURRENT BID:</strong> <span id="tickerBidAmountClone" class="ticker-bid-green"><%= ['₹', '$', '€', '£'].includes(units) ? `${units}${(data.auctionState.currentBid || 0).toLocaleString()}` : `${(data.auctionState.currentBid || 0).toLocaleString()} ${units}` %></span></div>
+                <div class="ticker-divider">★</div>
+                <div class="ticker-item">🏆 <strong>HIGHEST BIDDER:</strong> <span id="tickerHighestBidderClone"><%= data.auctionState.highestBidder || 'NO BIDS YET' %></span></div>
+                <div class="ticker-divider">★</div>
+                <div class="ticker-item">🏷️ <strong>SPONSORED BY:</strong> <span id="tickerSponsorNameClone"><%= data.auctionDetails && data.auctionDetails.sponsorName ? data.auctionDetails.sponsorName : 'Official Sponsor' %></span></div>
+                <div class="ticker-divider">★</div>
+                <div class="ticker-item">⏱️ <strong>ROUND:</strong> <%= data.auctionState.round || 1 %> • <strong>TEAMS:</strong> <%= data.teams ? data.teams.length : 0 %></div>
+                <div class="ticker-divider">★</div>
+            </div>
+        </div>
+    </footer>
     <script>
         window.auctionCurrencyUnit = "<%= data.auctionDetails && data.auctionDetails.units ? data.auctionDetails.units : '₹' %>";
         window.auctionMaxPlayers = parseInt("<%= data.auctionDetails && data.auctionDetails.playersPerTeamMax ? data.auctionDetails.playersPerTeamMax : 15 %>", 10) || 15;
