@@ -1,5 +1,5 @@
 # Use Node 18 Alpine as base image for a small footprint
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Create app directory
 WORKDIR /usr/src/app
