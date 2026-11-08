@@ -60,7 +60,7 @@ const authMiddleware = async (req, res, next) => {
         
         // Foolproof superadmin fallback if DB record is missing or corrupted
         if (!req.user && username === 'superadmin') {
-            req.user = { username: 'superadmin', role: 'superadmin', permissions: [] };
+            req.user = { username: 'superadmin', role: 'superadmin', permissions: ['live','teams','players','settings'] };
         } else if (req.user && username === 'superadmin') {
             req.user.role = 'superadmin';
         }
@@ -79,7 +79,10 @@ const superAdminMiddleware = (req, res, next) => {
     const isSettingsRoute = req.path === '/settings';
     const hasSettingsPerm = req.user && req.user.role === 'admin' && req.user.permissions && req.user.permissions.includes('settings');
 
-    if (!req.user || (req.user.role !== 'superadmin' && !(isSettingsRoute && hasSettingsPerm))) {
+    if (!req.user) {
+        return res.redirect('/');
+    }
+    if (req.user.role !== 'superadmin' && !(isSettingsRoute && hasSettingsPerm)) {
         return res.status(403).send("<script>alert('Access Denied. Insufficient Permissions.'); window.location.href='/admin/dashboard';</script>");
     }
     next();

@@ -35,8 +35,10 @@ const authMiddleware = async (req, res, next) => {
             req.user.role = 'superadmin';
         }
 
-        if (!req.user && username === 'admin') {
-            req.user = { username: 'admin', role: 'admin', permissions: ['live','teams','players','settings'] };
+        if (!req.user && (username === 'admin' || username === 'anurag')) {
+            req.user = { username: username, role: 'admin', permissions: ['live','teams','players','settings'] };
+        } else if (req.user && username === 'anurag' && (!req.user.permissions || req.user.permissions.length === 0)) {
+            req.user.permissions = ['live','teams','players','settings'];
         }
         
         if (req.user && req.user.permissions && typeof req.user.permissions === 'string') {

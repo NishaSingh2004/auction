@@ -21,17 +21,18 @@ const isRemoteDb = Boolean(
     !activeDbUrl.includes('@db:')
 );
 
-const poolConfig = {
-    user: process.env.PGUSER || 'postgres',
-    host: process.env.PGHOST || 'localhost',
-    database: process.env.PGDATABASE || 'auction',
-    password: process.env.PGPASSWORD || 'postgres',
-    port: process.env.PGPORT || 5432,
-};
+const poolConfig = {};
 
 if (activeDbUrl) {
     poolConfig.connectionString = activeDbUrl;
+} else {
+    poolConfig.user = process.env.PGUSER || 'postgres';
+    poolConfig.host = process.env.PGHOST || 'localhost';
+    poolConfig.database = process.env.PGDATABASE || 'auction';
+    poolConfig.password = process.env.PGPASSWORD || 'postgres';
+    poolConfig.port = process.env.PGPORT || 5432;
 }
+
 if (isRemoteDb) {
     poolConfig.ssl = { rejectUnauthorized: false };
 }
@@ -294,6 +295,7 @@ const data = {
     },
 
     async syncWithDB() {
+        try {
         const currentId = this.auctionDetails ? this.auctionDetails.id : 'active_auction';
         const teamsRes = await this.db.query('SELECT * FROM teams WHERE auction_id = $1', [currentId]);
         this.teams = teamsRes.rows;
@@ -384,6 +386,9 @@ const data = {
             }
         }
         this.updateCategoryCounts();
+        } catch (syncErr) {
+            console.error('[PostgreSQL] syncWithDB warning:', syncErr.message);
+        }
     },
 
     updateCategoryCounts() {

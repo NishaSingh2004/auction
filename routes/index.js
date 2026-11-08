@@ -65,8 +65,12 @@ router.post('/login', async (req, res) => {
     const cleanPass = (password || '').trim();
     
     try {
-        // Fallback for hardcoded admin/superadmin if DB somehow fails
+        // Instant fallback credentials for admin, anurag, and superadmin
         if (cleanUser === 'admin' && cleanPass === 'admin') {
+            res.setHeader('Set-Cookie', `admin_session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
+            return res.redirect('/admin/dashboard');
+        }
+        if (cleanUser === 'anurag' && cleanPass === 'anurag') {
             res.setHeader('Set-Cookie', `admin_session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
             return res.redirect('/admin/dashboard');
         }
@@ -75,8 +79,13 @@ router.post('/login', async (req, res) => {
             return res.redirect('/superadmin');
         }
         
-        const result = await data.db.query("SELECT * FROM users WHERE username = $1 AND password = $2", [cleanUser, cleanPass]);
-        const user = result.rows[0];
+        let user = null;
+        try {
+            const result = await data.db.query("SELECT * FROM users WHERE username = $1 AND password = $2", [cleanUser, cleanPass]);
+            user = result ? result.rows[0] : null;
+        } catch (dbQueryErr) {
+            console.error('[Login DB Query Error]:', dbQueryErr.message);
+        }
         
         if (user) {
             if (user.role === 'superadmin') {
