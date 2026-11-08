@@ -91,7 +91,7 @@ router.post('/login', async (req, res) => {
         }
     } catch (e) {
         console.error('Login Error:', e);
-        res.send("<script>alert('Database Error'); window.location.href='/';</script>");
+        res.send(`<script>alert('Database Error: ${(e.message || '').replace(/['"\\\n]/g, ' ')}'); window.location.href='/';</script>`);
     }
 });
 

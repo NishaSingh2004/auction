@@ -22,17 +22,21 @@ const authMiddleware = async (req, res, next) => {
         }
     }
     if (username) {
-        const result = await data.db.query("SELECT * FROM users WHERE username = $1", [username]);
-        req.user = result.rows[0];
+        try {
+            const result = await data.db.query("SELECT * FROM users WHERE username = $1", [username]);
+            req.user = result.rows[0];
+        } catch (dbErr) {
+            console.error('[Admin AuthMiddleware] DB error:', dbErr.message);
+        }
         
         if (!req.user && username === 'superadmin') {
-            req.user = { username: 'superadmin', role: 'superadmin', permissions: [] };
+            req.user = { username: 'superadmin', role: 'superadmin', permissions: ['live','teams','players','settings'] };
         } else if (req.user && username === 'superadmin') {
             req.user.role = 'superadmin';
         }
 
         if (!req.user && username === 'admin') {
-            req.user = { username: 'admin', role: 'admin', permissions: [] };
+            req.user = { username: 'admin', role: 'admin', permissions: ['live','teams','players','settings'] };
         }
         
         if (req.user && req.user.permissions && typeof req.user.permissions === 'string') {

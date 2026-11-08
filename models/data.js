@@ -96,6 +96,29 @@ const data = {
                 };
             }
 
+            // Auto-negotiate SSL vs Non-SSL
+            try {
+                await this.db.query('SELECT 1');
+                console.log('[PostgreSQL] Connection test successful.');
+            } catch (connErr) {
+                const msg = connErr.message || '';
+                if (msg.includes('server does not support SSL')) {
+                    console.log('[PostgreSQL] Database does not support SSL. Reconnecting without SSL...');
+                    delete poolConfig.ssl;
+                    this.db = new Pool(poolConfig);
+                    await this.db.query('SELECT 1');
+                    console.log('[PostgreSQL] Reconnected without SSL successfully.');
+                } else if (msg.includes('no encryption') || msg.includes('SSL required') || msg.includes('sslmode') || msg.includes('pg_hba.conf')) {
+                    console.log('[PostgreSQL] Database requires SSL. Reconnecting with SSL...');
+                    poolConfig.ssl = { rejectUnauthorized: false };
+                    this.db = new Pool(poolConfig);
+                    await this.db.query('SELECT 1');
+                    console.log('[PostgreSQL] Reconnected with SSL successfully.');
+                } else {
+                    throw connErr;
+                }
+            }
+
             // Initializing Tables for PostgreSQL
             await this.db.query(`
                 CREATE TABLE IF NOT EXISTS auctions (

@@ -50,8 +50,13 @@ const authMiddleware = async (req, res, next) => {
         }
     }
     if (username) {
-        const result = await data.db.query("SELECT * FROM users WHERE username = $1", [username]);
-        req.user = result.rows[0];
+        let result = null;
+        try {
+            result = await data.db.query("SELECT * FROM users WHERE username = $1", [username]);
+        } catch (dbErr) {
+            console.error('[Superadmin Auth] DB error:', dbErr.message);
+        }
+        req.user = result && result.rows ? result.rows[0] : null;
         
         // Foolproof superadmin fallback if DB record is missing or corrupted
         if (!req.user && username === 'superadmin') {
