@@ -226,6 +226,25 @@ const data = {
                 console.error('[Redis] Error restoring last_active_auction_id:', e.message);
             }
 
+            // Auto-seed players and teams if database is freshly deployed
+            try {
+                const countCheck = await this.db.query('SELECT COUNT(*) FROM players');
+                const playerCount = parseInt(countCheck.rows[0].count, 10);
+                if (playerCount === 0) {
+                    const fs = require('fs');
+                    const path = require('path');
+                    const backupFile = path.join(__dirname, '../auction_database_backup.sql');
+                    if (fs.existsSync(backupFile)) {
+                        console.log('[PostgreSQL] Database is fresh (0 players). Auto-seeding all 147 players & teams...');
+                        const sql = fs.readFileSync(backupFile, 'utf8');
+                        await this.db.query(sql);
+                        console.log('[PostgreSQL] Auto-seed complete!');
+                    }
+                }
+            } catch (seedErr) {
+                console.warn('[PostgreSQL] Auto-seed warning:', seedErr.message);
+            }
+
             // Load initial teams and players
             const currentId = this.auctionDetails ? this.auctionDetails.id : 'active_auction';
             await this.syncWithDB();
