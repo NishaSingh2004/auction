@@ -6,12 +6,19 @@ const path = require('path');
 types.setTypeParser(20, (val) => val === null ? null : parseInt(val, 10));
 types.setTypeParser(1700, (val) => val === null ? null : parseFloat(val));
 
-// PostgreSQL Connection Pool
+// Determine the PostgreSQL connection URL:
+// 1. DATABASE_URL from environment
+// 2. POSTGRES_URL from environment
+// 3. Fallback to Railway internal PostgreSQL if running in production
+const activeDbUrl = process.env.DATABASE_URL || 
+                    process.env.POSTGRES_URL || 
+                    (process.env.NODE_ENV === 'production' ? 'postgresql://postgres:qlzvuYGAEBfBszwuvnkxOEwsMXNoRTn@postgres.railway.internal:5432/railway' : null);
+
 const isRemoteDb = Boolean(
-    process.env.DATABASE_URL &&
-    !process.env.DATABASE_URL.includes('localhost') &&
-    !process.env.DATABASE_URL.includes('127.0.0.1') &&
-    !process.env.DATABASE_URL.includes('@db:')
+    activeDbUrl &&
+    !activeDbUrl.includes('localhost') &&
+    !activeDbUrl.includes('127.0.0.1') &&
+    !activeDbUrl.includes('@db:')
 );
 
 const poolConfig = {
@@ -22,8 +29,8 @@ const poolConfig = {
     port: process.env.PGPORT || 5432,
 };
 
-if (process.env.DATABASE_URL) {
-    poolConfig.connectionString = process.env.DATABASE_URL;
+if (activeDbUrl) {
+    poolConfig.connectionString = activeDbUrl;
 }
 if (isRemoteDb) {
     poolConfig.ssl = { rejectUnauthorized: false };
@@ -70,7 +77,7 @@ const data = {
     db: pool,
     redis: redisClient,
     
-    async init() {
+    async init(retryCount = 0) {
         try {
             // Connect Redis if available
             try {
@@ -253,8 +260,13 @@ const data = {
 
             console.log(`[PostgreSQL] Ready. Initialized with ${this.teams.length} teams and ${this.players.length} players.`);
         } catch (err) {
-            console.error('[PostgreSQL/Redis] Initialization Error:', err);
-            throw err;
+            console.error('[PostgreSQL/Redis] Initialization Error:', err.message);
+            if (retryCount < 6) {
+                console.log(`[PostgreSQL] Retrying DB connection in 3s (attempt ${retryCount + 1}/6)...`);
+                await new Promise(r => setTimeout(r, 3000));
+                return this.init(retryCount + 1);
+            }
+            console.error('[PostgreSQL] Max connection retries reached.');
         }
     },
 
