@@ -69,12 +69,12 @@ socketHandler(io);
 
 const PORT = process.env.PORT || 3000;
 
-data.init().then(() => {
-    if (!process.env.VERCEL) {
-        server.listen(PORT, '0.0.0.0', () => {
-            console.log(`Server is running on http://localhost:${PORT}`);
-        });
-    }
-}).catch(console.error);
+if (!process.env.VERCEL) {
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log('Server is running on port ' + PORT);
+    });
+}
+
+data.init().catch(err => console.error('[DB Init Warning]:', err.message));
 
 module.exports = app;
