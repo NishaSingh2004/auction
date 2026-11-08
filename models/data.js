@@ -11,8 +11,7 @@ const isRemoteDb = Boolean(
     process.env.DATABASE_URL &&
     !process.env.DATABASE_URL.includes('localhost') &&
     !process.env.DATABASE_URL.includes('127.0.0.1') &&
-    !process.env.DATABASE_URL.includes('@db:') &&
-    !process.env.DATABASE_URL.includes('.railway.internal')
+    !process.env.DATABASE_URL.includes('@db:')
 );
 
 const poolConfig = {

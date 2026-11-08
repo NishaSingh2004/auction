@@ -67,12 +67,32 @@ app.use('/user', userRouter);
 
 socketHandler(io);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 if (!process.env.VERCEL) {
     server.listen(PORT, '0.0.0.0', () => {
         console.log('Server is running on port ' + PORT);
     });
+
+    if (PORT !== 3000) {
+        try {
+            const server3000 = http.createServer(app);
+            io.attach(server3000);
+            server3000.listen(3000, '0.0.0.0', () => {
+                console.log('Also listening on port 3000');
+            }).on('error', (e) => console.log('Port 3000 listener:', e.message));
+        } catch (e) {}
+    }
+
+    if (PORT !== 8080) {
+        try {
+            const server8080 = http.createServer(app);
+            io.attach(server8080);
+            server8080.listen(8080, '0.0.0.0', () => {
+                console.log('Also listening on port 8080');
+            }).on('error', (e) => console.log('Port 8080 listener:', e.message));
+        } catch (e) {}
+    }
 }
 
 data.init().catch(err => console.error('[DB Init Warning]:', err.message));
