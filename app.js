@@ -119,8 +119,23 @@ if (!process.env.VERCEL) {
         console.log(`[Server] Live auction server successfully running on port ${PORT}`);
     });
     server.on('error', (err) => {
-        console.error('[Server] Listener error:', err.message);
+        console.error('[Server] Primary listener error:', err.message);
     });
+
+    // Provide automatic secondary listener on alternate port (3000 / 8080) to eliminate Railway routing 502s
+    const altPort = (PORT === 3000) ? 8080 : 3000;
+    try {
+        const altServer = http.createServer(app);
+        socketHandler(new Server(altServer, { cors: { origin: '*' } }));
+        altServer.listen(altPort, '0.0.0.0', () => {
+            console.log(`[Server] Dual-port compatibility listener active on port ${altPort}`);
+        });
+        altServer.on('error', (e) => {
+            console.log(`[Server] Port ${altPort} listener note:`, e.message);
+        });
+    } catch (e) {
+        // Safe to ignore if port already occupied
+    }
 }
 
 data.init().catch(err => console.error('[DB Init Warning]:', err.message));
