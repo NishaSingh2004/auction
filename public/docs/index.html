@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Auction Platform - Full Deployment & Architecture Manual</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #070b14;
+            --bg-card: #0f172a;
+            --bg-card-hover: #1e293b;
+            --primary: #fbbf24;
+            --primary-hover: #f59e0b;
+            --accent: #38bdf8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+            --code-bg: #030712;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Top Action Bar */
+        .top-action-bar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0.85rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #000;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border-color: var(--border);
+        }
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Container Layout */
+        .doc-container {
+            max-width: 1080px;
+            margin: 2.5rem auto;
+            padding: 0 1.5rem 5rem 1.5rem;
+        }
+
+        .doc-header {
+            margin-bottom: 2.5rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .doc-badge {
+            display: inline-block;
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--primary);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2.35rem;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .doc-subtitle {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+        }
+
+        h2 {
+            font-size: 1.55rem;
+            font-weight: 800;
+            margin: 2.5rem 0 1rem 0;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-left: 4px solid var(--primary);
+            padding-left: 0.75rem;
+        }
+
+        h3 {
+            font-size: 1.18rem;
+            font-weight: 700;
+            margin: 1.8rem 0 0.75rem 0;
+            color: var(--accent);
+        }
+
+        p, li {
+            font-size: 0.96rem;
+            color: #cbd5e1;
+            margin-bottom: 1rem;
+        }
+
+        ul, ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Card panels */
+        .doc-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        /* Code Blocks */
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #f1f5f9;
+        }
+
+        pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        th, td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.88rem;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--primary);
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Diagram Box */
+        .diagram-box {
+            background: #020617;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 10px;
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #7dd3fc;
+            overflow-x: auto;
+            white-space: pre;
+            line-height: 1.4;
+            margin: 1.5rem 0;
+        }
+
+        /* Quick Links Grid */
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .link-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            text-decoration: none;
+            color: var(--text);
+            transition: all 0.2s;
+            display: block;
+        }
+
+        .link-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .link-card-title {
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .link-card-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* Print Styles */
+        @media print {
+            .top-action-bar { display: none !important; }
+            body { background: #fff !important; color: #000 !important; }
+            .doc-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            .doc-card, pre, table, .diagram-box { background: #f8fafc !important; color: #0f172a !important; border: 1px solid #cbd5e1 !important; }
+            h1, h2, h3 { color: #0f172a !important; }
+            th { color: #000 !important; background: #e2e8f0 !important; }
+            p, li { color: #334155 !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- STICKY ACTION HEADER -->
+    <header class="top-action-bar">
+        <div class="brand-title">
+            <span>⚡</span> LIVE AUCTION SYSTEM MANUAL
+        </div>
+        <div class="action-btns">
+            <a href="/" class="btn btn-outline">← Back to Portal</a>
+            <button onclick="window.print()" class="btn btn-outline">🖨️ Print / Save PDF</button>
+            <a href="/docs/download" class="btn btn-primary">📥 Download Manual</a>
+        </div>
+    </header>
+
+    <div class="doc-container">
+
+        <!-- DOCUMENT TITLE -->
+        <header class="doc-header">
+            <span class="doc-badge">Production Architecture & Operations Guide</span>
+            <h1>Live Auction Platform Manual</h1>
+            <p class="doc-subtitle">Complete technical reference covering multi-tenant architecture, dual-database failover, WebSocket lifecycle, and Railway container cloud deployment.</p>
+        </header>
+
+        <!-- QUICK NAV LINKS -->
+        <div class="links-grid">
+            <a href="#architecture" class="link-card">
+                <div class="link-card-title">1. System Architecture</div>
+                <div class="link-card-desc">Node.js Express, dual port binding & Edge routing</div>
+            </a>
+            <a href="#multitenant" class="link-card">
+                <div class="link-card-title">2. Multi-Tenant Workspaces</div>
+                <div class="link-card-desc">Admin isolation & clean dashboard generation</div>
+            </a>
+            <a href="#database" class="link-card">
+                <div class="link-card-title">3. Database Resilience</div>
+                <div class="link-card-desc">PostgreSQL timeout protection & SQLite fallback</div>
+            </a>
+            <a href="#deployment" class="link-card">
+                <div class="link-card-title">4. Railway Deployment</div>
+                <div class="link-card-desc">CLI commands, bundle optimization & 502 prevention</div>
+            </a>
+        </div>
+
+        <!-- SECTION 1: ARCHITECTURE -->
+        <section id="architecture">
+            <h2>1. System Architecture & Topology</h2>
+            <p>The platform runs as a high-concurrency Node.js application containerized on Railway with persistent WebSocket streaming:</p>
+
+            <div class="diagram-box">
+  Cloudflare / Railway Edge Router (HTTPS Ingress)
+                 │
+                 ▼
+  Node.js Express 4 Engine (Dual Listeners: Port 3000 & 8080)
+        │                                 │
+        ├─────────────────────────────────┼────────────────────────┐
+        ▼                                 ▼                        ▼
+  Superadmin Portal                Tenant Workspaces        Socket.IO WebSockets
+  (/superadmin)                    (/admin/dashboard)       (Timer & Realtime Bids)
+        │                                 │                        │
+        └────────────────┬────────────────┘                        ▼
+                         ▼                                  Live Spectators
+                  Database Adapter                          OBS / YouTube Overlay
+          (2000ms PG Timeout + SQLite Fallback)             Franchise Tablets
+                         │
+           ┌─────────────┴─────────────┐
+           ▼                           ▼
+    PostgreSQL Cloud            SQLite Embedded
+  (Production Database)         (auction.db)
+            </div>
+
+            <h3>Core Architectural Specifications</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Component</th>
+                        <th>Implementation Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Ingress & Networking</strong></td>
+                        <td>Dual-Port Binding</td>
+                        <td>Binds to <code>process.env.PORT</code>, <code>3000</code>, and <code>8080</code> simultaneously to eliminate Railway proxy routing mismatches.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Realtime Layer</strong></td>
+                        <td>Socket.IO 4.x</td>
+                        <td>Persistent bi-directional WebSocket connections for 30s countdowns, purse subtraction, and hammer down events.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Storage Engine</strong></td>
+                        <td>Hybrid dbAdapter</td>
+                        <td>PostgreSQL with 2000ms query timeout, seamlessly falling back to local SQLite with 100% data persistence.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Container Base</strong></td>
+                        <td>node:20-slim</td>
+                        <td>Debian glibc container providing native C/C++ pre-compiled SQLite3 support without build timeouts.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- SECTION 2: MULTI-TENANT ISOLATION -->
+        <section id="multitenant">
+            <h2>2. Multi-Tenant Workspace Isolation</h2>
+            <p>Every league administrator has their own isolated tournament without cross-contaminating other organizers:</p>
+
+            <div class="doc-card">
+                <h3>How Multi-Tenancy Functions:</h3>
+                <ol>
+                    <li><strong>Provisioning (<code>/superadmin/create-admin</code>)</strong>:
+                        When Superadmin provisions an account (e.g., <code>Mansha</code>), the system creates a dedicated tournament space:
+                        <code>auction_mansha_&lt;timestamp&gt;</code> with <strong>0 teams, 0 players</strong>, and default "All" category.
+                    </li>
+                    <li><strong>Case-Insensitive Authentication</strong>:
+                        The login query checks <code>LOWER(TRIM(username)) = LOWER(TRIM($1))</code>. Signing in as <code>Mansha</code>, <code>mansha</code>, or <code>MANSHA</code> succeeds reliably.
+                    </li>
+                    <li><strong>Automatic Workspace Self-Healing</strong>:
+                        If an older admin account lacks an assigned tournament, <code>data.ensureAuctionForUser()</code> automatically generates their blank tournament on their very first login.
+                    </li>
+                    <li><strong>Master Organizer Preservation</strong>:
+                        System administrators (<code>anurag</code> and <code>admin</code>) maintain their master tournament (<code>active_auction</code>) with all 66 franchises and 1563 registered players.
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- SECTION 3: DUAL-DATABASE FAILOVER -->
+        <section id="database">
+            <h2>3. Database Resilience & Zero-Downtime Failover</h2>
+            <p>To eliminate 502 Bad Gateway responses when remote PostgreSQL instances experience network blocks, <code>models/data.js</code> implements a resilient query adapter:</p>
+
+            <pre><code>// models/data.js - Connection Safety & Query Routing
+const poolConfig = {
+    connectionTimeoutMillis: 2000, // 2s Connection Timeout
+    idleTimeoutMillis: 5000,
+    query_timeout: 2500,           // 2.5s Query Timeout
+    statement_timeout: 3000
+};
+
+const dbAdapter = {
+    async query(sql, params = []) {
+        if (isPgConnected && pgPool) {
+            try {
+                return await pgPool.query(sql, params);
+            } catch (pgErr) {
+                console.warn('[PostgreSQL Query Fallback to SQLite]:', pgErr.message);
+            }
+        }
+        // Fall back to SQLite auction.db with 100% reliability
+        const sdb = await getSqliteDb();
+        const sqliteSql = sql.replace(/\$\d+/g, '?');
+        return await sdb.all(sqliteSql, params);
+    }
+};</code></pre>
+        </section>
+
+        <!-- SECTION 4: CLOUD DEPLOYMENT & DEVOPS -->
+        <section id="deployment">
+            <h2>4. Cloud Deployment Runbook (Railway)</h2>
+            <p>Deploying the auction application is automated via the Railway CLI or Git remote:</p>
+
+            <h3>1. Bundle Optimization (Eliminating Cloudflare 413 Payload Too Large)</h3>
+            <p>Railway limits source uploads through Cloudflare to 100 MB. The project bundle was optimized from <strong>1,401 MB down to 2.4 MB</strong> (99.8% reduction) using <code>.railwayignore</code>:</p>
+            <pre><code># .railwayignore
+public/uploads/*
+!public/uploads/.gitkeep
+node_modules
+.git
+.gemini</code></pre>
+
+            <h3>2. Terminal Deployment Commands</h3>
+            <pre><code># 1. Commit changes to Git
+git add .
+git commit -m "Deploy latest platform updates"
+git push origin main
+
+# 2. Deploy directly to Railway Service
+npx @railway/cli up --service auction</code></pre>
+        </section>
+
+        <!-- SECTION 5: LIVE SPECTATOR ROUTES -->
+        <section id="routes">
+            <h2>5. Application Routes & Spectator Links</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Destination</th>
+                        <th>URL</th>
+                        <th>Multi-Tenant Query</th>
+                        <th>Intended Audience</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Portal Login</strong></td>
+                        <td><code>/</code></td>
+                        <td>N/A</td>
+                        <td>Superadmin & League Organizers</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Superadmin Center</strong></td>
+                        <td><code>/superadmin</code></td>
+                        <td>Session Cookie</td>
+                        <td>Platform Owner / Superadmin</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Organizer Console</strong></td>
+                        <td><code>/admin/dashboard</code></td>
+                        <td>Tenant Cookie</td>
+                        <td>Franchise & Auctioneer Panel</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Live Auction Stage</strong></td>
+                        <td><code>/live-auction</code></td>
+                        <td><code>?auctionId=&lt;id&gt;</code></td>
+                        <td>Players & Spectators (Mobile / Web)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>OBS Broadcast Overlay</strong></td>
+                        <td><code>/overlay</code></td>
+                        <td><code>?auctionId=&lt;id&gt;</code></td>
+                        <td>YouTube / Twitch 1080p Stream</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Spectator Portal</strong></td>
+                        <td><code>/live</code></td>
+                        <td><code>?auctionId=&lt;id&gt;</code></td>
+                        <td>Interactive Audience (Teams & Stats)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>System Documentation</strong></td>
+                        <td><code>/docs</code></td>
+                        <td>N/A</td>
+                        <td>Developers & Operators</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- FOOTER -->
+        <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+            Live Auction Web Application &copy; 2026. All rights reserved. Built for high-stakes professional leagues.
+        </footer>
+
+    </div>
+
+</body>
+</html>

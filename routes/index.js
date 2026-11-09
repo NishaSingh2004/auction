@@ -1,6 +1,25 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
 const data = require('../models/data');
+
+// Documentation Viewer & Downloader Routes
+router.get('/docs', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/docs/system-manual.html'));
+});
+router.get('/documentation', (req, res) => res.redirect('/docs'));
+router.get('/docs/download', (req, res) => {
+    res.download(
+        path.join(__dirname, '../public/docs/system-manual.html'),
+        'Live_Auction_Architecture_and_Deployment_Manual.html'
+    );
+});
+router.get('/docs/download-md', (req, res) => {
+    res.download(
+        path.join(__dirname, '../COMPLETE_DEPLOYMENT_AND_ARCHITECTURE_MANUAL.md'),
+        'Live_Auction_Architecture_and_Deployment_Manual.md'
+    );
+});
 
 router.get('/', (req, res) => {
     res.render('login');
