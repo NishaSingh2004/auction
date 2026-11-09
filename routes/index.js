@@ -7,7 +7,10 @@ router.get('/', (req, res) => {
 });
 
 router.get('/live', async (req, res) => {
-    // Pass the spectator view
+    const targetAuctionId = req.query.auctionId;
+    if (targetAuctionId && data.auctionDetails && data.auctionDetails.id !== targetAuctionId) {
+        await data.selectAuction(targetAuctionId);
+    }
     res.render('user/dashboard', { 
         data, 
         username: 'Spectator'
@@ -16,6 +19,10 @@ router.get('/live', async (req, res) => {
 
 // Dedicated Live Auction Only route (clean, fully responsive, auction only without tabs)
 router.get('/live-auction', async (req, res) => {
+    const targetAuctionId = req.query.auctionId;
+    if (targetAuctionId && data.auctionDetails && data.auctionDetails.id !== targetAuctionId) {
+        await data.selectAuction(targetAuctionId);
+    }
     res.render('live-auction', { 
         data, 
         username: 'Spectator'
@@ -67,10 +74,16 @@ router.post('/login', async (req, res) => {
     try {
         // Instant fallback credentials for admin, anurag, and superadmin
         if (cleanUser === 'admin' && cleanPass === 'admin') {
+            if (data.auctionDetails && data.auctionDetails.id !== 'active_auction') {
+                await data.selectAuction('active_auction');
+            }
             res.setHeader('Set-Cookie', `admin_session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
             return res.redirect('/admin/dashboard');
         }
         if (cleanUser === 'anurag' && cleanPass === 'anurag') {
+            if (data.auctionDetails && data.auctionDetails.id !== 'active_auction') {
+                await data.selectAuction('active_auction');
+            }
             res.setHeader('Set-Cookie', `admin_session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
             return res.redirect('/admin/dashboard');
         }
@@ -88,6 +101,9 @@ router.post('/login', async (req, res) => {
         }
         
         if (user) {
+            if (user.active_auction_id) {
+                await data.selectAuction(user.active_auction_id);
+            }
             if (user.role === 'superadmin') {
                 res.setHeader('Set-Cookie', `superadmin_session=${encodeURIComponent(user.username)}; Path=/; HttpOnly`);
                 return res.redirect('/superadmin');

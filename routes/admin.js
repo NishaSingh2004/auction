@@ -35,8 +35,12 @@ const authMiddleware = async (req, res, next) => {
         req.user = { 
             username: username, 
             role: 'admin', 
-            permissions: ['live', 'teams', 'players', 'settings'] 
+            permissions: ['live', 'teams', 'players', 'settings'],
+            active_auction_id: 'active_auction'
         };
+        if (data.auctionDetails && data.auctionDetails.id !== 'active_auction') {
+            await data.selectAuction('active_auction');
+        }
         return next();
     }
     if (username === 'superadmin') {
@@ -62,7 +66,11 @@ const authMiddleware = async (req, res, next) => {
         if (req.user.permissions && typeof req.user.permissions === 'string') {
             try { req.user.permissions = JSON.parse(req.user.permissions); } catch(e) { req.user.permissions = []; }
         } else if (!req.user.permissions) {
-            req.user.permissions = ['live', 'teams', 'players'];
+            req.user.permissions = ['live', 'teams', 'players', 'settings'];
+        }
+        // Isolate tenant workspace: load admin's private blank auction
+        if (req.user.active_auction_id && (!data.auctionDetails || data.auctionDetails.id !== req.user.active_auction_id)) {
+            await data.selectAuction(req.user.active_auction_id);
         }
         return next();
     }

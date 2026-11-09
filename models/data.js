@@ -143,16 +143,17 @@ const data = {
         try {
             const sdb = await getSqliteDb();
             await sdb.exec(`
-                CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT, role TEXT, permissions TEXT);
+                CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT, role TEXT, permissions TEXT, active_auction_id TEXT);
                 CREATE TABLE IF NOT EXISTS categories (id TEXT PRIMARY KEY, auction_id TEXT, name TEXT, "maxPlayers" INTEGER, "minPlayers" INTEGER, "baseBid" INTEGER, increment INTEGER, "reserveBid" INTEGER, "highestBidPerPlayer" INTEGER, "categoryHighestBidAll" INTEGER, color TEXT);
             `);
+            try { await sdb.exec(`ALTER TABLE users ADD COLUMN active_auction_id TEXT;`); } catch(e){}
             const defaultPerms = JSON.stringify(['live', 'teams', 'players', 'settings']);
-            await sdb.run('INSERT OR IGNORE INTO users (username, password, role, permissions) VALUES (?, ?, ?, ?)',
-                ['superadmin', 'superadmin', 'superadmin', defaultPerms]);
-            await sdb.run('INSERT OR IGNORE INTO users (username, password, role, permissions) VALUES (?, ?, ?, ?)',
-                ['admin', 'admin', 'admin', defaultPerms]);
-            await sdb.run('INSERT OR IGNORE INTO users (username, password, role, permissions) VALUES (?, ?, ?, ?)',
-                ['anurag', 'anurag', 'admin', defaultPerms]);
+            await sdb.run('INSERT OR IGNORE INTO users (username, password, role, permissions, active_auction_id) VALUES (?, ?, ?, ?, ?)',
+                ['superadmin', 'superadmin', 'superadmin', defaultPerms, 'active_auction']);
+            await sdb.run('INSERT OR IGNORE INTO users (username, password, role, permissions, active_auction_id) VALUES (?, ?, ?, ?, ?)',
+                ['admin', 'admin', 'admin', defaultPerms, 'active_auction']);
+            await sdb.run('INSERT OR IGNORE INTO users (username, password, role, permissions, active_auction_id) VALUES (?, ?, ?, ?, ?)',
+                ['anurag', 'anurag', 'admin', defaultPerms, 'active_auction']);
         } catch (e) {
             console.warn('[SQLite Init Warn]:', e.message);
         }
@@ -265,10 +266,13 @@ const data = {
                     category_id TEXT
                 );
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT;
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS active_auction_id TEXT;
                 CREATE TABLE IF NOT EXISTS users (
                     username TEXT PRIMARY KEY,
                     password TEXT,
-                    role TEXT
+                    role TEXT,
+                    permissions TEXT,
+                    active_auction_id TEXT
                 );
                 ALTER TABLE auction_details ADD COLUMN IF NOT EXISTS "sponsorLogo" TEXT;
                 ALTER TABLE auction_details ADD COLUMN IF NOT EXISTS "sponsorName" TEXT;
@@ -776,10 +780,53 @@ const data = {
         return newId;
     },
 
-    async deleteAuctionDetails(id) {
-        if (id === 'active_auction') return;
-        await this.db.query('DELETE FROM auction_details WHERE id = $1', [id]);
+    async createBlankAuctionForAdmin(username, password) {
+        const cleanUser = (username || '').trim();
+        const cleanPass = (password || '').trim();
+        if (!cleanUser || !cleanPass) throw new Error('Username and password are required');
+
+        const newAuctionId = 'auction_' + cleanUser.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
+        const tournamentName = `${cleanUser.toUpperCase()} PREMIER LEAGUE ${new Date().getFullYear()}`;
+
+        // 1. Create fresh blank tournament in auction_details (0 teams, 0 players)
+        await this.db.query(`
+            INSERT INTO auction_details (
+                id, logo, "sportsType", season, name, "auctionDate", "auctionTime",
+                "pointsPerTeam", units, "baseBid", "bidIncreaseBy", "playersPerTeamMax", "playersPerTeamMin",
+                "sponsorLogo", "sponsorName"
+            ) VALUES ($1, null, 'Cricket', $2, $3, '2026-05-09', '16:00', 100000, 'CR/LAC', 1000.0, 500.0, 16, 0, null, '')
+        `, [newAuctionId, String(new Date().getFullYear()), tournamentName]);
+
+        // 2. Create default 'All' category for this blank tournament
+        const catId = 'cat_all_' + newAuctionId;
+        await this.db.query(`
+            INSERT INTO categories (
+                id, auction_id, name, "maxPlayers", "minPlayers", "baseBid", increment, "reserveBid", "highestBidPerPlayer", "categoryHighestBidAll", color
+            ) VALUES ($1, $2, 'All', 16, 0, 1000, 500, 0, 0, 0, '#ffffff')
+        `, [catId, newAuctionId]);
+
+        // 3. Insert new admin account linked directly to their blank auction
+        const defaultPerms = JSON.stringify(['live', 'teams', 'players', 'settings']);
+        await this.db.query(
+            "INSERT INTO users (username, password, role, permissions, active_auction_id) VALUES ($1, $2, 'admin', $3, $4)",
+            [cleanUser, cleanPass, defaultPerms, newAuctionId]
+        );
+
         await this.syncWithDB();
+        return newAuctionId;
+    },
+
+    async deleteAuctionDetails(id) {
+        if (!id || id === 'active_auction') return;
+        await this.db.query('DELETE FROM auction_details WHERE id = $1', [id]);
+        await this.db.query('DELETE FROM teams WHERE auction_id = $1', [id]);
+        await this.db.query('DELETE FROM players WHERE auction_id = $1', [id]);
+        await this.db.query('DELETE FROM categories WHERE auction_id = $1', [id]);
+        if (this.auctionDetails && this.auctionDetails.id === id) {
+            await this.selectAuction('active_auction');
+        } else {
+            await this.syncWithDB();
+        }
     },
 
     async updateSponsorDetails(id, fields) {

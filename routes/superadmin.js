@@ -151,17 +151,19 @@ router.get('/settings', async (req, res) => {
     }
 });
 
-// Create Admin
+// Create Admin with guaranteed blank dashboard (0 teams, 0 players, fresh tournament)
 router.post('/create-admin', async (req, res) => {
     const { username, password } = req.body;
     try {
-        await data.db.query(
-            "INSERT INTO users (username, password, role, permissions) VALUES ($1, $2, 'admin', '[]')",
-            [username, password]
-        );
+        const cleanUser = (username || '').trim();
+        const cleanPass = (password || '').trim();
+        if (!cleanUser || !cleanPass) {
+            return res.send("<script>alert('Username and password are required'); window.location.href='/superadmin';</script>");
+        }
+        await data.createBlankAuctionForAdmin(cleanUser, cleanPass);
         res.redirect('/superadmin');
     } catch (e) {
-        console.error(e);
+        console.error('Error creating admin:', e);
         res.send("<script>alert('Error creating admin. Username might exist.'); window.location.href='/superadmin';</script>");
     }
 });
@@ -170,6 +172,11 @@ router.post('/create-admin', async (req, res) => {
 router.post('/delete-admin', async (req, res) => {
     const { username } = req.body;
     try {
+        const userRes = await data.db.query("SELECT active_auction_id FROM users WHERE username = $1", [username]);
+        const user = userRes && userRes.rows ? userRes.rows[0] : null;
+        if (user && user.active_auction_id && user.active_auction_id !== 'active_auction') {
+            await data.deleteAuctionDetails(user.active_auction_id);
+        }
         await data.db.query("DELETE FROM users WHERE username = $1 AND role = 'admin'", [username]);
         res.redirect('/superadmin');
     } catch (e) {
