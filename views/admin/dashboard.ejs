@@ -118,7 +118,7 @@
             <div style="display: flex; align-items: center; gap: 0.85rem; font-size: 0.85rem; font-weight: 800; color: rgba(255,255,255,0.6);">
                 <!-- YOUTUBE OVERLAY LINK BUTTON -->
                 <div style="display: flex; align-items: center; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; overflow: hidden;" title="YouTube / OBS Stream Overlay (1920x1080 Transparent)">
-                    <a href="/overlay" target="_blank" style="text-decoration: none; color: #f87171; font-size: 0.75rem; font-weight: 800; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 0.4rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='transparent'">
+                    <a href="/overlay<%= (data.auctionDetails && data.auctionDetails.id !== 'active_auction') ? ('?auctionId=' + data.auctionDetails.id) : '' %>" target="_blank" style="text-decoration: none; color: #f87171; font-size: 0.75rem; font-weight: 800; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 0.4rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='transparent'">
                         <span style="font-size: 0.95rem;">📺</span> OVERLAY
                     </a>
                     <button type="button" onclick="copyStreamLinkDirect('/overlay', this)" style="background: rgba(239, 68, 68, 0.22); border: none; border-left: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; font-size: 0.72rem; font-weight: 800; padding: 0.35rem 0.5rem; cursor: pointer; transition: all 0.2s;" title="Copy Overlay URL for OBS Browser Source">
@@ -128,7 +128,7 @@
 
                 <!-- LIVE AUCTION ONLY SCREEN LINK BUTTON -->
                 <div style="display: flex; align-items: center; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; overflow: hidden;" title="Live Auction Screen (Auction Only - Fully Responsive)">
-                    <a href="/live-auction" target="_blank" style="text-decoration: none; color: #34d399; font-size: 0.75rem; font-weight: 800; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 0.4rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='transparent'">
+                    <a href="/live-auction<%= (data.auctionDetails && data.auctionDetails.id !== 'active_auction') ? ('?auctionId=' + data.auctionDetails.id) : '' %>" target="_blank" style="text-decoration: none; color: #34d399; font-size: 0.75rem; font-weight: 800; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 0.4rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='transparent'">
                         <span style="font-size: 0.95rem;">⚡</span> LIVE AUCTION
                     </a>
                     <button type="button" onclick="copyStreamLinkDirect('/live-auction', this)" style="background: rgba(16, 185, 129, 0.22); border: none; border-left: 1px solid rgba(16, 185, 129, 0.35); color: #6ee7b7; font-size: 0.72rem; font-weight: 800; padding: 0.35rem 0.5rem; cursor: pointer; transition: all 0.2s;" title="Copy Live Auction URL for Spectators">
@@ -2287,9 +2287,11 @@
                     const inpLive = document.getElementById('linkInputLiveAuction');
                     const inpOverlay = document.getElementById('linkInputOverlay');
                     const inpFull = document.getElementById('linkInputFullLive');
-                    if (inpLive) inpLive.value = origin + '/live-auction';
-                    if (inpOverlay) inpOverlay.value = origin + '/overlay';
-                    if (inpFull) inpFull.value = origin + '/live';
+                    const currentAid = '<%= data.auctionDetails ? data.auctionDetails.id : "" %>';
+                    const q = (currentAid && currentAid !== 'active_auction') ? ('?auctionId=' + encodeURIComponent(currentAid)) : '';
+                    if (inpLive) inpLive.value = origin + '/live-auction' + q;
+                    if (inpOverlay) inpOverlay.value = origin + '/overlay' + q;
+                    if (inpFull) inpFull.value = origin + '/live' + q;
                 } catch (e) {
                     console.error('Error initStreamLinkInputs:', e);
                 }
@@ -2336,7 +2338,10 @@
             }
 
             window.copyStreamLinkDirect = function(path, btn) {
-                const fullUrl = window.location.origin + path;
+                const currentAid = '<%= data.auctionDetails ? data.auctionDetails.id : "" %>';
+                const sep = path.includes('?') ? '&' : '?';
+                const queryStr = (currentAid && currentAid !== 'active_auction') ? (sep + 'auctionId=' + encodeURIComponent(currentAid)) : '';
+                const fullUrl = window.location.origin + path + queryStr;
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(fullUrl).then(() => {
                         const orig = btn.innerHTML;

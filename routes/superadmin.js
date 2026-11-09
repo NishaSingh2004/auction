@@ -56,8 +56,10 @@ const authMiddleware = async (req, res, next) => {
         return res.redirect('/');
     }
 
+    const lowerUser = username.toLowerCase().trim();
+
     // Instant fast-path bypass for superadmin and admin accounts to guarantee 0ms latency and eliminate 502s
-    if (username === 'superadmin') {
+    if (lowerUser === 'superadmin') {
         req.user = { 
             username: 'superadmin', 
             role: 'superadmin', 
@@ -65,7 +67,7 @@ const authMiddleware = async (req, res, next) => {
         };
         return next();
     }
-    if (username === 'admin' || username === 'anurag') {
+    if (lowerUser === 'admin' || lowerUser === 'anurag') {
         req.user = { 
             username: username, 
             role: 'admin', 
@@ -76,8 +78,8 @@ const authMiddleware = async (req, res, next) => {
 
     try {
         const result = await Promise.race([
-            data.db.query("SELECT * FROM users WHERE username = $1", [username]),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Superadmin Auth Timeout')), 1500))
+            data.db.query("SELECT * FROM users WHERE LOWER(TRIM(username)) = $1", [lowerUser]),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Superadmin Auth Timeout')), 2000))
         ]);
         req.user = result && result.rows ? result.rows[0] : null;
     } catch (dbErr) {
@@ -171,13 +173,14 @@ router.post('/create-admin', async (req, res) => {
 // Delete Admin
 router.post('/delete-admin', async (req, res) => {
     const { username } = req.body;
+    const lower = (username || '').toLowerCase().trim();
     try {
-        const userRes = await data.db.query("SELECT active_auction_id FROM users WHERE username = $1", [username]);
+        const userRes = await data.db.query("SELECT active_auction_id FROM users WHERE LOWER(TRIM(username)) = $1", [lower]);
         const user = userRes && userRes.rows ? userRes.rows[0] : null;
         if (user && user.active_auction_id && user.active_auction_id !== 'active_auction') {
             await data.deleteAuctionDetails(user.active_auction_id);
         }
-        await data.db.query("DELETE FROM users WHERE username = $1 AND role = 'admin'", [username]);
+        await data.db.query("DELETE FROM users WHERE LOWER(TRIM(username)) = $1 AND role != 'superadmin'", [lower]);
         res.redirect('/superadmin');
     } catch (e) {
         console.error(e);
@@ -188,12 +191,13 @@ router.post('/delete-admin', async (req, res) => {
 // Update Permissions
 router.post('/update-permissions', async (req, res) => {
     const { username, permissions } = req.body; 
+    const lower = (username || '').toLowerCase().trim();
     let permsJson = '[]';
     if (permissions) {
         permsJson = JSON.stringify(Array.isArray(permissions) ? permissions : [permissions]);
     }
     try {
-        await data.db.query("UPDATE users SET permissions = $1 WHERE username = $2 AND role = 'admin'", [permsJson, username]);
+        await data.db.query("UPDATE users SET permissions = $1, role = 'admin' WHERE LOWER(TRIM(username)) = $2 AND role != 'superadmin'", [permsJson, lower]);
         res.redirect('/superadmin');
     } catch (e) {
         console.error(e);

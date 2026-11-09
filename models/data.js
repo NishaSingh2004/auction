@@ -154,6 +154,10 @@ const data = {
                 ['admin', 'admin', 'admin', defaultPerms, 'active_auction']);
             await sdb.run('INSERT OR IGNORE INTO users (username, password, role, permissions, active_auction_id) VALUES (?, ?, ?, ?, ?)',
                 ['anurag', 'anurag', 'admin', defaultPerms, 'active_auction']);
+            // Normalize any subordinate accounts to ensure admin role and full default permissions
+            await sdb.run("UPDATE users SET role = 'admin' WHERE role = 'user' OR role IS NULL");
+            await sdb.run("UPDATE users SET permissions = ? WHERE permissions IS NULL", [defaultPerms]);
+            await sdb.run("UPDATE users SET active_auction_id = 'active_auction' WHERE LOWER(username) IN ('admin', 'anurag') AND (active_auction_id IS NULL OR active_auction_id = '')");
         } catch (e) {
             console.warn('[SQLite Init Warn]:', e.message);
         }
@@ -778,6 +782,55 @@ const data = {
         `, [fields.baseBid || 1000, newId]);
         await this.syncWithDB();
         return newId;
+    },
+
+    async ensureAuctionForUser(username) {
+        const cleanUser = (username || '').trim();
+        const lowerUser = cleanUser.toLowerCase();
+        
+        // Default system admins always use active_auction
+        if (lowerUser === 'anurag' || lowerUser === 'admin') {
+            await this.db.query("UPDATE users SET active_auction_id = 'active_auction', role = 'admin' WHERE LOWER(TRIM(username)) = $1", [lowerUser]);
+            return 'active_auction';
+        }
+
+        // Check if user already has an active_auction_id in DB
+        const res = await this.db.query("SELECT active_auction_id FROM users WHERE LOWER(TRIM(username)) = $1", [lowerUser]);
+        if (res.rows && res.rows.length > 0 && res.rows[0].active_auction_id) {
+            const existingId = res.rows[0].active_auction_id;
+            const aRes = await this.db.query("SELECT id FROM auction_details WHERE id = $1", [existingId]);
+            if (aRes.rows && aRes.rows.length > 0) {
+                return existingId;
+            }
+        }
+
+        // Otherwise create a clean isolated blank tournament for this user
+        const newAuctionId = 'auction_' + lowerUser.replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
+        const tournamentName = `${cleanUser.toUpperCase()} PREMIER LEAGUE ${new Date().getFullYear()}`;
+
+        await this.db.query(`
+            INSERT INTO auction_details (
+                id, logo, "sportsType", season, name, "auctionDate", "auctionTime",
+                "pointsPerTeam", units, "baseBid", "bidIncreaseBy", "playersPerTeamMax", "playersPerTeamMin",
+                "sponsorLogo", "sponsorName"
+            ) VALUES ($1, null, 'Cricket', $2, $3, '2026-05-09', '16:00', 100000, 'CR/LAC', 1000.0, 500.0, 16, 0, null, '')
+        `, [newAuctionId, String(new Date().getFullYear()), tournamentName]);
+
+        const catId = 'cat_all_' + newAuctionId;
+        await this.db.query(`
+            INSERT INTO categories (
+                id, auction_id, name, "maxPlayers", "minPlayers", "baseBid", increment, "reserveBid", "highestBidPerPlayer", "categoryHighestBidAll", color
+            ) VALUES ($1, $2, 'All', 16, 0, 1000, 500, 0, 0, 0, '#ffffff')
+        `, [catId, newAuctionId]);
+
+        const defaultPerms = JSON.stringify(['live', 'teams', 'players', 'settings']);
+        await this.db.query(
+            "UPDATE users SET active_auction_id = $1, role = 'admin', permissions = COALESCE(permissions, $2) WHERE LOWER(TRIM(username)) = $3",
+            [newAuctionId, defaultPerms, lowerUser]
+        );
+
+        await this.syncWithDB();
+        return newAuctionId;
     },
 
     async createBlankAuctionForAdmin(username, password) {

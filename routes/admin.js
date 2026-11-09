@@ -30,8 +30,10 @@ const authMiddleware = async (req, res, next) => {
         return res.redirect('/');
     }
 
-    // Instant bypass for trusted admin accounts (anurag, admin, superadmin) to eliminate 502 / DB latency
-    if (username === 'admin' || username === 'anurag') {
+    const lowerUser = username.toLowerCase().trim();
+
+    // Instant bypass for trusted system accounts to eliminate 502 / DB latency
+    if (lowerUser === 'admin' || lowerUser === 'anurag') {
         req.user = { 
             username: username, 
             role: 'admin', 
@@ -43,7 +45,7 @@ const authMiddleware = async (req, res, next) => {
         }
         return next();
     }
-    if (username === 'superadmin') {
+    if (lowerUser === 'superadmin') {
         req.user = { 
             username: 'superadmin', 
             role: 'superadmin', 
@@ -54,8 +56,8 @@ const authMiddleware = async (req, res, next) => {
 
     try {
         const result = await Promise.race([
-            data.db.query("SELECT * FROM users WHERE username = $1", [username]),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Auth Query Timeout')), 1500))
+            data.db.query("SELECT * FROM users WHERE LOWER(TRIM(username)) = $1", [lowerUser]),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Auth Query Timeout')), 2000))
         ]);
         req.user = result && result.rows ? result.rows[0] : null;
     } catch (dbErr) {
@@ -63,13 +65,21 @@ const authMiddleware = async (req, res, next) => {
     }
     
     if (req.user) {
+        req.user.role = 'admin';
         if (req.user.permissions && typeof req.user.permissions === 'string') {
             try { req.user.permissions = JSON.parse(req.user.permissions); } catch(e) { req.user.permissions = []; }
-        } else if (!req.user.permissions) {
+        }
+        if (!req.user.permissions || req.user.permissions.length === 0) {
             req.user.permissions = ['live', 'teams', 'players', 'settings'];
         }
+
+        // Guarantee tenant workspace for every subordinate administrator
+        if (!req.user.active_auction_id) {
+            req.user.active_auction_id = await data.ensureAuctionForUser(req.user.username);
+        }
+
         // Isolate tenant workspace: load admin's private blank auction
-        if (req.user.active_auction_id && (!data.auctionDetails || data.auctionDetails.id !== req.user.active_auction_id)) {
+        if (!data.auctionDetails || data.auctionDetails.id !== req.user.active_auction_id) {
             await data.selectAuction(req.user.active_auction_id);
         }
         return next();

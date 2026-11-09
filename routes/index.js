@@ -70,53 +70,74 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const cleanUser = (username || '').trim();
     const cleanPass = (password || '').trim();
+    const lowerUser = cleanUser.toLowerCase();
     
     try {
-        // Instant fallback credentials for admin, anurag, and superadmin
-        if (cleanUser === 'admin' && cleanPass === 'admin') {
-            if (data.auctionDetails && data.auctionDetails.id !== 'active_auction') {
-                await data.selectAuction('active_auction');
-            }
-            res.setHeader('Set-Cookie', `admin_session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
+        // Fast-path bypass for system accounts
+        if (lowerUser === 'admin' && cleanPass === 'admin') {
+            await data.selectAuction('active_auction');
+            res.setHeader('Set-Cookie', [
+                `admin_session=${encodeURIComponent('admin')}; Path=/; HttpOnly`,
+                `superadmin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+                `session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+            ]);
             return res.redirect('/admin/dashboard');
         }
-        if (cleanUser === 'anurag' && cleanPass === 'anurag') {
-            if (data.auctionDetails && data.auctionDetails.id !== 'active_auction') {
-                await data.selectAuction('active_auction');
-            }
-            res.setHeader('Set-Cookie', `admin_session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
+        if (lowerUser === 'anurag' && cleanPass === 'anurag') {
+            await data.selectAuction('active_auction');
+            res.setHeader('Set-Cookie', [
+                `admin_session=${encodeURIComponent('anurag')}; Path=/; HttpOnly`,
+                `superadmin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+                `session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+            ]);
             return res.redirect('/admin/dashboard');
         }
-        if (cleanUser === 'superadmin' && cleanPass === 'superadmin') {
-            res.setHeader('Set-Cookie', `superadmin_session=${encodeURIComponent(cleanUser)}; Path=/; HttpOnly`);
+        if (lowerUser === 'superadmin' && cleanPass === 'superadmin') {
+            res.setHeader('Set-Cookie', [
+                `superadmin_session=${encodeURIComponent('superadmin')}; Path=/; HttpOnly`,
+                `admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+                `session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+            ]);
             return res.redirect('/superadmin');
         }
         
         let user = null;
         try {
-            const result = await data.db.query("SELECT * FROM users WHERE username = $1 AND password = $2", [cleanUser, cleanPass]);
-            user = result ? result.rows[0] : null;
+            const result = await data.db.query(
+                "SELECT * FROM users WHERE LOWER(TRIM(username)) = $1 AND TRIM(password) = $2",
+                [lowerUser, cleanPass]
+            );
+            user = result && result.rows ? result.rows[0] : null;
         } catch (dbQueryErr) {
             console.error('[Login DB Query Error]:', dbQueryErr.message);
         }
         
         if (user) {
-            if (user.active_auction_id) {
-                await data.selectAuction(user.active_auction_id);
-            }
             if (user.role === 'superadmin') {
-                res.setHeader('Set-Cookie', `superadmin_session=${encodeURIComponent(user.username)}; Path=/; HttpOnly`);
+                res.setHeader('Set-Cookie', [
+                    `superadmin_session=${encodeURIComponent(user.username)}; Path=/; HttpOnly`,
+                    `admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+                    `session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+                ]);
                 return res.redirect('/superadmin');
             } else {
-                res.setHeader('Set-Cookie', `admin_session=${encodeURIComponent(user.username)}; Path=/; HttpOnly`);
+                // Multi-tenant: Guarantee isolated workspace for admin
+                const auctionId = user.active_auction_id || await data.ensureAuctionForUser(user.username);
+                await data.selectAuction(auctionId);
+
+                res.setHeader('Set-Cookie', [
+                    `admin_session=${encodeURIComponent(user.username)}; Path=/; HttpOnly`,
+                    `superadmin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+                    `session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+                ]);
                 return res.redirect('/admin/dashboard');
             }
         } else {
-            res.send("<script>alert('Invalid Credentials!'); window.location.href='/';</script>");
+            res.send("<script>alert('Invalid Credentials! Please verify username and password.'); window.location.href='/';</script>");
         }
     } catch (e) {
         console.error('Login Error:', e);
-        res.send(`<script>alert('Database Error: ${(e.message || '').replace(/['"\\\n]/g, ' ')}'); window.location.href='/';</script>`);
+        res.send(`<script>alert('Login Error: ${(e.message || '').replace(/['"\\\n]/g, ' ')}'); window.location.href='/';</script>`);
     }
 });
 
