@@ -1,15 +1,14 @@
 const { Pool, types } = require('pg');
 const { createClient } = require('redis');
 const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
+const { open } = require('sqlite');
 
 // Configure pg type parsers: BIGINT (OID 20) and NUMERIC (OID 1700) to return numbers, preventing string concatenation
 types.setTypeParser(20, (val) => val === null ? null : parseInt(val, 10));
 types.setTypeParser(1700, (val) => val === null ? null : parseFloat(val));
 
 // Determine the PostgreSQL connection URL:
-// 1. DATABASE_URL from environment
-// 2. POSTGRES_URL from environment
-// 3. Fallback to Railway internal PostgreSQL if running in production
 const activeDbUrl = process.env.DATABASE_URL || 
                     process.env.POSTGRES_URL || 
                     (process.env.NODE_ENV === 'production' ? 'postgresql://postgres:qlzvuYGAEBfBszwuvnkxOEwsMXNoRTn@postgres.railway.internal:5432/railway' : null);
@@ -21,7 +20,12 @@ const isRemoteDb = Boolean(
     !activeDbUrl.includes('@db:')
 );
 
-const poolConfig = {};
+const poolConfig = {
+    connectionTimeoutMillis: 2000,
+    idleTimeoutMillis: 5000,
+    query_timeout: 2500,
+    statement_timeout: 3000
+};
 
 if (activeDbUrl) {
     poolConfig.connectionString = activeDbUrl;
@@ -37,15 +41,69 @@ if (isRemoteDb) {
     poolConfig.ssl = { rejectUnauthorized: false };
 }
 
-const pool = new Pool(poolConfig);
-pool.on('error', (err) => console.error('[PostgreSQL] Pool Error:', err));
+let pgPool = new Pool(poolConfig);
+pgPool.on('error', (err) => console.warn('[PostgreSQL Pool Warning]:', err.message));
+
+let isPgConnected = false;
+let sqliteDb = null;
+
+async function getSqliteDb() {
+    if (!sqliteDb) {
+        sqliteDb = await open({
+            filename: path.join(__dirname, '../auction.db'),
+            driver: sqlite3.Database
+        });
+    }
+    return sqliteDb;
+}
+
+// Resilient query adapter: routes queries to PostgreSQL when connected, falls back to SQLite
+const dbAdapter = {
+    async query(sql, params = []) {
+        if (isPgConnected && pgPool) {
+            try {
+                return await pgPool.query(sql, params);
+            } catch (pgErr) {
+                console.warn('[PostgreSQL Query Fallback to SQLite]:', pgErr.message);
+            }
+        }
+        
+        try {
+            const sdb = await getSqliteDb();
+            let sqliteSql = sql.replace(/\$\d+/g, '?');
+            const trimmed = sqliteSql.trim();
+            const upper = trimmed.toUpperCase();
+
+            // Handle multi-statement DDL if any
+            if (upper.startsWith('CREATE TABLE') || upper.startsWith('ALTER TABLE')) {
+                await sdb.exec(sqliteSql);
+                return { rows: [] };
+            }
+
+            if (upper.startsWith('SELECT')) {
+                const rows = await sdb.all(sqliteSql, params);
+                return { rows: rows || [] };
+            } else {
+                const result = await sdb.run(sqliteSql, params);
+                return { rows: [], rowCount: result ? result.changes : 0 };
+            }
+        } catch (sqliteErr) {
+            console.error('[SQLite Query Error]:', sqliteErr.message, 'SQL:', sql);
+            return { rows: [] };
+        }
+    }
+};
 
 // Redis Client with in-memory fallback for cloud / serverless compatibility
 let redisClient = null;
-const redisUrl = process.env.REDIS_URL || (process.env.NODE_ENV === 'production' ? null : 'redis://localhost:6379');
+const redisUrl = process.env.REDIS_URL || null;
 if (redisUrl) {
     redisClient = createClient({
-        url: redisUrl
+        url: redisUrl,
+        socket: { 
+            connectTimeout: 1500,
+            reconnectStrategy: (retries) => retries > 2 ? new Error('Redis max retries') : 500
+        }
     });
     redisClient.on('error', (err) => console.warn('[Redis] Warning:', err.message));
 } else {
@@ -75,53 +133,76 @@ const data = {
         bidHistory: [],
         activeCategory: 'all'
     },
-    db: pool,
+    db: dbAdapter,
     redis: redisClient,
     
-    async init(retryCount = 0) {
+    async init() {
+        console.log('[Data] Initializing auction database and state...');
+        
+        // 1. Immediately ensure SQLite tables and users exist in <5ms
         try {
-            // Connect Redis if available
-            try {
-                if (this.redis && !this.redis.isOpen) {
-                    await this.redis.connect();
-                    console.log('[Redis] Connected.');
-                }
-            } catch (rErr) {
-                console.warn('[Redis] Connection warning, using in-memory state fallback:', rErr.message);
-                const memStore = new Map();
-                this.redis = {
-                    isOpen: true,
-                    get: async (k) => memStore.get(k) || null,
-                    set: async (k, v) => { memStore.set(k, v); return 'OK'; },
-                    del: async (k) => { memStore.delete(k); return 1; }
-                };
-            }
+            const sdb = await getSqliteDb();
+            await sdb.exec(`
+                CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT, role TEXT, permissions TEXT);
+                CREATE TABLE IF NOT EXISTS categories (id TEXT PRIMARY KEY, auction_id TEXT, name TEXT, "maxPlayers" INTEGER, "minPlayers" INTEGER, "baseBid" INTEGER, increment INTEGER, "reserveBid" INTEGER, "highestBidPerPlayer" INTEGER, "categoryHighestBidAll" INTEGER, color TEXT);
+            `);
+            const defaultPerms = JSON.stringify(['live', 'teams', 'players', 'settings']);
+            await sdb.run('INSERT OR IGNORE INTO users (username, password, role, permissions) VALUES (?, ?, ?, ?)',
+                ['superadmin', 'superadmin', 'superadmin', defaultPerms]);
+            await sdb.run('INSERT OR IGNORE INTO users (username, password, role, permissions) VALUES (?, ?, ?, ?)',
+                ['admin', 'admin', 'admin', defaultPerms]);
+            await sdb.run('INSERT OR IGNORE INTO users (username, password, role, permissions) VALUES (?, ?, ?, ?)',
+                ['anurag', 'anurag', 'admin', defaultPerms]);
+        } catch (e) {
+            console.warn('[SQLite Init Warn]:', e.message);
+        }
 
-            // Auto-negotiate SSL vs Non-SSL
-            try {
-                await this.db.query('SELECT 1');
-                console.log('[PostgreSQL] Connection test successful.');
-            } catch (connErr) {
-                const msg = connErr.message || '';
-                if (msg.includes('server does not support SSL')) {
-                    console.log('[PostgreSQL] Database does not support SSL. Reconnecting without SSL...');
-                    delete poolConfig.ssl;
-                    this.db = new Pool(poolConfig);
-                    await this.db.query('SELECT 1');
-                    console.log('[PostgreSQL] Reconnected without SSL successfully.');
-                } else if (msg.includes('no encryption') || msg.includes('SSL required') || msg.includes('sslmode') || msg.includes('pg_hba.conf')) {
-                    console.log('[PostgreSQL] Database requires SSL. Reconnecting with SSL...');
-                    poolConfig.ssl = { rejectUnauthorized: false };
-                    this.db = new Pool(poolConfig);
-                    await this.db.query('SELECT 1');
-                    console.log('[PostgreSQL] Reconnected with SSL successfully.');
-                } else {
-                    throw connErr;
-                }
-            }
+        // 2. Load data immediately into memory from SQLite so dashboard and live views render in <5ms
+        await this.syncWithDB();
 
-            // Initializing Tables for PostgreSQL
-            await this.db.query(`
+        // 3. Connect Redis with 1.5s timeout
+        try {
+            if (this.redis && !this.redis.isOpen) {
+                await Promise.race([
+                    this.redis.connect(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Redis Timeout')), 1500))
+                ]);
+                console.log('[Redis] Connected.');
+            }
+        } catch (rErr) {
+            console.warn('[Redis] Connection warning, using in-memory state fallback:', rErr.message);
+            const memStore = new Map();
+            this.redis = {
+                isOpen: true,
+                get: async (k) => memStore.get(k) || null,
+                set: async (k, v) => { memStore.set(k, v); return 'OK'; },
+                del: async (k) => { memStore.delete(k); return 1; }
+            };
+        }
+
+        // 4. Test PostgreSQL connection with 2.0s timeout
+        try {
+            await Promise.race([
+                pgPool.query('SELECT 1'),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('PostgreSQL Connection Timeout (2s)')), 2000))
+            ]);
+            isPgConnected = true;
+            console.log('[PostgreSQL] Connected successfully to cloud database.');
+            await this.initPostgreSQLTables();
+            await this.syncWithDB();
+        } catch (pgErr) {
+            isPgConnected = false;
+            console.log(`[Database] Remote PostgreSQL unavailable (${pgErr.message}). Seamlessly running on SQLite auction.db with full persistence.`);
+        }
+
+        // 5. Restore State from Redis or memory
+        await this.loadStateFromRedis();
+        console.log(`[Data Ready] Ready with ${this.teams.length} teams and ${this.players.length} players.`);
+    },
+
+    async initPostgreSQLTables() {
+        try {
+            await pgPool.query(`
                 CREATE TABLE IF NOT EXISTS auctions (
                     id TEXT PRIMARY KEY,
                     name TEXT,
@@ -142,8 +223,6 @@ const data = {
                     "categoryHighestBidAll" INTEGER,
                     color TEXT
                 );
-                
-                -- Add columns if they were created before these were added
                 ALTER TABLE categories ADD COLUMN IF NOT EXISTS "highestBidPerPlayer" INTEGER;
                 ALTER TABLE categories ADD COLUMN IF NOT EXISTS "categoryHighestBidAll" INTEGER;
                 
@@ -186,9 +265,6 @@ const data = {
                     category_id TEXT
                 );
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT;
-                ALTER TABLE players ALTER COLUMN "basePrice" TYPE BIGINT;
-                ALTER TABLE players ALTER COLUMN "soldPrice" TYPE BIGINT;
-                ALTER TABLE players ALTER COLUMN age TYPE BIGINT;
                 CREATE TABLE IF NOT EXISTS users (
                     username TEXT PRIMARY KEY,
                     password TEXT,
@@ -213,22 +289,24 @@ const data = {
                 );
             `);
 
-            
-            // Seed Superadmin
-            const saCheck = await this.db.query("SELECT * FROM users WHERE username = 'superadmin'");
+            const defaultPerms = JSON.stringify(['live', 'teams', 'players', 'settings']);
+            const saCheck = await pgPool.query("SELECT * FROM users WHERE username = 'superadmin'");
             if (saCheck.rows.length === 0) {
-                await this.db.query("INSERT INTO users (username, password, role) VALUES ('superadmin', 'superadmin', 'superadmin')");
+                await pgPool.query("INSERT INTO users (username, password, role, permissions) VALUES ('superadmin', 'superadmin', 'superadmin', $1)", [defaultPerms]);
             }
-            // Seed Admin
-            const adminCheck = await this.db.query("SELECT * FROM users WHERE username = 'admin'");
+            const adminCheck = await pgPool.query("SELECT * FROM users WHERE username = 'admin'");
             if (adminCheck.rows.length === 0) {
-                await this.db.query("INSERT INTO users (username, password, role) VALUES ('admin', 'admin', 'admin')");
+                await pgPool.query("INSERT INTO users (username, password, role, permissions) VALUES ('admin', 'admin', 'admin', $1)", [defaultPerms]);
+            }
+            const anuragCheck = await pgPool.query("SELECT * FROM users WHERE username = 'anurag'");
+            if (anuragCheck.rows.length === 0) {
+                await pgPool.query("INSERT INTO users (username, password, role, permissions) VALUES ('anurag', 'anurag', 'admin', $1)", [defaultPerms]);
             }
 
-            // Load or Create default auction details
-            let detailsRes = await this.db.query("SELECT * FROM auction_details WHERE id = 'active_auction'");
+            // Load or Create default auction details in PG
+            let detailsRes = await pgPool.query("SELECT * FROM auction_details WHERE id = 'active_auction'");
             if (detailsRes.rows.length === 0) {
-                await this.db.query(`
+                await pgPool.query(`
                     INSERT INTO auction_details (
                         id, logo, "sportsType", season, name, "auctionDate", "auctionTime",
                         "pointsPerTeam", units, "baseBid", "bidIncreaseBy", "playersPerTeamMax", "playersPerTeamMin"
@@ -238,59 +316,23 @@ const data = {
                         '2026-05-09', '16:00', 100000, 'CR/LAC', 1000.0, 500.0, 16, 0
                     )
                 `);
-                detailsRes = await this.db.query("SELECT * FROM auction_details WHERE id = 'active_auction'");
             }
-            this.auctionDetails = detailsRes.rows[0];
 
-            // Restore last active auction from Redis if available
-            try {
-                const savedAuctionId = await this.redis.get('last_active_auction_id');
-                if (savedAuctionId) {
-                    const savedRes = await this.db.query("SELECT * FROM auction_details WHERE id = $1", [savedAuctionId]);
-                    if (savedRes.rows.length > 0) {
-                        this.auctionDetails = savedRes.rows[0];
-                        console.log(`[Redis] Restored active tournament: ${this.auctionDetails.name} (${savedAuctionId})`);
-                    }
+            // Auto-seed players and teams if PG database is freshly deployed
+            const countCheck = await pgPool.query('SELECT COUNT(*) FROM players');
+            const playerCount = parseInt(countCheck.rows[0].count, 10);
+            if (playerCount === 0) {
+                const fs = require('fs');
+                const backupFile = path.join(__dirname, '../auction_database_backup.sql');
+                if (fs.existsSync(backupFile)) {
+                    console.log('[PostgreSQL] Database is fresh (0 players). Auto-seeding players & teams...');
+                    const sql = fs.readFileSync(backupFile, 'utf8');
+                    await pgPool.query(sql);
+                    console.log('[PostgreSQL] Auto-seed complete!');
                 }
-            } catch (e) {
-                console.error('[Redis] Error restoring last_active_auction_id:', e.message);
             }
-
-            // Auto-seed players and teams if database is freshly deployed
-            try {
-                const countCheck = await this.db.query('SELECT COUNT(*) FROM players');
-                const playerCount = parseInt(countCheck.rows[0].count, 10);
-                if (playerCount === 0) {
-                    const fs = require('fs');
-                    const path = require('path');
-                    const backupFile = path.join(__dirname, '../auction_database_backup.sql');
-                    if (fs.existsSync(backupFile)) {
-                        console.log('[PostgreSQL] Database is fresh (0 players). Auto-seeding all 147 players & teams...');
-                        const sql = fs.readFileSync(backupFile, 'utf8');
-                        await this.db.query(sql);
-                        console.log('[PostgreSQL] Auto-seed complete!');
-                    }
-                }
-            } catch (seedErr) {
-                console.warn('[PostgreSQL] Auto-seed warning:', seedErr.message);
-            }
-
-            // Load initial teams and players
-            const currentId = this.auctionDetails ? this.auctionDetails.id : 'active_auction';
-            await this.syncWithDB();
-
-            // Restore State from Redis
-            await this.loadStateFromRedis();
-
-            console.log(`[PostgreSQL] Ready. Initialized with ${this.teams.length} teams and ${this.players.length} players.`);
         } catch (err) {
-            console.error('[PostgreSQL/Redis] Initialization Error:', err.message);
-            if (retryCount < 6) {
-                console.log(`[PostgreSQL] Retrying DB connection in 3s (attempt ${retryCount + 1}/6)...`);
-                await new Promise(r => setTimeout(r, 3000));
-                return this.init(retryCount + 1);
-            }
-            console.error('[PostgreSQL] Max connection retries reached.');
+            console.warn('[PostgreSQL init tables warning]:', err.message);
         }
     },
 

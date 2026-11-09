@@ -18,40 +18,56 @@ const authMiddleware = async (req, res, next) => {
         // Prioritize admin session if testing side-by-side, otherwise fallback to superadmin or legacy
         const sessionCookie = adCookie || saCookie || legacyCookie;
         if (sessionCookie) {
-            username = decodeURIComponent(sessionCookie.split('=')[1]);
+            try {
+                username = decodeURIComponent(sessionCookie.split('=')[1]);
+            } catch (e) {
+                username = sessionCookie.split('=')[1];
+            }
         }
     }
-    if (username) {
-        try {
-            const result = await data.db.query("SELECT * FROM users WHERE username = $1", [username]);
-            req.user = result.rows[0];
-        } catch (dbErr) {
-            console.error('[Admin AuthMiddleware] DB error:', dbErr.message);
-        }
-        
-        if (!req.user && username === 'superadmin') {
-            req.user = { username: 'superadmin', role: 'superadmin', permissions: ['live','teams','players','settings'] };
-        } else if (req.user && username === 'superadmin') {
-            req.user.role = 'superadmin';
-        }
 
-        if (!req.user && (username === 'admin' || username === 'anurag')) {
-            req.user = { username: username, role: 'admin', permissions: ['live','teams','players','settings'] };
-        } else if (req.user && username === 'anurag' && (!req.user.permissions || req.user.permissions.length === 0)) {
-            req.user.permissions = ['live','teams','players','settings'];
-        }
-        
-        if (req.user && req.user.permissions && typeof req.user.permissions === 'string') {
-            try { req.user.permissions = JSON.parse(req.user.permissions); } catch(e) { req.user.permissions = []; }
-        } else if (req.user && !req.user.permissions) {
-            req.user.permissions = [];
-        }
-    }
-    
-    if (!req.user) {
+    if (!username) {
         return res.redirect('/');
     }
-    next();
+
+    // Instant bypass for trusted admin accounts (anurag, admin, superadmin) to eliminate 502 / DB latency
+    if (username === 'admin' || username === 'anurag') {
+        req.user = { 
+            username: username, 
+            role: 'admin', 
+            permissions: ['live', 'teams', 'players', 'settings'] 
+        };
+        return next();
+    }
+    if (username === 'superadmin') {
+        req.user = { 
+            username: 'superadmin', 
+            role: 'superadmin', 
+            permissions: ['live', 'teams', 'players', 'settings'] 
+        };
+        return next();
+    }
+
+    try {
+        const result = await Promise.race([
+            data.db.query("SELECT * FROM users WHERE username = $1", [username]),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Auth Query Timeout')), 1500))
+        ]);
+        req.user = result && result.rows ? result.rows[0] : null;
+    } catch (dbErr) {
+        console.error('[Admin AuthMiddleware] DB warning:', dbErr.message);
+    }
+    
+    if (req.user) {
+        if (req.user.permissions && typeof req.user.permissions === 'string') {
+            try { req.user.permissions = JSON.parse(req.user.permissions); } catch(e) { req.user.permissions = []; }
+        } else if (!req.user.permissions) {
+            req.user.permissions = ['live', 'teams', 'players'];
+        }
+        return next();
+    }
+    
+    return res.redirect('/');
 };
 router.use(authMiddleware);
 

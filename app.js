@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -7,7 +8,9 @@ const data = require('./models/data');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: { origin: '*' }
+});
 global.io = io;
 
 app.use(express.urlencoded({ extended: true }));
@@ -17,13 +20,19 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 app.use((req, res, next) => {
-    const cookies = req.headers.cookie;
-    req.cookies = {};
-    if (cookies) {
-        cookies.split(';').forEach(cookie => {
-            const parts = cookie.split('=');
-            req.cookies[parts[0].trim()] = decodeURIComponent(parts[1]);
-        });
+    try {
+        const cookies = req.headers.cookie;
+        req.cookies = {};
+        if (cookies) {
+            cookies.split(';').forEach(cookie => {
+                const parts = cookie.split('=');
+                if (parts.length >= 2) {
+                    req.cookies[parts[0].trim()] = decodeURIComponent(parts.slice(1).join('='));
+                }
+            });
+        }
+    } catch (e) {
+        req.cookies = {};
     }
     next();
 });
@@ -107,28 +116,11 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 if (!process.env.VERCEL) {
     server.listen(PORT, '0.0.0.0', () => {
-        console.log('Server is running on port ' + PORT);
+        console.log(`[Server] Live auction server successfully running on port ${PORT}`);
     });
-
-    if (PORT !== 3000) {
-        try {
-            const server3000 = http.createServer(app);
-            io.attach(server3000);
-            server3000.listen(3000, '0.0.0.0', () => {
-                console.log('Also listening on port 3000');
-            }).on('error', (e) => console.log('Port 3000 listener:', e.message));
-        } catch (e) {}
-    }
-
-    if (PORT !== 8080) {
-        try {
-            const server8080 = http.createServer(app);
-            io.attach(server8080);
-            server8080.listen(8080, '0.0.0.0', () => {
-                console.log('Also listening on port 8080');
-            }).on('error', (e) => console.log('Port 8080 listener:', e.message));
-        } catch (e) {}
-    }
+    server.on('error', (err) => {
+        console.error('[Server] Listener error:', err.message);
+    });
 }
 
 data.init().catch(err => console.error('[DB Init Warning]:', err.message));
