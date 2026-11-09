@@ -1,0 +1,14 @@
+node_modules
+.git
+.vercel
+scratch
+*.py
+*.txt
+*.bat
+public/uploads/*
+!public/uploads/default-auction.svg
+!public/uploads/default-player.svg
+uploads/*
+!uploads/default-auction.svg
+!uploads/default-player.svg
+npm-debug.log
