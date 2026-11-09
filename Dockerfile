@@ -11,8 +11,10 @@ RUN npm install --omit=dev
 # Bundle app source
 COPY . .
 
-# Set environment to production
+# Set production environment and default port
 ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
 
 # Start the application
 CMD [ "node", "app.js" ]
