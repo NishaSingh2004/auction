@@ -5,3 +5,9 @@ node_modules/
 .env
 .DS_Store
 scratch/
+public/uploads/*
+!public/uploads/default-auction.svg
+!public/uploads/default-player.svg
+uploads/*
+!uploads/default-auction.svg
+!uploads/default-player.svg

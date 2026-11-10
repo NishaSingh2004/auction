@@ -32,19 +32,6 @@ const authMiddleware = async (req, res, next) => {
 
     const lowerUser = username.toLowerCase().trim();
 
-    // Instant bypass for trusted system accounts to eliminate 502 / DB latency
-    if (lowerUser === 'admin' || lowerUser === 'anurag') {
-        req.user = { 
-            username: username, 
-            role: 'admin', 
-            permissions: ['live', 'teams', 'players', 'settings'],
-            active_auction_id: 'active_auction'
-        };
-        if (data.auctionDetails && data.auctionDetails.id !== 'active_auction') {
-            await data.selectAuction('active_auction');
-        }
-        return next();
-    }
     if (lowerUser === 'superadmin') {
         req.user = { 
             username: 'superadmin', 
@@ -78,9 +65,23 @@ const authMiddleware = async (req, res, next) => {
             req.user.active_auction_id = await data.ensureAuctionForUser(req.user.username);
         }
 
-        // Isolate tenant workspace: load admin's private blank auction
+        // Load admin's active auction
         if (!data.auctionDetails || data.auctionDetails.id !== req.user.active_auction_id) {
             await data.selectAuction(req.user.active_auction_id);
+        }
+        return next();
+    }
+    
+    // Fallback for default admin/anurag if not in DB yet
+    if (lowerUser === 'admin' || lowerUser === 'anurag') {
+        req.user = { 
+            username: username, 
+            role: 'admin', 
+            permissions: ['live', 'teams', 'players', 'settings'],
+            active_auction_id: 'active_auction'
+        };
+        if (!data.auctionDetails || data.auctionDetails.id !== 'active_auction') {
+            await data.selectAuction('active_auction');
         }
         return next();
     }
@@ -187,6 +188,24 @@ router.get('/auction', (req, res) => {
 
 router.post('/add-team', upload.single('logo'), async (req, res) => {
     const { name, color, shortName, shortcutKey } = req.body;
+    const cleanKey = (shortcutKey || '').trim().toUpperCase();
+
+    // Prevent repeated/duplicate shortcut keys in the same auction
+    if (cleanKey) {
+        const activeAuctionId = data.auctionDetails ? data.auctionDetails.id : 'active_auction';
+        const existingKeyTeam = (data.teams || []).find(t => 
+            t.shortcutKey && 
+            t.shortcutKey.trim().toUpperCase() === cleanKey && 
+            (!t.auction_id || t.auction_id === activeAuctionId)
+        );
+        if (existingKeyTeam) {
+            return res.json({ 
+                success: false, 
+                message: `Shortcut key "${cleanKey}" is already assigned to team "${existingKeyTeam.name}". Please assign a different shortcut key.` 
+            });
+        }
+    }
+
     const logoUrl = req.file ? '/uploads/' + req.file.filename : null;
     const pointsPerTeam = data.auctionDetails && data.auctionDetails.pointsPerTeam ? parseInt(data.auctionDetails.pointsPerTeam) : 100000;
     await data.addTeam({ 
@@ -196,7 +215,7 @@ router.post('/add-team', upload.single('logo'), async (req, res) => {
         color: color || '#3b82f6',
         logo: logoUrl,
         shortName: shortName || '',
-        shortcutKey: shortcutKey || ''
+        shortcutKey: cleanKey
     });
     broadcastUpdates();
     res.json({ success: true, teams: data.teams });
@@ -249,16 +268,35 @@ router.post('/add-player', upload.single('photo'), async (req, res) => {
 
 router.post('/edit-team', upload.single('logo'), async (req, res) => {
     const { teamId, name, color, shortName, shortcutKey } = req.body;
-    const logoUrl = req.file ? '/uploads/' + req.file.filename : undefined;
+    const cleanKey = (shortcutKey || '').trim().toUpperCase();
     
     const team = data.teams.find(t => t.id === teamId);
     if (!team) return res.json({ success: false, message: 'Team not found' });
+
+    // Prevent repeated/duplicate shortcut keys in the same auction
+    if (cleanKey) {
+        const activeAuctionId = data.auctionDetails ? data.auctionDetails.id : 'active_auction';
+        const existingKeyTeam = (data.teams || []).find(t => 
+            t.shortcutKey && 
+            t.shortcutKey.trim().toUpperCase() === cleanKey && 
+            t.id !== teamId &&
+            (!t.auction_id || t.auction_id === activeAuctionId)
+        );
+        if (existingKeyTeam) {
+            return res.json({ 
+                success: false, 
+                message: `Shortcut key "${cleanKey}" is already assigned to team "${existingKeyTeam.name}". Please assign a different shortcut key.` 
+            });
+        }
+    }
+
+    const logoUrl = req.file ? '/uploads/' + req.file.filename : undefined;
     
     const updatedFields = {
         name,
         color,
         shortName: shortName || '',
-        shortcutKey: shortcutKey || ''
+        shortcutKey: cleanKey
     };
     if (logoUrl !== undefined) {
         updatedFields.logo = logoUrl;
@@ -923,7 +961,25 @@ router.post('/update-auction-details', upload.fields([
 router.post('/select-auction', async (req, res) => {
     try {
         const { auctionId } = req.body;
+        if (!auctionId) {
+            return res.json({ success: false, error: 'Auction ID is required' });
+        }
         await data.selectAuction(auctionId);
+        
+        // Persist switch to the authenticated user's record so it stays active permanently
+        if (req.user && req.user.username) {
+            req.user.active_auction_id = auctionId;
+            const lower = req.user.username.toLowerCase().trim();
+            try {
+                await data.db.query(
+                    "UPDATE users SET active_auction_id = $1 WHERE LOWER(TRIM(username)) = $2",
+                    [auctionId, lower]
+                );
+            } catch (dbErr) {
+                console.warn('[Select-Auction DB Update Note]:', dbErr.message);
+            }
+        }
+        
         broadcastUpdates();
         res.json({ success: true, auctionDetails: data.auctionDetails, teams: data.teams, players: data.players });
     } catch (err) {

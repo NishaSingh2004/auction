@@ -114,10 +114,13 @@ router.use(superAdminMiddleware);
 
 router.get('/', async (req, res) => {
     try {
+        if (typeof data.loadAuctionsList === 'function') {
+            await data.loadAuctionsList();
+        }
         let admins = [];
         try {
             const usersRes = await Promise.race([
-                data.db.query("SELECT username, role, permissions FROM users WHERE role != 'superadmin'"),
+                data.db.query("SELECT username, role, permissions, active_auction_id FROM users WHERE role != 'superadmin'"),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Admin list query timeout')), 1500))
             ]);
             admins = usersRes ? usersRes.rows : [];
@@ -128,8 +131,8 @@ router.get('/', async (req, res) => {
         // Guarantee default admins list so table is always rendered
         if (!admins || admins.length === 0) {
             admins = [
-                { username: 'anurag', role: 'admin', permissions: ['live', 'teams', 'players', 'settings'] },
-                { username: 'admin', role: 'admin', permissions: ['live', 'teams', 'players', 'settings'] }
+                { username: 'anurag', role: 'admin', permissions: ['live', 'teams', 'players', 'settings'], active_auction_id: 'active_auction' },
+                { username: 'admin', role: 'admin', permissions: ['live', 'teams', 'players', 'settings'], active_auction_id: 'active_auction' }
             ];
         }
 
@@ -153,20 +156,54 @@ router.get('/settings', async (req, res) => {
     }
 });
 
-// Create Admin with guaranteed blank dashboard (0 teams, 0 players, fresh tournament)
+// Create Admin with auction authority assignment (blank workspace or specific existing tournament)
 router.post('/create-admin', async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, assignedAuctionId } = req.body;
     try {
         const cleanUser = (username || '').trim();
         const cleanPass = (password || '').trim();
         if (!cleanUser || !cleanPass) {
             return res.send("<script>alert('Username and password are required'); window.location.href='/superadmin';</script>");
         }
-        await data.createBlankAuctionForAdmin(cleanUser, cleanPass);
+
+        if (assignedAuctionId && assignedAuctionId !== 'new') {
+            // Assign designated auction to newly provisioned admin
+            const defaultPerms = JSON.stringify(['live', 'teams', 'players', 'settings']);
+            const lower = cleanUser.toLowerCase();
+            const existing = await data.db.query("SELECT username FROM users WHERE LOWER(TRIM(username)) = $1", [lower]);
+            if (existing && existing.rows && existing.rows.length > 0) {
+                return res.send("<script>alert('Error: Admin username already exists.'); window.location.href='/superadmin';</script>");
+            }
+            await data.db.query(
+                "INSERT INTO users (username, password, role, permissions, active_auction_id) VALUES ($1, $2, 'admin', $3, $4)",
+                [cleanUser, cleanPass, defaultPerms, assignedAuctionId]
+            );
+        } else {
+            // Create brand new isolated blank auction tournament
+            await data.createBlankAuctionForAdmin(cleanUser, cleanPass);
+        }
         res.redirect('/superadmin');
     } catch (e) {
         console.error('Error creating admin:', e);
         res.send("<script>alert('Error creating admin. Username might exist.'); window.location.href='/superadmin';</script>");
+    }
+});
+
+// Assign Auction Authority to an Admin
+router.post('/assign-auction', async (req, res) => {
+    const { username, auctionId } = req.body;
+    const lower = (username || '').toLowerCase().trim();
+    try {
+        if (auctionId && lower) {
+            await data.db.query(
+                "UPDATE users SET active_auction_id = $1 WHERE LOWER(TRIM(username)) = $2 AND role != 'superadmin'",
+                [auctionId, lower]
+            );
+        }
+        res.redirect('/superadmin');
+    } catch (e) {
+        console.error('Error assigning auction authority:', e);
+        res.redirect('/superadmin');
     }
 });
 
@@ -188,16 +225,26 @@ router.post('/delete-admin', async (req, res) => {
     }
 });
 
-// Update Permissions
+// Update Permissions & Assigned Auction Authority
 router.post('/update-permissions', async (req, res) => {
-    const { username, permissions } = req.body; 
+    const { username, permissions, assignedAuctionId } = req.body; 
     const lower = (username || '').toLowerCase().trim();
     let permsJson = '[]';
     if (permissions) {
         permsJson = JSON.stringify(Array.isArray(permissions) ? permissions : [permissions]);
     }
     try {
-        await data.db.query("UPDATE users SET permissions = $1, role = 'admin' WHERE LOWER(TRIM(username)) = $2 AND role != 'superadmin'", [permsJson, lower]);
+        if (assignedAuctionId) {
+            await data.db.query(
+                "UPDATE users SET permissions = $1, active_auction_id = $2, role = 'admin' WHERE LOWER(TRIM(username)) = $3 AND role != 'superadmin'",
+                [permsJson, assignedAuctionId, lower]
+            );
+        } else {
+            await data.db.query(
+                "UPDATE users SET permissions = $1, role = 'admin' WHERE LOWER(TRIM(username)) = $2 AND role != 'superadmin'",
+                [permsJson, lower]
+            );
+        }
         res.redirect('/superadmin');
     } catch (e) {
         console.error(e);

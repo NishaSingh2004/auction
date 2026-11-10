@@ -167,9 +167,42 @@ document.getElementById('addTeamForm').addEventListener('submit', async (e) => {
         }
         socket.emit('adminDataAdded');
     } else {
-        showToast('⚠️ ' + (result.error || 'Error saving team'), 'error');
+        const errorMsg = result.message || result.error || 'Error saving team';
+        showToast('⚠️ ' + errorMsg, 'error');
+        alert(errorMsg);
     }
 });
+
+// Real-time shortcut key uniqueness validation
+const teamShortcutKeyInput = document.querySelector('#addTeamForm [name="shortcutKey"]');
+if (teamShortcutKeyInput) {
+    teamShortcutKeyInput.addEventListener('input', (e) => {
+        const val = (e.target.value || '').trim().toUpperCase();
+        e.target.value = val;
+        const teams = window.currentTeamsCache || [];
+        const duplicate = teams.find(t => 
+            t.shortcutKey && 
+            t.shortcutKey.toUpperCase() === val && 
+            t.id !== editingTeamId
+        );
+        let feedback = document.getElementById('shortcutKeyFeedback');
+        if (!feedback) {
+            feedback = document.createElement('div');
+            feedback.id = 'shortcutKeyFeedback';
+            feedback.style.fontSize = '0.72rem';
+            feedback.style.marginTop = '0.25rem';
+            feedback.style.fontWeight = '700';
+            e.target.parentNode.appendChild(feedback);
+        }
+        if (duplicate) {
+            feedback.style.color = '#f87171';
+            feedback.style.display = 'block';
+            feedback.textContent = `⚠️ Key '${val}' already used by "${duplicate.name}"!`;
+        } else {
+            feedback.style.display = 'none';
+        }
+    });
+}
 
 document.getElementById('addPlayerForm').addEventListener('submit', async (e) => {
     e.preventDefault();

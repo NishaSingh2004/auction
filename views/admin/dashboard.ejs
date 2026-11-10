@@ -116,22 +116,12 @@
             </div>
             
             <div style="display: flex; align-items: center; gap: 0.85rem; font-size: 0.85rem; font-weight: 800; color: rgba(255,255,255,0.6);">
-                <!-- YOUTUBE OVERLAY LINK BUTTON -->
-                <div style="display: flex; align-items: center; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; overflow: hidden;" title="YouTube / OBS Stream Overlay (1920x1080 Transparent)">
-                    <a href="/overlay<%= (data.auctionDetails && data.auctionDetails.id !== 'active_auction') ? ('?auctionId=' + data.auctionDetails.id) : '' %>" target="_blank" style="text-decoration: none; color: #f87171; font-size: 0.75rem; font-weight: 800; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 0.4rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='transparent'">
-                        <span style="font-size: 0.95rem;">📺</span> OVERLAY
+                <!-- SINGLE UNIFIED LIVE DASHBOARD LINK -->
+                <div style="display: flex; align-items: center; background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(59, 130, 246, 0.15)); border: 1px solid rgba(16, 185, 129, 0.5); border-radius: 6px; overflow: hidden; box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);" title="Live Spectator Dashboard (https://auction-production-358e.up.railway.app/live)">
+                    <a href="/live<%= (data.auctionDetails && data.auctionDetails.id !== 'active_auction') ? ('?auctionId=' + data.auctionDetails.id) : '' %>" target="_blank" style="text-decoration: none; color: #34d399; font-size: 0.75rem; font-weight: 900; padding: 0.35rem 0.75rem; display: flex; align-items: center; gap: 0.45rem; letter-spacing: 0.5px; transition: background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='transparent'">
+                        <span style="font-size: 0.95rem;">📊</span> LIVE DASHBOARD
                     </a>
-                    <button type="button" onclick="copyStreamLinkDirect('/overlay', this)" style="background: rgba(239, 68, 68, 0.22); border: none; border-left: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; font-size: 0.72rem; font-weight: 800; padding: 0.35rem 0.5rem; cursor: pointer; transition: all 0.2s;" title="Copy Overlay URL for OBS Browser Source">
-                        📋
-                    </button>
-                </div>
-
-                <!-- LIVE AUCTION ONLY SCREEN LINK BUTTON -->
-                <div style="display: flex; align-items: center; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; overflow: hidden;" title="Live Auction Screen (Auction Only - Fully Responsive)">
-                    <a href="/live-auction<%= (data.auctionDetails && data.auctionDetails.id !== 'active_auction') ? ('?auctionId=' + data.auctionDetails.id) : '' %>" target="_blank" style="text-decoration: none; color: #34d399; font-size: 0.75rem; font-weight: 800; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 0.4rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='transparent'">
-                        <span style="font-size: 0.95rem;">⚡</span> LIVE AUCTION
-                    </a>
-                    <button type="button" onclick="copyStreamLinkDirect('/live-auction', this)" style="background: rgba(16, 185, 129, 0.22); border: none; border-left: 1px solid rgba(16, 185, 129, 0.35); color: #6ee7b7; font-size: 0.72rem; font-weight: 800; padding: 0.35rem 0.5rem; cursor: pointer; transition: all 0.2s;" title="Copy Live Auction URL for Spectators">
+                    <button type="button" onclick="copyStreamLinkDirect('/live', this)" style="background: rgba(16, 185, 129, 0.22); border: none; border-left: 1px solid rgba(16, 185, 129, 0.35); color: #6ee7b7; font-size: 0.72rem; font-weight: 800; padding: 0.35rem 0.55rem; cursor: pointer; transition: all 0.2s;" title="Copy Live Dashboard URL">
                         📋
                     </button>
                 </div>
@@ -164,6 +154,11 @@
                   <a href="/superadmin" style="text-decoration: none; color: #fbbf24; font-weight: 800; cursor: pointer;">SUPERADMIN</a>
                   <% } %>
                 <div style="font-size: 1.1rem; cursor: pointer;">🔔</div>
+
+                <!-- ADMIN LOGOUT BUTTON -->
+                <a href="/logout" style="text-decoration: none; background: rgba(239, 68, 68, 0.18); border: 1px solid rgba(239, 68, 68, 0.45); color: #f87171; font-size: 0.75rem; font-weight: 900; padding: 0.35rem 0.75rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.4rem; letter-spacing: 0.5px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);" onmouseover="this.style.background='#ef4444'; this.style.color='#fff';" onmouseout="this.style.background='rgba(239, 68, 68, 0.18)'; this.style.color='#f87171';" title="Sign Out of Admin Session">
+                    <span>🚪</span> LOGOUT
+                </a>
             </div>
         </header>
 

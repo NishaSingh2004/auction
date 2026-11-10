@@ -638,6 +638,7 @@
                         <tr>
                             <th>ADMINISTRATOR</th>
                             <th>ROLE</th>
+                            <th>ASSIGNED AUCTION AUTHORITY</th>
                             <th>DELEGATED PERMISSIONS</th>
                             <th style="text-align: right;">ACTIONS</th>
                         </tr>
@@ -660,32 +661,49 @@
                                             <%= a.role %>
                                         </span>
                                     </td>
-                                    <td>
-                                        <form action="/superadmin/update-permissions" method="POST" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                                            <input type="hidden" name="username" value="<%= a.username %>">
-                                            <% 
-                                                let perms = [];
-                                                try { perms = JSON.parse(a.permissions || '[]'); } catch(e){} 
-                                            %>
-                                            <div class="perm-checkbox-group">
-                                                <label class="perm-pill <%= perms.includes('live') ? 'active' : '' %>">
-                                                    <input type="checkbox" name="permissions" value="live" <%= perms.includes('live') ? 'checked' : '' %>> ⚡ Live Bidding
-                                                </label>
-                                                <label class="perm-pill <%= perms.includes('teams') ? 'active' : '' %>">
-                                                    <input type="checkbox" name="permissions" value="teams" <%= perms.includes('teams') ? 'checked' : '' %>> 🛡️ Team View
-                                                </label>
-                                                <label class="perm-pill <%= perms.includes('players') ? 'active' : '' %>">
-                                                    <input type="checkbox" name="permissions" value="players" <%= perms.includes('players') ? 'checked' : '' %>> 👥 Players
-                                                </label>
-                                                <label class="perm-pill <%= perms.includes('settings') ? 'active' : '' %>">
-                                                    <input type="checkbox" name="permissions" value="settings" <%= perms.includes('settings') ? 'checked' : '' %>> ⚙️ Settings
-                                                </label>
+                                    <form action="/superadmin/update-permissions" method="POST">
+                                        <input type="hidden" name="username" value="<%= a.username %>">
+                                        <td>
+                                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                <select name="assignedAuctionId" class="form-input" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; color: #fbbf24; background: rgba(0,0,0,0.4); border: 1px solid rgba(251,191,36,0.3); border-radius: 6px; max-width: 220px;">
+                                                    <% if (data.auctionsList && data.auctionsList.length > 0) { %>
+                                                        <% data.auctionsList.forEach(auc => { %>
+                                                            <option value="<%= auc.id %>" <%= (a.active_auction_id === auc.id || (!a.active_auction_id && auc.id === 'active_auction')) ? 'selected' : '' %>>
+                                                                <%= auc.name || auc.id %>
+                                                            </option>
+                                                        <% }) %>
+                                                    <% } else { %>
+                                                        <option value="active_auction">Default Tournament</option>
+                                                    <% } %>
+                                                </select>
                                             </div>
-                                            <button type="submit" class="sa-nav-btn sa-nav-btn-primary" style="padding: 0.35rem 0.85rem; font-size: 0.75rem;">
-                                                Save
-                                            </button>
-                                        </form>
-                                    </td>
+                                        </td>
+                                        <td>
+                                            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                                                <% 
+                                                    let perms = [];
+                                                    try { perms = JSON.parse(a.permissions || '[]'); } catch(e){} 
+                                                %>
+                                                <div class="perm-checkbox-group">
+                                                    <label class="perm-pill <%= perms.includes('live') ? 'active' : '' %>">
+                                                        <input type="checkbox" name="permissions" value="live" <%= perms.includes('live') ? 'checked' : '' %>> ⚡ Live Bidding
+                                                    </label>
+                                                    <label class="perm-pill <%= perms.includes('teams') ? 'active' : '' %>">
+                                                        <input type="checkbox" name="permissions" value="teams" <%= perms.includes('teams') ? 'checked' : '' %>> 🛡️ Team View
+                                                    </label>
+                                                    <label class="perm-pill <%= perms.includes('players') ? 'active' : '' %>">
+                                                        <input type="checkbox" name="permissions" value="players" <%= perms.includes('players') ? 'checked' : '' %>> 👥 Players
+                                                    </label>
+                                                    <label class="perm-pill <%= perms.includes('settings') ? 'active' : '' %>">
+                                                        <input type="checkbox" name="permissions" value="settings" <%= perms.includes('settings') ? 'checked' : '' %>> ⚙️ Settings
+                                                    </label>
+                                                </div>
+                                                <button type="submit" class="sa-nav-btn sa-nav-btn-primary" style="padding: 0.35rem 0.85rem; font-size: 0.75rem;">
+                                                    Save Authority
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </form>
                                     <td style="text-align: right;">
                                         <form action="/superadmin/delete-admin" method="POST" onsubmit="return confirm('Permanently revoke all access for admin \'<%= a.username %>\'?');" style="display: inline-block;">
                                             <input type="hidden" name="username" value="<%= a.username %>">
@@ -698,7 +716,7 @@
                             <% }) %>
                         <% } else { %>
                             <tr>
-                                <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 2.5rem;">
+                                <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 2.5rem;">
                                     No subordinate administrators registered. Provision an account below.
                                 </td>
                             </tr>
@@ -715,11 +733,11 @@
                     <h2 class="sa-card-title">
                         <span>➕</span> PROVISION NEW ADMINISTRATOR
                     </h2>
-                    <p class="sa-card-desc">Create a new credentials-based restricted administrator. Permissions can be assigned above immediately upon creation.</p>
+                    <p class="sa-card-desc">Create a new credentials-based restricted administrator. Assign a dedicated blank workspace or grant authority to an existing auction.</p>
                 </div>
             </div>
 
-            <form action="/superadmin/create-admin" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) auto; gap: 1rem; align-items: flex-end;">
+            <form action="/superadmin/create-admin" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto; gap: 1rem; align-items: flex-end;">
                 <div>
                     <label style="display: block; font-size: 0.72rem; color: var(--text-dim); font-weight: 800; text-transform: uppercase; margin-bottom: 0.4rem;">Username</label>
                     <input type="text" name="username" placeholder="e.g. operator_mumbai" class="form-input" required autocomplete="off">
@@ -727,6 +745,17 @@
                 <div>
                     <label style="display: block; font-size: 0.72rem; color: var(--text-dim); font-weight: 800; text-transform: uppercase; margin-bottom: 0.4rem;">Password</label>
                     <input type="password" name="password" placeholder="Set a secure password" class="form-input" required autocomplete="new-password">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.72rem; color: var(--text-dim); font-weight: 800; text-transform: uppercase; margin-bottom: 0.4rem;">Auction Authority</label>
+                    <select name="assignedAuctionId" class="form-input" style="height: 44px; font-weight: 700; color: #fbbf24;">
+                        <option value="new">✨ Blank Tournament Workspace (Fresh 0 Data)</option>
+                        <% if (data.auctionsList && data.auctionsList.length > 0) { %>
+                            <% data.auctionsList.forEach(auc => { %>
+                                <option value="<%= auc.id %>">Assign: <%= auc.name || auc.id %></option>
+                            <% }) %>
+                        <% } %>
+                    </select>
                 </div>
                 <button type="submit" class="btn-gold" style="height: 44px; justify-content: center; white-space: nowrap;">
                     ➕ Create Account

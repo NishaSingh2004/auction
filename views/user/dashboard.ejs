@@ -147,6 +147,7 @@
         <script>
             window.playersCache = <%- JSON.stringify(data.players || []) %>;
             window.teamsCache = <%- JSON.stringify(data.teams || []) %>;
+            window.categoriesCache = <%- JSON.stringify(data.categories || []) %>;
 
             function updateActiveNav(activeKey) {
                 const btnLiveBid = document.getElementById('tabLiveBid');
@@ -326,10 +327,24 @@
                     </div>
 
                     <!-- Instant Search & Filter Bar -->
-                    <div class="player-list-filters-bar">
-                        <div style="position: relative; flex: 1; min-width: 220px; max-width: 380px;">
+                    <div class="player-list-filters-bar" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                        <div style="position: relative; flex: 1; min-width: 220px; max-width: 360px;">
                             <input type="text" id="livePlayerSearchInput" oninput="if(typeof filterLivePlayerTable === 'function') filterLivePlayerTable(this.value);" placeholder="🔍 Search by name, role, #ID or UID..." class="player-search-box">
                         </div>
+
+                        <!-- Live Categories Filter Dropdown -->
+                        <div class="player-category-filter-box" style="display: flex; align-items: center; gap: 0.4rem;">
+                            <label for="liveCategoryFilterSelect" style="font-size: 0.7rem; color: #fbbf24; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">CATEGORY:</label>
+                            <select id="liveCategoryFilterSelect" onchange="if(typeof setLivePlayerCategoryFilter === 'function') setLivePlayerCategoryFilter(this.value);" style="background: #1e222d; border: 1px solid rgba(251, 191, 36, 0.35); color: #fbbf24; font-size: 0.78rem; font-weight: 800; padding: 0.45rem 0.85rem; border-radius: 8px; cursor: pointer; outline: none; transition: all 0.2s;">
+                                <option value="all">⚡ ALL CATEGORIES</option>
+                                <% if (data.categories && data.categories.length > 0) { %>
+                                    <% data.categories.forEach(cat => { %>
+                                        <option value="<%= cat.id %>"><%= cat.name %></option>
+                                    <% }) %>
+                                <% } %>
+                            </select>
+                        </div>
+
                         <div class="player-status-pills">
                             <button type="button" class="status-filter-pill active" data-status="all" onclick="if(typeof setLivePlayerStatusFilter === 'function') setLivePlayerStatusFilter('all', this);">All (<span id="countFilterAll"><%= (data.players || []).length %></span>)</button>
                             <button type="button" class="status-filter-pill" data-status="available" onclick="if(typeof setLivePlayerStatusFilter === 'function') setLivePlayerStatusFilter('available', this);">Available (<span id="countFilterAvailable"><%= (data.players || []).filter(p => !p.status || p.status === 'available').length %></span>)</button>

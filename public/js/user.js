@@ -1016,6 +1016,13 @@ function checkBiddingValidity() {
 let currentLivePlayerSearchQuery = '';
 let currentLivePlayerStatusFilter = 'all';
 
+let currentLivePlayerCategoryFilter = 'all';
+
+window.setLivePlayerCategoryFilter = function(catVal) {
+    currentLivePlayerCategoryFilter = (catVal || 'all').trim().toLowerCase();
+    renderPlayerListTable();
+};
+
 window.filterLivePlayerTable = function(query) {
     currentLivePlayerSearchQuery = (query || '').toLowerCase().trim();
     renderPlayerListTable();
@@ -1080,6 +1087,17 @@ function renderPlayerListTable() {
             if (currentLivePlayerStatusFilter === 'available' && pStatus !== 'available') return false;
             if (currentLivePlayerStatusFilter === 'sold' && pStatus !== 'sold') return false;
             if (currentLivePlayerStatusFilter === 'unsold' && pStatus !== 'unsold') return false;
+        }
+        if (currentLivePlayerCategoryFilter && currentLivePlayerCategoryFilter !== 'all') {
+            const pCatId = String(p.category_id || '').toLowerCase();
+            const pCatName = String(p.category || '').toLowerCase();
+            const catMatches = pCatId === currentLivePlayerCategoryFilter || 
+                               pCatName === currentLivePlayerCategoryFilter ||
+                               (window.categoriesCache && window.categoriesCache.some(c => 
+                                   String(c.id).toLowerCase() === currentLivePlayerCategoryFilter && 
+                                   (pCatId === String(c.id).toLowerCase() || pCatName === String(c.name).toLowerCase())
+                               ));
+            if (!catMatches) return false;
         }
         if (currentLivePlayerSearchQuery) {
             const name = (p.name || '').toLowerCase();

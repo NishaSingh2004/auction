@@ -9,9 +9,7 @@ types.setTypeParser(20, (val) => val === null ? null : parseInt(val, 10));
 types.setTypeParser(1700, (val) => val === null ? null : parseFloat(val));
 
 // Determine the PostgreSQL connection URL:
-const activeDbUrl = process.env.DATABASE_URL || 
-                    process.env.POSTGRES_URL || 
-                    (process.env.NODE_ENV === 'production' ? 'postgresql://postgres:qlzvuYGAEBfBszwuvnkxOEwsMXNoRTn@postgres.railway.internal:5432/railway' : null);
+const activeDbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || null;
 
 const isRemoteDb = Boolean(
     activeDbUrl &&
@@ -70,7 +68,13 @@ const dbAdapter = {
         
         try {
             const sdb = await getSqliteDb();
-            let sqliteSql = sql.replace(/\$\d+/g, '?');
+            // Map numbered PostgreSQL parameters ($1, $2, etc.) to SQLite params array correctly
+            const sqliteParams = [];
+            let sqliteSql = sql.replace(/\$(\d+)/g, (match, num) => {
+                const idx = parseInt(num, 10) - 1;
+                sqliteParams.push(params[idx]);
+                return '?';
+            });
             const trimmed = sqliteSql.trim();
             const upper = trimmed.toUpperCase();
 
@@ -81,10 +85,10 @@ const dbAdapter = {
             }
 
             if (upper.startsWith('SELECT')) {
-                const rows = await sdb.all(sqliteSql, params);
+                const rows = await sdb.all(sqliteSql, sqliteParams.length > 0 ? sqliteParams : params);
                 return { rows: rows || [] };
             } else {
-                const result = await sdb.run(sqliteSql, params);
+                const result = await sdb.run(sqliteSql, sqliteParams.length > 0 ? sqliteParams : params);
                 return { rows: [], rowCount: result ? result.changes : 0 };
             }
         } catch (sqliteErr) {
@@ -762,7 +766,7 @@ const data = {
     },
 
     async createAuctionDetails(fields) {
-        const newId = 'auction_' + Date.now();
+        const newId = fields.id || ('auction_' + Date.now());
         await this.db.query(`
             INSERT INTO auction_details (
                 id, logo, "sportsType", season, name, "auctionDate", "auctionTime",
@@ -788,12 +792,6 @@ const data = {
         const cleanUser = (username || '').trim();
         const lowerUser = cleanUser.toLowerCase();
         
-        // Default system admins always use active_auction
-        if (lowerUser === 'anurag' || lowerUser === 'admin') {
-            await this.db.query("UPDATE users SET active_auction_id = 'active_auction', role = 'admin' WHERE LOWER(TRIM(username)) = $1", [lowerUser]);
-            return 'active_auction';
-        }
-
         // Check if user already has an active_auction_id in DB
         const res = await this.db.query("SELECT active_auction_id FROM users WHERE LOWER(TRIM(username)) = $1", [lowerUser]);
         if (res.rows && res.rows.length > 0 && res.rows[0].active_auction_id) {
@@ -802,6 +800,12 @@ const data = {
             if (aRes.rows && aRes.rows.length > 0) {
                 return existingId;
             }
+        }
+
+        // Default system admins use active_auction if not set
+        if (lowerUser === 'anurag' || lowerUser === 'admin') {
+            await this.db.query("UPDATE users SET active_auction_id = 'active_auction', role = 'admin' WHERE LOWER(TRIM(username)) = $1 AND (active_auction_id IS NULL OR active_auction_id = '')", [lowerUser]);
+            return 'active_auction';
         }
 
         // Otherwise create a clean isolated blank tournament for this user
